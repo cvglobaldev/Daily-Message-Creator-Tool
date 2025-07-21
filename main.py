@@ -221,10 +221,20 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         existing_user = db_manager.get_user_by_phone(phone_number)
         
         if existing_user and existing_user.status == 'active':
-            send_message_to_platform(
-                phone_number, platform,
-                "You're already on your faith journey! You'll receive your next content every 5 minutes for testing. Type HELP if you need assistance."
-            )
+            # Allow restart - reset to Day 1
+            db_manager.update_user(phone_number, 
+                                 current_day=1, 
+                                 join_date=datetime.now())
+            platform_emoji = "📱" if platform == "telegram" else "📱"
+            restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
+                              "You'll receive daily content for the next 10 days (every 5 minutes for testing). "
+                              "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                              "Let's start with Day 1 content right now!")
+            send_message_to_platform(phone_number, platform, restart_message)
+            
+            # Send Day 1 content immediately
+            scheduler.send_content_to_user(phone_number)
+            logger.info(f"User {phone_number} restarted journey from Day 1")
             return
         
         # Create or reactivate user

@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import List
 from db_manager import DatabaseManager
-from services import WhatsAppService, GeminiService
+from services import WhatsAppService, TelegramService, GeminiService
 import time
 
 logger = logging.getLogger(__name__)
@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 class ContentScheduler:
     """Handles scheduled content delivery and user progression"""
     
-    def __init__(self, db: DatabaseManager, whatsapp_service: WhatsAppService, gemini_service: GeminiService):
+    def __init__(self, whatsapp_service: WhatsAppService, telegram_service: TelegramService, db: DatabaseManager):
         self.db = db
         self.whatsapp_service = whatsapp_service
-        self.gemini_service = gemini_service
+        self.telegram_service = telegram_service
     
     def send_daily_content(self) -> None:
         """Send daily content to all active users"""
