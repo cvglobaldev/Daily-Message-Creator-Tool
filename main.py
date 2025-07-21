@@ -1,0 +1,298 @@
+import os
+import json
+import logging
+from datetime import datetime
+from flask import Flask, request, jsonify, render_template
+from database import DatabaseManager
+from services import WhatsAppService, GeminiService
+from scheduler import ContentScheduler
+import threading
+import time
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
+app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
+
+# Initialize services
+db = DatabaseManager()
+whatsapp_service = WhatsAppService()
+gemini_service = GeminiService()
+scheduler = ContentScheduler(db, whatsapp_service, gemini_service)
+
+# Keywords that trigger human handoff
+HUMAN_HANDOFF_KEYWORDS = [
+    "talk to someone", "speak to a person", "pray with me", "need help",
+    "counselor", "pastor", "imam", "spiritual guidance", "depression",
+    "suicide", "anxiety", "crisis"
+]
+
+def start_scheduler():
+    """Start the background scheduler in a separate thread"""
+    def run_scheduler():
+        while True:
+            try:
+                current_time = datetime.now().strftime("%H:%M")
+                # Run daily content delivery at 8:00 AM
+                if current_time == "08:00":
+                    logger.info("Running daily content scheduler...")
+                    scheduler.send_daily_content()
+                    # Sleep for 60 seconds to avoid running multiple times in the same minute
+                    time.sleep(60)
+                else:
+                    # Check every 30 seconds
+                    time.sleep(30)
+            except Exception as e:
+                logger.error(f"Error in scheduler: {e}")
+                time.sleep(60)
+    
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    logger.info("Background scheduler started")
+
+@app.route('/')
+def dashboard():
+    """Simple dashboard to monitor the system"""
+    try:
+        # Get basic stats
+        active_users = db.get_active_users_count()
+        total_users = db.get_total_users_count()
+        recent_messages = db.get_recent_messages(limit=10)
+        
+        return render_template('dashboard.html', 
+                             active_users=active_users,
+                             total_users=total_users,
+                             recent_messages=recent_messages)
+    except Exception as e:
+        logger.error(f"Error loading dashboard: {e}")
+        return f"Dashboard error: {e}", 500
+
+@app.route('/whatsapp', methods=['POST'])
+def whatsapp_webhook():
+    """Handle incoming WhatsApp messages"""
+    try:
+        data = request.get_json()
+        logger.debug(f"Received webhook data: {data}")
+        
+        # Extract message data (structure may vary based on WhatsApp provider)
+        # This is a generic structure that works with most providers
+        if 'messages' in data:
+            for message_data in data['messages']:
+                phone_number = message_data.get('from', '').replace('whatsapp:', '')
+                message_text = message_data.get('text', {}).get('body', '').strip()
+                
+                if phone_number and message_text:
+                    process_incoming_message(phone_number, message_text)
+        
+        return jsonify({"status": "success"}), 200
+        
+    except Exception as e:
+        logger.error(f"Error processing WhatsApp webhook: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def process_incoming_message(phone_number: str, message_text: str):
+    """Process incoming message from user"""
+    try:
+        logger.info(f"Processing message from {phone_number}: {message_text}")
+        
+        # Normalize phone number
+        if not phone_number.startswith('+'):
+            phone_number = '+' + phone_number
+        
+        message_lower = message_text.lower().strip()
+        
+        # Handle commands
+        if message_lower == 'start':
+            handle_start_command(phone_number)
+            return
+        
+        elif message_lower == 'stop':
+            handle_stop_command(phone_number)
+            return
+        
+        elif message_lower == 'help':
+            handle_help_command(phone_number)
+            return
+        
+        # Check for human handoff triggers
+        if any(keyword in message_lower for keyword in HUMAN_HANDOFF_KEYWORDS):
+            handle_human_handoff(phone_number, message_text)
+            return
+        
+        # Handle regular response (likely to a reflection question)
+        handle_reflection_response(phone_number, message_text)
+        
+    except Exception as e:
+        logger.error(f"Error processing message from {phone_number}: {e}")
+        # Send error message to user
+        whatsapp_service.send_message(
+            phone_number, 
+            "Sorry, there was an error processing your message. Please try again or type HELP for assistance."
+        )
+
+def handle_start_command(phone_number: str):
+    """Handle START command - onboard new user"""
+    try:
+        # Check if user already exists
+        existing_user = db.get_user(phone_number)
+        
+        if existing_user and existing_user.get('status') == 'active':
+            whatsapp_service.send_message(
+                phone_number,
+                "You're already on your faith journey! You'll receive your next content at 8:00 AM daily. Type HELP if you need assistance."
+            )
+            return
+        
+        # Create or reactivate user
+        db.create_or_update_user(phone_number, {
+            'status': 'active',
+            'current_day': 1,
+            'join_date': datetime.now().isoformat(),
+            'tags': []
+        })
+        
+        # Send welcome message
+        welcome_message = ("Welcome to your Faith Journey! 🌟\n\n"
+                          "You'll receive daily content for the next 30 days at 8:00 AM. "
+                          "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                          "Let's start with Day 1 content right now!")
+        
+        whatsapp_service.send_message(phone_number, welcome_message)
+        
+        # Send Day 1 content immediately
+        scheduler.send_content_to_user(phone_number)
+        
+        logger.info(f"User {phone_number} successfully onboarded")
+        
+    except Exception as e:
+        logger.error(f"Error handling START command for {phone_number}: {e}")
+        whatsapp_service.send_message(
+            phone_number,
+            "Sorry, there was an error setting up your journey. Please try again."
+        )
+
+def handle_stop_command(phone_number: str):
+    """Handle STOP command - deactivate user"""
+    try:
+        user = db.get_user(phone_number)
+        if user:
+            db.create_or_update_user(phone_number, {
+                **user,
+                'status': 'inactive'
+            })
+            
+            message = ("You have been unsubscribed from the Faith Journey. "
+                      "If you'd like to restart your journey, simply send START anytime. "
+                      "Peace be with you. 🙏")
+        else:
+            message = "You weren't subscribed to any journey. Send START to begin your faith journey."
+        
+        whatsapp_service.send_message(phone_number, message)
+        logger.info(f"User {phone_number} unsubscribed")
+        
+    except Exception as e:
+        logger.error(f"Error handling STOP command for {phone_number}: {e}")
+
+def handle_help_command(phone_number: str):
+    """Handle HELP command"""
+    help_message = ("📖 Faith Journey Help\n\n"
+                   "Commands:\n"
+                   "• START - Begin or restart your 30-day journey\n"
+                   "• STOP - Unsubscribe from daily messages\n"
+                   "• HELP - Show this help message\n\n"
+                   "You'll receive daily content at 8:00 AM followed by a reflection question. "
+                   "Feel free to share your thoughts - there are no wrong answers!\n\n"
+                   "If you need to speak with someone, just let us know.")
+    
+    whatsapp_service.send_message(phone_number, help_message)
+
+def handle_human_handoff(phone_number: str, message_text: str):
+    """Handle messages that require human intervention"""
+    try:
+        # Log the handoff request
+        log_data = {
+            'user_id': phone_number,
+            'timestamp': datetime.now().isoformat(),
+            'direction': 'incoming',
+            'raw_text': message_text,
+            'llm_sentiment': 'neutral',
+            'llm_tags': ['HUMAN_HANDOFF', 'URGENT']
+        }
+        
+        log_id = f"{phone_number}_{int(datetime.now().timestamp())}"
+        db.log_message(log_id, log_data)
+        
+        # Send response to user
+        response_message = ("Thank you for reaching out. A member of our team will contact you shortly. "
+                          "In the meantime, know that you are valued and your journey matters. 🙏")
+        
+        whatsapp_service.send_message(phone_number, response_message)
+        
+        logger.warning(f"HUMAN HANDOFF requested by {phone_number}: {message_text}")
+        
+    except Exception as e:
+        logger.error(f"Error handling human handoff for {phone_number}: {e}")
+
+def handle_reflection_response(phone_number: str, message_text: str):
+    """Handle user's reflection response"""
+    try:
+        # Analyze the response with Gemini
+        analysis = gemini_service.analyze_response(message_text)
+        
+        # Log the response
+        log_data = {
+            'user_id': phone_number,
+            'timestamp': datetime.now().isoformat(),
+            'direction': 'incoming',
+            'raw_text': message_text,
+            'llm_sentiment': analysis['sentiment'],
+            'llm_tags': analysis['tags']
+        }
+        
+        log_id = f"{phone_number}_{int(datetime.now().timestamp())}"
+        db.log_message(log_id, log_data)
+        
+        # Send acknowledgment
+        acknowledgments = [
+            "Thank you for sharing your reflection. 🙏",
+            "I appreciate you taking the time to reflect on this.",
+            "Your thoughts are valuable. Thank you for sharing.",
+            "Thank you for your honest reflection.",
+        ]
+        
+        import random
+        response = random.choice(acknowledgments)
+        whatsapp_service.send_message(phone_number, response)
+        
+        logger.info(f"Processed reflection from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
+        
+    except Exception as e:
+        logger.error(f"Error handling reflection response from {phone_number}: {e}")
+        # Still acknowledge the user's response
+        whatsapp_service.send_message(phone_number, "Thank you for your reflection. 🙏")
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "database": "operational",
+            "whatsapp": "operational",
+            "gemini": "operational"
+        }
+    })
+
+if __name__ == '__main__':
+    # Initialize database with sample content
+    db.initialize_content()
+    
+    # Start background scheduler
+    start_scheduler()
+    
+    # Start Flask app
+    app.run(host='0.0.0.0', port=5000, debug=True)

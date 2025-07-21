@@ -1,0 +1,83 @@
+/* Custom styles for Faith Journey Dashboard */
+
+.message-preview {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(255, 255, 255, 0.125);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--bs-secondary);
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.text-muted {
+    opacity: 0.75;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .message-preview {
+        max-width: 150px;
+    }
+    
+    .badge {
+        font-size: 0.7em;
+    }
+}
+
+/* Loading state for real-time updates */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Status indicators */
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-online {
+    background-color: var(--bs-success);
+}
+
+.status-offline {
+    background-color: var(--bs-danger);
+}
+
+/* Custom scrollbar for message table */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: var(--bs-dark);
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-light);
+}

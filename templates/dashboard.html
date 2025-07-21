@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faith Journey Dashboard</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-heart me-2"></i>
+                Faith Journey Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-users fa-2x text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="card-title mb-1">Active Users</h5>
+                                <h2 class="mb-0">{{ active_users }}</h2>
+                                <small class="text-muted">Currently on their journey</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-user-check fa-2x text-success"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="card-title mb-1">Total Users</h5>
+                                <h2 class="mb-0">{{ total_users }}</h2>
+                                <small class="text-muted">All time registrations</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>System Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="badge bg-success me-2">●</span>
+                                    <span>WhatsApp Service</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="badge bg-success me-2">●</span>
+                                    <span>Database</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="badge bg-success me-2">●</span>
+                                    <span>AI Analysis</span>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Daily content scheduled for 8:00 AM daily
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Messages -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Recent Messages</h5>
+                        <span class="badge bg-secondary">Last 10</span>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_messages %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Message</th>
+                                            <th>Sentiment</th>
+                                            <th>Tags</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for message in recent_messages %}
+                                        <tr>
+                                            <td>
+                                                <code class="text-muted">{{ message.user_id[-4:] }}****</code>
+                                            </td>
+                                            <td>
+                                                <div class="message-preview">
+                                                    {{ message.raw_text[:50] }}{% if message.raw_text|length > 50 %}...{% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if message.llm_sentiment == 'positive' %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-smile me-1"></i>{{ message.llm_sentiment|title }}
+                                                    </span>
+                                                {% elif message.llm_sentiment == 'negative' %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-frown me-1"></i>{{ message.llm_sentiment|title }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-meh me-1"></i>{{ message.llm_sentiment|title }}
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% for tag in message.llm_tags %}
+                                                    <span class="badge bg-info me-1">{{ tag }}</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ message.timestamp[:19].replace('T', ' ') }}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No messages yet. Messages will appear here as users interact with the bot.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Getting Started</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>For Users:</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-play text-success me-2"></i>Send <code>START</code> to begin the journey</li>
+                                    <li><i class="fas fa-stop text-danger me-2"></i>Send <code>STOP</code> to unsubscribe</li>
+                                    <li><i class="fas fa-question text-info me-2"></i>Send <code>HELP</code> for assistance</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>System Features:</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-clock text-primary me-2"></i>Daily content at 8:00 AM</li>
+                                    <li><i class="fas fa-brain text-warning me-2"></i>AI-powered response analysis</li>
+                                    <li><i class="fas fa-hands-helping text-success me-2"></i>Human handoff detection</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3" role="alert">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Development Mode:</strong> WhatsApp messages are currently being simulated in the console. 
+                            Configure your WhatsApp Business API credentials in the environment variables to enable real messaging.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-5 py-4 bg-dark">
+        <div class="container text-center">
+            <p class="mb-0 text-muted">
+                <i class="fas fa-heart text-danger me-1"></i>
+                Faith Journey Bot - Bringing hearts together through understanding
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-refresh dashboard every 30 seconds
+        setTimeout(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>
