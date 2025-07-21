@@ -2,13 +2,16 @@ import os
 import json
 import logging
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, make_response
-from models import db, User, Content, MessageLog
+from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash
+from models import db, User, Content, MessageLog, AdminUser
 from db_manager import DatabaseManager
 from services import WhatsAppService, TelegramService, GeminiService
 from scheduler import ContentScheduler
 import threading
 import time
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm
+from urllib.parse import urlparse
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -17,6 +20,16 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return AdminUser.query.get(int(user_id))
 
 # Configure PostgreSQL database
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
@@ -77,6 +90,7 @@ def start_scheduler():
     logger.info("Background scheduler started")
 
 @app.route('/')
+@login_required
 def dashboard():
     """Simple dashboard to monitor the system"""
     ensure_scheduler_running()  # Start scheduler on first request
@@ -93,7 +107,8 @@ def dashboard():
         return render_template('dashboard.html', 
                              user_stats=user_stats,
                              recent_messages=recent_messages_data,
-                             human_handoffs=human_handoff_data)
+                             human_handoffs=human_handoff_data,
+                             user=current_user)
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
         return f"Dashboard error: {e}", 500
@@ -589,9 +604,10 @@ def test_interface():
     return render_template('test.html')
 
 @app.route('/cms')
+@login_required
 def cms():
     """Content Management System for 30-day journey content"""
-    return render_template('cms.html')
+    return render_template('cms.html', user=current_user)
 
 @app.route('/api/content', methods=['GET'])
 def get_all_content():
@@ -705,6 +721,7 @@ def chat_history(user_id):
         return f"Error loading chat history: {e}", 500
 
 @app.route('/settings')
+@login_required
 def settings_page():
     """Display chatbot settings page"""
     try:
@@ -721,7 +738,7 @@ Your role:
 
 Always maintain a respectful, caring tone and be ready to offer prayer or encouragement when needed."""
         
-        return render_template('settings.html', settings=settings, default_prompt=default_prompt)
+        return render_template('settings.html', settings=settings, default_prompt=default_prompt, user=current_user)
     except Exception as e:
         logger.error(f"Error loading settings: {e}")
         return f"Error loading settings: {e}", 500
@@ -844,11 +861,12 @@ def test_chatbot_response():
 
 # Chat Management Routes
 @app.route('/chat-management')
+@login_required
 def chat_management_page():
     """Display chat management page"""
     try:
         stats = db_manager.get_chat_management_stats()
-        return render_template('chat_management.html', stats=stats)
+        return render_template('chat_management.html', stats=stats, user=current_user)
     except Exception as e:
         logger.error(f"Error loading chat management page: {e}")
         return f"Error loading chat management page: {e}", 500
@@ -1010,6 +1028,7 @@ def get_recent_messages():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/chat/<int:user_id>')
+@login_required
 def view_full_chat(user_id):
     """Display full chat history for a specific user"""
     try:
@@ -1030,10 +1049,131 @@ def view_full_chat(user_id):
             'join_date': user.join_date
         }
         
-        return render_template('full_chat.html', user=user_dict, messages=messages)
+        return render_template('full_chat.html', user=user_dict, messages=messages, current_user=current_user)
     except Exception as e:
         logger.error(f"Error loading chat history: {e}")
         return f"Error loading chat history: {e}", 500
+
+# Authentication Routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = AdminUser.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data) and user.is_active:
+            login_user(user, remember=form.remember_me.data)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            next_page = request.args.get('next')
+            if not next_page or urlparse(next_page).netloc != '':
+                next_page = url_for('dashboard')
+            flash('Login successful!', 'success')
+            return redirect(next_page)
+        flash('Invalid username or password', 'error')
+    return render_template('auth/login.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Logout user"""
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+@login_required
+def register():
+    """Registration page (admin only)"""
+    if current_user.role != 'super_admin':
+        flash('Only super admins can create new users.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = AdminUser(
+            username=form.username.data,
+            email=form.email.data,
+            full_name=form.full_name.data,
+            role=form.role.data
+        )
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash(f'User {form.username.data} has been registered successfully!', 'success')
+        return redirect(url_for('user_management'))
+    return render_template('auth/register.html', form=form)
+
+@app.route('/user-management')
+@login_required
+def user_management():
+    """User management page"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Super admin privileges required.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    users = AdminUser.query.all()
+    return render_template('auth/user_management.html', users=users)
+
+@app.route('/edit-user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def edit_user(user_id):
+    """Edit user page"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Super admin privileges required.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = AdminUser.query.get_or_404(user_id)
+    form = EditUserForm(obj=user)
+    
+    if form.validate_on_submit():
+        user.username = form.username.data
+        user.email = form.email.data
+        user.full_name = form.full_name.data
+        user.role = form.role.data
+        user.is_active = form.is_active.data
+        db.session.commit()
+        flash(f'User {user.username} has been updated successfully!', 'success')
+        return redirect(url_for('user_management'))
+    
+    return render_template('auth/edit_user.html', form=form, user=user)
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Change password page"""
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if current_user.check_password(form.current_password.data):
+            current_user.set_password(form.new_password.data)
+            db.session.commit()
+            flash('Your password has been changed successfully!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Current password is incorrect.', 'error')
+    return render_template('auth/change_password.html', form=form)
+
+@app.route('/delete-user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    """Delete user"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Super admin privileges required.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = AdminUser.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'error')
+        return redirect(url_for('user_management'))
+    
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User {username} has been deleted successfully!', 'success')
+    return redirect(url_for('user_management'))
 
 if __name__ == '__main__':
     with app.app_context():
@@ -1042,6 +1182,19 @@ if __name__ == '__main__':
         
         # Initialize database with sample content
         db_manager.initialize_sample_content()
+        
+        # Create default super admin if no users exist
+        if AdminUser.query.count() == 0:
+            admin = AdminUser(
+                username='admin',
+                email='admin@faithjourney.com',
+                full_name='System Administrator',
+                role='super_admin'
+            )
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            logger.info("Default admin user created: admin / admin123")
     
     # Start background scheduler
     start_scheduler()

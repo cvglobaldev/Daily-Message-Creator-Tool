@@ -5,6 +5,8 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import String, Integer, DateTime, Text, JSON, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional, Dict, Any
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class Base(DeclarativeBase):
     pass
@@ -102,6 +104,43 @@ class MessageLog(db.Model):
             'llm_tags': self.llm_tags or [],
             'llm_confidence': self.llm_confidence,
             'is_human_handoff': self.is_human_handoff
+        }
+
+class AdminUser(UserMixin, db.Model):
+    """Admin user model for authentication"""
+    __tablename__ = 'admin_users'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default='admin')  # admin, super_admin
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
+    def set_password(self, password):
+        """Set password hash"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Check password against hash"""
+        return check_password_hash(self.password_hash, password)
+    
+    def __repr__(self):
+        return f'<AdminUser {self.username} ({self.role})>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'full_name': self.full_name,
+            'role': self.role,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat(),
+            'last_login': self.last_login.isoformat() if self.last_login else None
         }
 
 class SystemSettings(db.Model):
