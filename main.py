@@ -46,16 +46,10 @@ def start_scheduler():
     def run_scheduler():
         while True:
             try:
-                current_time = datetime.now().strftime("%H:%M")
-                # Run daily content delivery at 8:00 AM
-                if current_time == "08:00":
-                    logger.info("Running daily content scheduler...")
-                    scheduler.send_daily_content()
-                    # Sleep for 60 seconds to avoid running multiple times in the same minute
-                    time.sleep(60)
-                else:
-                    # Check every 30 seconds
-                    time.sleep(30)
+                logger.info("Running content scheduler (every 5 minutes for testing)...")
+                scheduler.send_daily_content()
+                # Sleep for 5 minutes (300 seconds) between content deliveries
+                time.sleep(300)
             except Exception as e:
                 logger.error(f"Error in scheduler: {e}")
                 time.sleep(60)
