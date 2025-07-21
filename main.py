@@ -34,6 +34,22 @@ whatsapp_service = WhatsAppService()
 gemini_service = GeminiService()
 scheduler = ContentScheduler(db_manager, whatsapp_service, gemini_service)
 
+# Global flag to ensure scheduler starts only once
+scheduler_started = False
+
+def ensure_scheduler_running():
+    """Ensure the scheduler is running (called on first request)"""
+    global scheduler_started
+    if not scheduler_started:
+        with app.app_context():
+            # Create database tables if they don't exist
+            db.create_all()
+            # Initialize sample content if needed
+            db_manager.initialize_sample_content()
+        # Start the scheduler
+        start_scheduler()
+        scheduler_started = True
+
 # Keywords that trigger human handoff
 HUMAN_HANDOFF_KEYWORDS = [
     "talk to someone", "speak to a person", "pray with me", "need help",
@@ -47,7 +63,8 @@ def start_scheduler():
         while True:
             try:
                 logger.info("Running content scheduler (every 5 minutes for testing)...")
-                scheduler.send_daily_content()
+                with app.app_context():  # Ensure Flask app context for database operations
+                    scheduler.send_daily_content()
                 # Sleep for 5 minutes (300 seconds) between content deliveries
                 time.sleep(300)
             except Exception as e:
@@ -61,6 +78,7 @@ def start_scheduler():
 @app.route('/')
 def dashboard():
     """Simple dashboard to monitor the system"""
+    ensure_scheduler_running()  # Start scheduler on first request
     try:
         # Get basic stats
         user_stats = db_manager.get_user_stats()
