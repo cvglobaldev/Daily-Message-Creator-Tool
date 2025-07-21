@@ -728,7 +728,7 @@ Always maintain a respectful, caring tone and be ready to offer prayer or encour
 
 @app.route('/api/send-message', methods=['POST'])
 def send_message_to_user():
-    """Send a message from admin to user"""
+    """Send a message from admin to user (legacy endpoint)"""
     try:
         data = request.get_json()
         user_id = data.get('user_id')
@@ -739,8 +739,9 @@ def send_message_to_user():
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
             
-        # Send message via WhatsApp
-        success = whatsapp_service.send_message(user.phone_number, message)
+        # Determine platform and send message
+        platform = 'telegram' if user.phone_number.startswith('tg_') else 'whatsapp'
+        success = send_message_to_platform(user.phone_number, platform, message)
         
         if success:
             # Log the message
@@ -748,12 +749,47 @@ def send_message_to_user():
                 user=user,
                 direction='outgoing',
                 raw_text=message,
-                tags=tags
+                tags=tags or ['ADMIN_MESSAGE']
             )
             
         return jsonify({'success': success})
     except Exception as e:
         logger.error(f"Error sending message: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/send-admin-message', methods=['POST'])
+def send_admin_message():
+    """Send a message from admin to user (new endpoint for full chat interface)"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        message = data.get('message')
+        tags = data.get('tags', [])
+        
+        user = db_manager.get_user_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+            
+        # Determine platform and send message
+        platform = 'telegram' if user.phone_number.startswith('tg_') else 'whatsapp'
+        success = send_message_to_platform(user.phone_number, platform, message)
+        
+        if success:
+            # Log the message with admin tags
+            admin_tags = tags if tags else ['ADMIN_MESSAGE']
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=message,
+                sentiment='neutral',
+                tags=admin_tags,
+                confidence=1.0
+            )
+            logger.info(f"Admin message sent to {user.phone_number} ({platform}): {message[:50]}...")
+            
+        return jsonify({'success': success, 'platform': platform})
+    except Exception as e:
+        logger.error(f"Error sending admin message: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/update-message-tags', methods=['POST'])
