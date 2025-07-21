@@ -320,9 +320,9 @@ def test_message():
         
         # Temporarily override WhatsApp service to capture responses
         original_send = whatsapp_service.send_message
-        def capture_send(to, text):
-            simulated_responses.append(f"Bot: {text}")
-            return original_send(to, text)
+        def capture_send(to, message):
+            simulated_responses.append(f"Bot: {message}")
+            return original_send(to, message)
         whatsapp_service.send_message = capture_send
         
         try:
@@ -369,6 +369,67 @@ def get_users():
 def test_interface():
     """Test interface for simulating WhatsApp messages"""
     return render_template('test.html')
+
+@app.route('/cms')
+def cms():
+    """Content Management System for 30-day journey content"""
+    return render_template('cms.html')
+
+@app.route('/api/content', methods=['GET'])
+def get_all_content():
+    """API endpoint to get all content"""
+    try:
+        content = db_manager.get_all_content()
+        return jsonify([c.to_dict() for c in content])
+    except Exception as e:
+        logger.error(f"Error getting content: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/content', methods=['POST'])
+def create_content():
+    """API endpoint to create new content"""
+    try:
+        data = request.get_json()
+        content_id = db_manager.create_content(
+            day_number=data['day_number'],
+            title=data['title'],
+            content=data['content'],
+            reflection_question=data['reflection_question'],
+            cultural_note=data.get('cultural_note', ''),
+            is_active=data.get('is_active', True)
+        )
+        return jsonify({"status": "success", "id": content_id})
+    except Exception as e:
+        logger.error(f"Error creating content: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/content/<int:content_id>', methods=['PUT'])
+def update_content(content_id):
+    """API endpoint to update content"""
+    try:
+        data = request.get_json()
+        db_manager.update_content(
+            content_id=content_id,
+            title=data['title'],
+            content=data['content'],
+            reflection_question=data['reflection_question'],
+            cultural_note=data.get('cultural_note', ''),
+            is_active=data.get('is_active', True)
+        )
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"Error updating content: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/content/<int:content_id>', methods=['DELETE'])
+def delete_content(content_id):
+    """API endpoint to delete content"""
+    try:
+        db_manager.delete_content(content_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"Error deleting content: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

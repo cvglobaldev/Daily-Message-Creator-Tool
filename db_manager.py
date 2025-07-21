@@ -98,38 +98,30 @@ class DatabaseManager:
     def get_content_by_day(self, day: int) -> Optional[Content]:
         """Get content for specific day"""
         try:
-            return Content.query.filter_by(day=day, is_active=True).first()
+            return Content.query.filter_by(day_number=day, is_active=True).first()
         except SQLAlchemyError as e:
             logger.error(f"Error getting content for day {day}: {e}")
             return None
     
-    def create_content(self, day: int, media_type: str, content_text: str, 
+    def create_content_legacy(self, day: int, media_type: str, content_text: str, 
                       reflection_question: str, media_url: Optional[str] = None) -> Optional[Content]:
-        """Create new content"""
-        try:
-            content = Content(
-                day=day,
-                media_type=media_type,
-                content_text=content_text,
-                media_url=media_url,
-                reflection_question=reflection_question
-            )
-            self.db.session.add(content)
-            self.db.session.commit()
-            logger.info(f"Content for day {day} created successfully")
-            return content
-        except SQLAlchemyError as e:
-            self.db.session.rollback()
-            logger.error(f"Error creating content for day {day}: {e}")
-            return None
+        """Legacy method for backward compatibility"""
+        return self.create_content(
+            day_number=day,
+            title="Legacy Content",
+            content=content_text,
+            reflection_question=reflection_question,
+            cultural_note="",
+            is_active=True
+        )
     
-    def get_all_content(self, active_only: bool = True) -> List[Content]:
-        """Get all content"""
+    def get_all_content_legacy(self, active_only: bool = True) -> List[Content]:
+        """Legacy method for backward compatibility"""
         try:
             query = Content.query
             if active_only:
                 query = query.filter_by(is_active=True)
-            return query.order_by(Content.day).all()
+            return query.order_by(Content.day_number).all()
         except SQLAlchemyError as e:
             logger.error(f"Error getting all content: {e}")
             return []
@@ -306,3 +298,72 @@ class DatabaseManager:
             
         except Exception as e:
             logger.error(f"Error initializing sample content: {e}")
+    
+    # Content Management Methods
+    def get_all_content(self):
+        """Get all content ordered by day number"""
+        try:
+            return Content.query.order_by(Content.day_number).all()
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting all content: {e}")
+            return []
+    
+    def create_content(self, day_number, title, content, reflection_question, cultural_note='', is_active=True):
+        """Create new content"""
+        try:
+            new_content = Content(
+                day_number=day_number,
+                title=title,
+                content=content,
+                reflection_question=reflection_question,
+                cultural_note=cultural_note,
+                is_active=is_active
+            )
+            self.db.session.add(new_content)
+            self.db.session.commit()
+            logger.info(f"Content for day {day_number} created successfully")
+            return new_content.id
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error creating content: {e}")
+            return None
+    
+    def update_content(self, content_id, title, content, reflection_question, cultural_note='', is_active=True):
+        """Update existing content"""
+        try:
+            content_obj = Content.query.get(content_id)
+            if not content_obj:
+                logger.error(f"Content with id {content_id} not found")
+                return False
+            
+            content_obj.title = title
+            content_obj.content = content
+            content_obj.reflection_question = reflection_question
+            content_obj.cultural_note = cultural_note
+            content_obj.is_active = is_active
+            content_obj.updated_at = datetime.utcnow()
+            
+            self.db.session.commit()
+            logger.info(f"Content {content_id} updated successfully")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error updating content: {e}")
+            return False
+    
+    def delete_content(self, content_id):
+        """Delete content"""
+        try:
+            content_obj = Content.query.get(content_id)
+            if not content_obj:
+                logger.error(f"Content with id {content_id} not found")
+                return False
+            
+            self.db.session.delete(content_obj)
+            self.db.session.commit()
+            logger.info(f"Content {content_id} deleted successfully")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error deleting content: {e}")
+            return False

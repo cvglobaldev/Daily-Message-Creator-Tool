@@ -45,27 +45,29 @@ class Content(db.Model):
     __tablename__ = 'content'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    day: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
-    media_type: Mapped[str] = mapped_column(String(20), nullable=False)  # text, image, video, audio
-    content_text: Mapped[str] = mapped_column(Text, nullable=False)
-    media_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    day_number: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
     reflection_question: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    cultural_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __repr__(self):
-        return f'<Content Day {self.day} - {self.media_type}>'
+        return f'<Content Day {self.day_number} - {self.title}>'
     
     def to_dict(self):
         return {
             'id': self.id,
-            'day': self.day,
-            'media_type': self.media_type,
-            'content_text': self.content_text,
-            'media_url': self.media_url,
+            'day_number': self.day_number,
+            'title': self.title,
+            'content': self.content,
             'reflection_question': self.reflection_question,
+            'cultural_note': self.cultural_note,
+            'is_active': self.is_active,
             'created_at': self.created_at.isoformat(),
-            'is_active': self.is_active
+            'updated_at': self.updated_at.isoformat()
         }
 
 class MessageLog(db.Model):

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faith Journey - Content Management System</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .content-preview {
+            background-color: var(--bs-gray-800);
+            border-left: 4px solid var(--bs-primary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.375rem;
+        }
+        .day-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .day-card:hover {
+            transform: translateY(-2px);
+        }
+        .content-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-edit me-2"></i>
+                Faith Journey - Content Management System
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link me-3" href="/">
+                    <i class="fas fa-chart-line me-1"></i>Dashboard
+                </a>
+                <a class="nav-link" href="/test-interface">
+                    <i class="fas fa-vial me-1"></i>Test
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Content Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>30-Day Journey Overview</h5>
+                        <button class="btn btn-success" onclick="addNewDay()">
+                            <i class="fas fa-plus me-1"></i>Add Day
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="daysOverview">
+                            <!-- Days will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Editor Modal -->
+        <div class="modal fade" id="contentModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-edit me-2"></i>
+                            Edit Day <span id="modalDayNumber">1</span> Content
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="contentForm">
+                            <input type="hidden" id="contentId" />
+                            
+                            <div class="mb-3">
+                                <label for="dayNumber" class="form-label">Day Number</label>
+                                <input type="number" class="form-control" id="dayNumber" min="1" max="30" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title</label>
+                                <input type="text" class="form-control" id="title" placeholder="e.g., The Light of Hope" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Main Content</label>
+                                <textarea class="form-control" id="content" rows="8" placeholder="Enter the main teaching content for this day..." required></textarea>
+                                <div class="form-text">This is the main spiritual teaching content that will be sent to users.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reflectionQuestion" class="form-label">Reflection Question</label>
+                                <textarea class="form-control" id="reflectionQuestion" rows="3" placeholder="e.g., How has light guided you through difficult times?" required></textarea>
+                                <div class="form-text">A thoughtful question to encourage user reflection and response.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="culturalNote" class="form-label">Cultural Note (Optional)</label>
+                                <textarea class="form-control" id="culturalNote" rows="2" placeholder="Optional note addressing Muslim background or cultural sensitivity..."></textarea>
+                                <div class="form-text">Sensitive guidance for Muslim-background readers (optional).</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="isActive">
+                                    <label class="form-check-label" for="isActive">
+                                        Active (will be sent to users)
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Content Preview:</h6>
+                                <div class="content-preview" id="contentPreview">
+                                    Preview will appear here as you type...
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger me-auto" id="deleteButton" onclick="deleteContent()" style="display: none;">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="saveContent()">
+                            <i class="fas fa-save me-1"></i>Save Content
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let contentModal;
+        let allContent = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            contentModal = new bootstrap.Modal(document.getElementById('contentModal'));
+            loadAllContent();
+            
+            // Real-time preview
+            ['title', 'content', 'reflectionQuestion', 'culturalNote'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePreview);
+            });
+        });
+
+        function loadAllContent() {
+            fetch('/api/content')
+                .then(response => response.json())
+                .then(data => {
+                    allContent = data;
+                    displayDaysOverview();
+                })
+                .catch(error => {
+                    console.error('Error loading content:', error);
+                    showAlert('Error loading content: ' + error.message, 'danger');
+                });
+        }
+
+        function displayDaysOverview() {
+            const container = document.getElementById('daysOverview');
+            container.innerHTML = '';
+            
+            // Create 30 day cards
+            for (let day = 1; day <= 30; day++) {
+                const dayContent = allContent.find(c => c.day_number === day);
+                const hasContent = dayContent && dayContent.content;
+                const isActive = dayContent ? dayContent.is_active : false;
+                
+                const card = document.createElement('div');
+                card.className = 'col-md-3 col-sm-4 col-6 mb-3';
+                card.innerHTML = `
+                    <div class="card day-card h-100 ${hasContent ? 'border-success' : 'border-secondary'}" 
+                         onclick="editDay(${day})" style="cursor: pointer; position: relative;">
+                        <div class="content-status">
+                            ${hasContent ? 
+                                `<span class="badge ${isActive ? 'bg-success' : 'bg-warning'}">
+                                    <i class="fas ${isActive ? 'fa-check' : 'fa-pause'}"></i>
+                                </span>` : 
+                                '<span class="badge bg-secondary"><i class="fas fa-plus"></i></span>'
+                            }
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title">Day ${day}</h6>
+                            <p class="card-text flex-grow-1 small">
+                                ${hasContent ? 
+                                    `<strong>${dayContent.title || 'Untitled'}</strong><br>
+                                     <span class="text-muted">${(dayContent.content || '').substring(0, 60)}...</span>` : 
+                                    '<span class="text-muted">Click to add content</span>'
+                                }
+                            </p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function editDay(dayNumber) {
+            const dayContent = allContent.find(c => c.day_number === dayNumber);
+            
+            document.getElementById('modalDayNumber').textContent = dayNumber;
+            document.getElementById('contentId').value = dayContent ? dayContent.id : '';
+            document.getElementById('dayNumber').value = dayNumber;
+            document.getElementById('title').value = dayContent ? dayContent.title || '' : '';
+            document.getElementById('content').value = dayContent ? dayContent.content || '' : '';
+            document.getElementById('reflectionQuestion').value = dayContent ? dayContent.reflection_question || '' : '';
+            document.getElementById('culturalNote').value = dayContent ? dayContent.cultural_note || '' : '';
+            document.getElementById('isActive').checked = dayContent ? dayContent.is_active : true;
+            
+            document.getElementById('deleteButton').style.display = dayContent ? 'block' : 'none';
+            
+            updatePreview();
+            contentModal.show();
+        }
+
+        function addNewDay() {
+            // Find next available day
+            const usedDays = allContent.map(c => c.day_number);
+            let nextDay = 1;
+            while (usedDays.includes(nextDay) && nextDay <= 30) {
+                nextDay++;
+            }
+            
+            if (nextDay > 30) {
+                showAlert('All 30 days already have content!', 'warning');
+                return;
+            }
+            
+            editDay(nextDay);
+        }
+
+        function updatePreview() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const question = document.getElementById('reflectionQuestion').value;
+            const cultural = document.getElementById('culturalNote').value;
+            
+            let preview = '';
+            if (title) preview += `<strong>📖 ${title}</strong><br><br>`;
+            if (content) preview += `${content.replace(/\n/g, '<br>')}<br><br>`;
+            if (cultural) preview += `<em>💡 ${cultural.replace(/\n/g, '<br>')}</em><br><br>`;
+            if (question) preview += `<strong>🤔 Reflection:</strong><br>${question.replace(/\n/g, '<br>')}`;
+            
+            document.getElementById('contentPreview').innerHTML = preview || 'Preview will appear here as you type...';
+        }
+
+        function saveContent() {
+            const formData = {
+                id: document.getElementById('contentId').value || null,
+                day_number: parseInt(document.getElementById('dayNumber').value),
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value,
+                reflection_question: document.getElementById('reflectionQuestion').value,
+                cultural_note: document.getElementById('culturalNote').value,
+                is_active: document.getElementById('isActive').checked
+            };
+            
+            if (!formData.title || !formData.content || !formData.reflection_question) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            const method = formData.id ? 'PUT' : 'POST';
+            const url = formData.id ? `/api/content/${formData.id}` : '/api/content';
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showAlert(`Day ${formData.day_number} content saved successfully!`, 'success');
+                    contentModal.hide();
+                    loadAllContent();
+                } else {
+                    showAlert('Error saving content: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                showAlert('Error saving content: ' + error.message, 'danger');
+            });
+        }
+
+        function deleteContent() {
+            const contentId = document.getElementById('contentId').value;
+            const dayNumber = document.getElementById('dayNumber').value;
+            
+            if (!contentId) return;
+            
+            if (!confirm(`Are you sure you want to delete Day ${dayNumber} content? This cannot be undone.`)) {
+                return;
+            }
+            
+            fetch(`/api/content/${contentId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showAlert(`Day ${dayNumber} content deleted successfully!`, 'success');
+                    contentModal.hide();
+                    loadAllContent();
+                } else {
+                    showAlert('Error deleting content: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                showAlert('Error deleting content: ' + error.message, 'danger');
+            });
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
