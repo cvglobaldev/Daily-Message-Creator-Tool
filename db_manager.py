@@ -308,7 +308,7 @@ class DatabaseManager:
             logger.error(f"Error getting all content: {e}")
             return []
     
-    def create_content(self, day_number, title, content, reflection_question, cultural_note='', is_active=True):
+    def create_content(self, day_number, title, content, reflection_question, tags=None, is_active=True):
         """Create new content"""
         try:
             new_content = Content(
@@ -316,7 +316,7 @@ class DatabaseManager:
                 title=title,
                 content=content,
                 reflection_question=reflection_question,
-                cultural_note=cultural_note,
+                tags=tags or [],
                 is_active=is_active
             )
             self.db.session.add(new_content)
@@ -328,7 +328,7 @@ class DatabaseManager:
             logger.error(f"Error creating content: {e}")
             return None
     
-    def update_content(self, content_id, title, content, reflection_question, cultural_note='', is_active=True):
+    def update_content(self, content_id, title, content, reflection_question, tags=None, is_active=True):
         """Update existing content"""
         try:
             content_obj = Content.query.get(content_id)
@@ -339,7 +339,7 @@ class DatabaseManager:
             content_obj.title = title
             content_obj.content = content
             content_obj.reflection_question = reflection_question
-            content_obj.cultural_note = cultural_note
+            content_obj.tags = tags or []
             content_obj.is_active = is_active
             content_obj.updated_at = datetime.utcnow()
             

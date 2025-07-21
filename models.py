@@ -49,7 +49,7 @@ class Content(db.Model):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     reflection_question: Mapped[str] = mapped_column(Text, nullable=False)
-    cultural_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    tags: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -64,7 +64,7 @@ class Content(db.Model):
             'title': self.title,
             'content': self.content,
             'reflection_question': self.reflection_question,
-            'cultural_note': self.cultural_note,
+            'tags': self.tags or [],
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()

@@ -51,10 +51,21 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>30-Day Journey Overview</h5>
-                        <button class="btn btn-success" onclick="addNewDay()">
-                            <i class="fas fa-plus me-1"></i>Add Day
-                        </button>
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i><span id="journeyTitle">30-Day</span> Journey Overview</h5>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="form-group mb-0">
+                                <label for="journeyDays" class="form-label mb-1 small">Journey Length:</label>
+                                <select class="form-select form-select-sm" id="journeyDays" onchange="updateJourneyLength()">
+                                    <option value="10">10 Days</option>
+                                    <option value="30" selected>30 Days</option>
+                                    <option value="60">60 Days</option>
+                                    <option value="90">90 Days</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success" onclick="addNewDay()">
+                                <i class="fas fa-plus me-1"></i>Add Day
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row" id="daysOverview">
@@ -103,9 +114,46 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="culturalNote" class="form-label">Cultural Note (Optional)</label>
-                                <textarea class="form-control" id="culturalNote" rows="2" placeholder="Optional note addressing Muslim background or cultural sensitivity..."></textarea>
-                                <div class="form-text">Sensitive guidance for Muslim-background readers (optional).</div>
+                                <label for="tags" class="form-label">Faith Journey Tags</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_bible_exposure" value="Bible Exposure">
+                                            <label class="form-check-label" for="tag_bible_exposure">Bible Exposure</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_christian_learning" value="Christian Learning">
+                                            <label class="form-check-label" for="tag_christian_learning">Christian Learning</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_bible_engagement" value="Bible Engagement">
+                                            <label class="form-check-label" for="tag_bible_engagement">Bible Engagement</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_salvation_prayer" value="Salvation Prayer">
+                                            <label class="form-check-label" for="tag_salvation_prayer">Salvation Prayer</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_gospel_presentation" value="Gospel Presentation">
+                                            <label class="form-check-label" for="tag_gospel_presentation">Gospel Presentation</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_prayer" value="Prayer">
+                                            <label class="form-check-label" for="tag_prayer">Prayer</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_introduction_to_jesus" value="Introduction to Jesus">
+                                            <label class="form-check-label" for="tag_introduction_to_jesus">Introduction to Jesus</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tag_holy_spirit_empowerment" value="Holy Spirit Empowerment">
+                                            <label class="form-check-label" for="tag_holy_spirit_empowerment">Holy Spirit Empowerment</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-text">Select relevant tags for this day's content focus.</div>
                             </div>
                             
                             <div class="mb-3">
@@ -149,8 +197,13 @@
             loadAllContent();
             
             // Real-time preview
-            ['title', 'content', 'reflectionQuestion', 'culturalNote'].forEach(id => {
+            ['title', 'content', 'reflectionQuestion'].forEach(id => {
                 document.getElementById(id).addEventListener('input', updatePreview);
+            });
+            
+            // Add event listeners for tag checkboxes
+            document.querySelectorAll('input[type="checkbox"][id^="tag_"]').forEach(checkbox => {
+                checkbox.addEventListener('change', updatePreview);
             });
         });
 
@@ -167,15 +220,24 @@
                 });
         }
 
+        let currentJourneyDays = 30;
+
+        function updateJourneyLength() {
+            currentJourneyDays = parseInt(document.getElementById('journeyDays').value);
+            document.getElementById('journeyTitle').textContent = `${currentJourneyDays}-Day`;
+            displayDaysOverview();
+        }
+
         function displayDaysOverview() {
             const container = document.getElementById('daysOverview');
             container.innerHTML = '';
             
-            // Create 30 day cards
-            for (let day = 1; day <= 30; day++) {
+            // Create day cards based on selected journey length
+            for (let day = 1; day <= currentJourneyDays; day++) {
                 const dayContent = allContent.find(c => c.day_number === day);
                 const hasContent = dayContent && dayContent.content;
                 const isActive = dayContent ? dayContent.is_active : false;
+                const tags = dayContent?.tags || [];
                 
                 const card = document.createElement('div');
                 card.className = 'col-md-3 col-sm-4 col-6 mb-3';
@@ -195,7 +257,8 @@
                             <p class="card-text flex-grow-1 small">
                                 ${hasContent ? 
                                     `<strong>${dayContent.title || 'Untitled'}</strong><br>
-                                     <span class="text-muted">${(dayContent.content || '').substring(0, 60)}...</span>` : 
+                                     <span class="text-muted">${(dayContent.content || '').substring(0, 40)}...</span>
+                                     ${tags.length > 0 ? `<br><small class="text-info">${tags.slice(0, 2).join(', ')}${tags.length > 2 ? '...' : ''}</small>` : ''}` : 
                                     '<span class="text-muted">Click to add content</span>'
                                 }
                             </p>
@@ -215,8 +278,10 @@
             document.getElementById('title').value = dayContent ? dayContent.title || '' : '';
             document.getElementById('content').value = dayContent ? dayContent.content || '' : '';
             document.getElementById('reflectionQuestion').value = dayContent ? dayContent.reflection_question || '' : '';
-            document.getElementById('culturalNote').value = dayContent ? dayContent.cultural_note || '' : '';
             document.getElementById('isActive').checked = dayContent ? dayContent.is_active : true;
+            
+            // Set tags
+            setSelectedTags(dayContent ? dayContent.tags : []);
             
             document.getElementById('deleteButton').style.display = dayContent ? 'block' : 'none';
             
@@ -228,12 +293,12 @@
             // Find next available day
             const usedDays = allContent.map(c => c.day_number);
             let nextDay = 1;
-            while (usedDays.includes(nextDay) && nextDay <= 30) {
+            while (usedDays.includes(nextDay) && nextDay <= currentJourneyDays) {
                 nextDay++;
             }
             
-            if (nextDay > 30) {
-                showAlert('All 30 days already have content!', 'warning');
+            if (nextDay > currentJourneyDays) {
+                showAlert(`All ${currentJourneyDays} days already have content!`, 'warning');
                 return;
             }
             
@@ -244,15 +309,46 @@
             const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
             const question = document.getElementById('reflectionQuestion').value;
-            const cultural = document.getElementById('culturalNote').value;
+            const selectedTags = getSelectedTags();
             
             let preview = '';
             if (title) preview += `<strong>📖 ${title}</strong><br><br>`;
             if (content) preview += `${content.replace(/\n/g, '<br>')}<br><br>`;
-            if (cultural) preview += `<em>💡 ${cultural.replace(/\n/g, '<br>')}</em><br><br>`;
             if (question) preview += `<strong>🤔 Reflection:</strong><br>${question.replace(/\n/g, '<br>')}`;
+            if (selectedTags.length > 0) {
+                preview += `<br><br><small><strong>Tags:</strong> ${selectedTags.map(tag => `<span class="badge bg-primary">${tag}</span>`).join(' ')}</small>`;
+            }
             
             document.getElementById('contentPreview').innerHTML = preview || 'Preview will appear here as you type...';
+        }
+
+        function getSelectedTags() {
+            const tags = [];
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="tag_"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    tags.push(checkbox.value);
+                }
+            });
+            return tags;
+        }
+
+        function setSelectedTags(tags) {
+            // Clear all checkboxes first
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="tag_"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Set selected tags
+            if (tags && tags.length > 0) {
+                tags.forEach(tag => {
+                    const checkbox = document.querySelector(`input[value="${tag}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
         }
 
         function saveContent() {
@@ -262,7 +358,7 @@
                 title: document.getElementById('title').value,
                 content: document.getElementById('content').value,
                 reflection_question: document.getElementById('reflectionQuestion').value,
-                cultural_note: document.getElementById('culturalNote').value,
+                tags: getSelectedTags(),
                 is_active: document.getElementById('isActive').checked
             };
             

@@ -395,7 +395,7 @@ def create_content():
             title=data['title'],
             content=data['content'],
             reflection_question=data['reflection_question'],
-            cultural_note=data.get('cultural_note', ''),
+            tags=data.get('tags', []),
             is_active=data.get('is_active', True)
         )
         return jsonify({"status": "success", "id": content_id})
@@ -413,7 +413,7 @@ def update_content(content_id):
             title=data['title'],
             content=data['content'],
             reflection_question=data['reflection_question'],
-            cultural_note=data.get('cultural_note', ''),
+            tags=data.get('tags', []),
             is_active=data.get('is_active', True)
         )
         return jsonify({"status": "success"})
