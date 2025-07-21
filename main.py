@@ -229,11 +229,15 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
                               "You'll receive daily content for the next 10 days (every 5 minutes for testing). "
                               "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                              "Let's start with Day 1 content right now!")
+                              "Day 1 content will arrive in 10 seconds!")
             send_message_to_platform(phone_number, platform, restart_message)
             
-            # Send Day 1 content immediately
-            scheduler.send_content_to_user(phone_number)
+            # Send Day 1 content after 10 second delay
+            def delayed_content():
+                with app.app_context():
+                    time.sleep(10)
+                    scheduler.send_content_to_user(phone_number)
+            threading.Thread(target=delayed_content, daemon=True).start()
             logger.info(f"User {phone_number} restarted journey from Day 1")
             return
         
@@ -254,12 +258,16 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
                           "You'll receive daily content for the next 10 days (every 5 minutes for testing). "
                           "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                          "Let's start with Day 1 content right now!")
+                          "Day 1 content will arrive in 10 seconds!")
         
         send_message_to_platform(phone_number, platform, welcome_message)
         
-        # Send Day 1 content immediately
-        scheduler.send_content_to_user(phone_number)
+        # Send Day 1 content after 10 second delay
+        def delayed_content():
+            with app.app_context():
+                time.sleep(10)
+                scheduler.send_content_to_user(phone_number)
+        threading.Thread(target=delayed_content, daemon=True).start()
         
         logger.info(f"User {phone_number} successfully onboarded")
         
