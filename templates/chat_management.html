@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Management - Faith Journey</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .chat-row:hover {
+            background-color: var(--bs-gray-800);
+        }
+        .message-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .tag-badge {
+            font-size: 0.7rem;
+            margin: 1px;
+        }
+        .human-handoff-indicator {
+            border-left: 3px solid var(--bs-warning);
+        }
+        .filter-section {
+            background: var(--bs-gray-900);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stats-card {
+            background: var(--bs-gray-800);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .sentiment-positive { color: var(--bs-success); }
+        .sentiment-negative { color: var(--bs-danger); }
+        .sentiment-neutral { color: var(--bs-secondary); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Dashboard
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link me-3" href="/cms">
+                    <i class="fas fa-edit me-1"></i>Content Management
+                </a>
+                <a class="nav-link me-3" href="/settings">
+                    <i class="fas fa-cogs me-1"></i>Settings
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2>
+                    <i class="fas fa-comments me-3"></i>Chat Management
+                </h2>
+                <p class="text-muted">Manage user conversations, filter by date and tags, and monitor interactions</p>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h4 class="text-primary" id="totalChats">{{ stats.total_chats or 0 }}</h4>
+                    <small>Total Conversations</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h4 class="text-warning" id="handoffCount">{{ stats.handoff_count or 0 }}</h4>
+                    <small>Human Handoffs</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h4 class="text-info" id="todayMessages">{{ stats.today_messages or 0 }}</h4>
+                    <small>Today's Messages</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h4 class="text-success" id="activeUsers">{{ stats.active_users or 0 }}</h4>
+                    <small>Active Users</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="dateFrom" class="form-label">Date From</label>
+                    <input type="date" class="form-control" id="dateFrom">
+                </div>
+                <div class="col-md-3">
+                    <label for="dateTo" class="form-label">Date To</label>
+                    <input type="date" class="form-control" id="dateTo">
+                </div>
+                <div class="col-md-3">
+                    <label for="userSearch" class="form-label">User Search</label>
+                    <input type="text" class="form-control" id="userSearch" placeholder="Phone number...">
+                </div>
+                <div class="col-md-3">
+                    <label for="sentimentFilter" class="form-label">Sentiment</label>
+                    <select class="form-select" id="sentimentFilter">
+                        <option value="">All Sentiments</option>
+                        <option value="positive">Positive</option>
+                        <option value="neutral">Neutral</option>
+                        <option value="negative">Negative</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label class="form-label">Filter by Tags</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Bible Exposure" id="tag1">
+                            <label class="form-check-label" for="tag1">Bible Exposure</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Christian Learning" id="tag2">
+                            <label class="form-check-label" for="tag2">Christian Learning</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Bible Engagement" id="tag3">
+                            <label class="form-check-label" for="tag3">Bible Engagement</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Salvation Prayer" id="tag4">
+                            <label class="form-check-label" for="tag4">Salvation Prayer</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Gospel Presentation" id="tag5">
+                            <label class="form-check-label" for="tag5">Gospel Presentation</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Prayer" id="tag6">
+                            <label class="form-check-label" for="tag6">Prayer</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Introduction to Jesus" id="tag7">
+                            <label class="form-check-label" for="tag7">Introduction to Jesus</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input tag-filter" type="checkbox" value="Holy Spirit Empowerment" id="tag8">
+                            <label class="form-check-label" for="tag8">Holy Spirit Empowerment</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Special Filters</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="humanHandoffOnly">
+                        <label class="form-check-label" for="humanHandoffOnly">
+                            Human Handoff Only
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="incomingOnly">
+                        <label class="form-check-label" for="incomingOnly">
+                            User Messages Only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="d-flex gap-2 w-100">
+                        <button class="btn btn-primary" id="applyFilters">
+                            <i class="fas fa-search me-2"></i>Apply Filters
+                        </button>
+                        <button class="btn btn-secondary" id="clearFilters">
+                            <i class="fas fa-times me-2"></i>Clear
+                        </button>
+                        <button class="btn btn-success" id="exportData">
+                            <i class="fas fa-download me-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Conversations
+                </h5>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-secondary me-2" id="resultCount">Loading...</span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-sort me-1"></i>Sort
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item sort-option" href="#" data-sort="timestamp" data-order="desc">Newest First</a></li>
+                            <li><a class="dropdown-item sort-option" href="#" data-sort="timestamp" data-order="asc">Oldest First</a></li>
+                            <li><a class="dropdown-item sort-option" href="#" data-sort="phone" data-order="asc">Phone A-Z</a></li>
+                            <li><a class="dropdown-item sort-option" href="#" data-sort="sentiment" data-order="desc">Sentiment</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Time</th>
+                                <th>User</th>
+                                <th>Direction</th>
+                                <th>Message Preview</th>
+                                <th>Sentiment</th>
+                                <th>Tags</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chatTableBody">
+                            <!-- Dynamic content will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3">
+                    <nav>
+                        <ul class="pagination pagination-sm justify-content-center mb-0" id="pagination">
+                            <!-- Pagination will be generated here -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Preview Modal -->
+    <div class="modal fade" id="chatPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye me-2"></i>Message Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="messageDetails">
+                    <!-- Message details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="viewFullChat">View Full Chat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class ChatManager {
+            constructor() {
+                this.currentPage = 1;
+                this.itemsPerPage = 20;
+                this.currentSort = { field: 'timestamp', order: 'desc' };
+                this.currentFilters = {};
+                
+                this.initializeEventListeners();
+                this.loadChats();
+            }
+
+            initializeEventListeners() {
+                // Filter controls
+                document.getElementById('applyFilters').addEventListener('click', () => this.applyFilters());
+                document.getElementById('clearFilters').addEventListener('click', () => this.clearFilters());
+                document.getElementById('exportData').addEventListener('click', () => this.exportData());
+                
+                // Sort options
+                document.querySelectorAll('.sort-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.currentSort = {
+                            field: e.target.dataset.sort,
+                            order: e.target.dataset.order
+                        };
+                        this.loadChats();
+                    });
+                });
+
+                // Auto-apply filters on certain inputs
+                document.getElementById('userSearch').addEventListener('input', () => {
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => this.applyFilters(), 500);
+                });
+            }
+
+            async loadChats() {
+                try {
+                    const params = new URLSearchParams({
+                        page: this.currentPage,
+                        limit: this.itemsPerPage,
+                        sort_field: this.currentSort.field,
+                        sort_order: this.currentSort.order,
+                        ...this.currentFilters
+                    });
+
+                    const response = await fetch(`/api/chat-management/messages?${params}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.renderChatTable(data.messages);
+                        this.renderPagination(data.pagination);
+                        this.updateStats(data.stats);
+                        document.getElementById('resultCount').textContent = `${data.pagination.total} messages`;
+                    } else {
+                        console.error('Failed to load chats:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading chats:', error);
+                    document.getElementById('chatTableBody').innerHTML = 
+                        '<tr><td colspan="7" class="text-center text-danger">Error loading data</td></tr>';
+                }
+            }
+
+            renderChatTable(messages) {
+                const tbody = document.getElementById('chatTableBody');
+                if (!messages || messages.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No messages found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = messages.map(message => {
+                    const sentimentClass = message.llm_sentiment ? `sentiment-${message.llm_sentiment}` : '';
+                    const handoffClass = message.is_human_handoff ? 'human-handoff-indicator' : '';
+                    
+                    return `
+                        <tr class="chat-row ${handoffClass}" onclick="this.viewMessage(${message.id})" data-message-id="${message.id}">
+                            <td>
+                                <div>${new Date(message.timestamp).toLocaleDateString()}</div>
+                                <small class="text-muted">${new Date(message.timestamp).toLocaleTimeString()}</small>
+                            </td>
+                            <td>
+                                <strong>${message.user_phone}</strong>
+                                <br><small class="text-muted">Day ${message.user_day || 'N/A'}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-${message.direction === 'incoming' ? 'info' : 'success'}">
+                                    ${message.direction === 'incoming' ? 'User' : 'Bot'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="message-preview">${message.raw_text}</div>
+                                ${message.is_human_handoff ? '<small class="badge bg-warning mt-1">Human Required</small>' : ''}
+                            </td>
+                            <td>
+                                ${message.llm_sentiment ? `<span class="${sentimentClass}"><i class="fas fa-circle"></i> ${message.llm_sentiment}</span>` : '-'}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap">
+                                    ${(message.llm_tags || []).map(tag => 
+                                        `<span class="badge bg-secondary tag-badge">${tag}</span>`
+                                    ).join('')}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="event.stopPropagation(); this.viewMessage(${message.id})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="event.stopPropagation(); this.viewFullChat(${message.user_id})" title="Full Chat">
+                                        <i class="fas fa-comments"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Add click handlers
+                tbody.addEventListener('click', (e) => {
+                    if (e.target.closest('.btn')) return;
+                    const row = e.target.closest('tr[data-message-id]');
+                    if (row) {
+                        const messageId = row.dataset.messageId;
+                        this.viewMessage(messageId);
+                    }
+                });
+            }
+
+            renderPagination(pagination) {
+                const paginationEl = document.getElementById('pagination');
+                if (pagination.total_pages <= 1) {
+                    paginationEl.innerHTML = '';
+                    return;
+                }
+
+                let paginationHTML = '';
+                
+                // Previous button
+                if (pagination.current_page > 1) {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.current_page - 1}">Previous</a></li>`;
+                }
+
+                // Page numbers
+                const startPage = Math.max(1, pagination.current_page - 2);
+                const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+
+                if (startPage > 1) {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+                    if (startPage > 2) {
+                        paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const activeClass = i === pagination.current_page ? 'active' : '';
+                    paginationHTML += `<li class="page-item ${activeClass}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+                }
+
+                if (endPage < pagination.total_pages) {
+                    if (endPage < pagination.total_pages - 1) {
+                        paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.total_pages}">${pagination.total_pages}</a></li>`;
+                }
+
+                // Next button
+                if (pagination.current_page < pagination.total_pages) {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.current_page + 1}">Next</a></li>`;
+                }
+
+                paginationEl.innerHTML = paginationHTML;
+
+                // Add click handlers for pagination
+                paginationEl.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'A' && e.target.dataset.page) {
+                        e.preventDefault();
+                        this.currentPage = parseInt(e.target.dataset.page);
+                        this.loadChats();
+                    }
+                });
+            }
+
+            updateStats(stats) {
+                if (stats) {
+                    document.getElementById('totalChats').textContent = stats.total_chats || 0;
+                    document.getElementById('handoffCount').textContent = stats.handoff_count || 0;
+                    document.getElementById('todayMessages').textContent = stats.today_messages || 0;
+                    document.getElementById('activeUsers').textContent = stats.active_users || 0;
+                }
+            }
+
+            applyFilters() {
+                const filters = {};
+
+                // Date filters
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                if (dateFrom) filters.date_from = dateFrom;
+                if (dateTo) filters.date_to = dateTo;
+
+                // User search
+                const userSearch = document.getElementById('userSearch').value.trim();
+                if (userSearch) filters.user_search = userSearch;
+
+                // Sentiment filter
+                const sentiment = document.getElementById('sentimentFilter').value;
+                if (sentiment) filters.sentiment = sentiment;
+
+                // Tag filters
+                const selectedTags = Array.from(document.querySelectorAll('.tag-filter:checked')).map(cb => cb.value);
+                if (selectedTags.length > 0) filters.tags = selectedTags.join(',');
+
+                // Special filters
+                if (document.getElementById('humanHandoffOnly').checked) filters.human_handoff = 'true';
+                if (document.getElementById('incomingOnly').checked) filters.direction = 'incoming';
+
+                this.currentFilters = filters;
+                this.currentPage = 1; // Reset to first page
+                this.loadChats();
+            }
+
+            clearFilters() {
+                // Reset all form inputs
+                document.getElementById('dateFrom').value = '';
+                document.getElementById('dateTo').value = '';
+                document.getElementById('userSearch').value = '';
+                document.getElementById('sentimentFilter').value = '';
+                document.querySelectorAll('.tag-filter').forEach(cb => cb.checked = false);
+                document.getElementById('humanHandoffOnly').checked = false;
+                document.getElementById('incomingOnly').checked = false;
+
+                // Reset filters and reload
+                this.currentFilters = {};
+                this.currentPage = 1;
+                this.loadChats();
+            }
+
+            async viewMessage(messageId) {
+                try {
+                    const response = await fetch(`/api/chat-management/message/${messageId}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showMessageModal(data.message);
+                    } else {
+                        alert('Failed to load message details');
+                    }
+                } catch (error) {
+                    console.error('Error loading message:', error);
+                    alert('Error loading message details');
+                }
+            }
+
+            showMessageModal(message) {
+                const modalBody = document.getElementById('messageDetails');
+                const sentimentClass = message.llm_sentiment ? `sentiment-${message.llm_sentiment}` : '';
+
+                modalBody.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>User:</strong> ${message.user_phone}<br>
+                            <strong>Time:</strong> ${new Date(message.timestamp).toLocaleString()}<br>
+                            <strong>Direction:</strong> <span class="badge bg-${message.direction === 'incoming' ? 'info' : 'success'}">${message.direction === 'incoming' ? 'User Message' : 'Bot Response'}</span><br>
+                            <strong>Journey Day:</strong> ${message.user_day || 'N/A'}<br>
+                            ${message.is_human_handoff ? '<strong>Status:</strong> <span class="badge bg-warning">Human Handoff Required</span><br>' : ''}
+                        </div>
+                        <div class="col-md-6">
+                            ${message.llm_sentiment ? `<strong>Sentiment:</strong> <span class="${sentimentClass}">${message.llm_sentiment}</span><br>` : ''}
+                            ${message.llm_confidence ? `<strong>Confidence:</strong> ${(message.llm_confidence * 100).toFixed(1)}%<br>` : ''}
+                            <strong>Tags:</strong><br>
+                            <div class="d-flex flex-wrap mt-1">
+                                ${(message.llm_tags || []).map(tag => 
+                                    `<span class="badge bg-secondary me-1 mb-1">${tag}</span>`
+                                ).join('') || '<span class="text-muted">No tags</span>'}
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div>
+                        <strong>Message:</strong>
+                        <div class="mt-2 p-3" style="background: var(--bs-gray-800); border-radius: 8px; white-space: pre-wrap;">${message.raw_text}</div>
+                    </div>
+                `;
+
+                // Set up full chat button
+                document.getElementById('viewFullChat').onclick = () => {
+                    window.location.href = `/chat/${message.user_id}`;
+                };
+
+                new bootstrap.Modal(document.getElementById('chatPreviewModal')).show();
+            }
+
+            viewFullChat(userId) {
+                window.location.href = `/chat/${userId}`;
+            }
+
+            async exportData() {
+                try {
+                    const params = new URLSearchParams(this.currentFilters);
+                    window.location.href = `/api/chat-management/export?${params}`;
+                } catch (error) {
+                    console.error('Export error:', error);
+                    alert('Error exporting data');
+                }
+            }
+        }
+
+        // Initialize chat manager when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.chatManager = new ChatManager();
+        });
+
+        // Global functions for inline onclick handlers
+        window.viewMessage = (messageId) => window.chatManager.viewMessage(messageId);
+        window.viewFullChat = (userId) => window.chatManager.viewFullChat(userId);
+    </script>
+</body>
+</html>

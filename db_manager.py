@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from models import db, User, Content, MessageLog, SystemSettings
 
 logger = logging.getLogger(__name__)
@@ -436,6 +436,230 @@ class DatabaseManager:
             logger.error(f"Error resetting chatbot settings: {e}")
             return False
     
+    def get_chat_management_stats(self, filters: Dict = None) -> Dict:
+        """Get statistics for chat management dashboard"""
+        try:
+            base_query = self.db.session.query(MessageLog).join(User)
+            
+            if filters:
+                base_query = self._apply_message_filters(base_query, filters)
+            
+            total_chats = base_query.count()
+            
+            # Human handoff count
+            handoff_count = base_query.filter(MessageLog.is_human_handoff == True).count()
+            
+            # Today's messages
+            today = datetime.utcnow().date()
+            today_messages = base_query.filter(
+                func.date(MessageLog.timestamp) == today
+            ).count()
+            
+            # Active users (messaged in last 7 days)
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            active_users = self.db.session.query(User).filter(
+                User.last_message_date >= week_ago
+            ).count() if hasattr(User, 'last_message_date') else 0
+            
+            return {
+                'total_chats': total_chats,
+                'handoff_count': handoff_count,
+                'today_messages': today_messages,
+                'active_users': active_users
+            }
+        except Exception as e:
+            logger.error(f"Error getting chat management stats: {e}")
+            return {'total_chats': 0, 'handoff_count': 0, 'today_messages': 0, 'active_users': 0}
+    
+    def get_filtered_messages(self, page: int = 1, limit: int = 20, sort_field: str = 'timestamp',
+                            sort_order: str = 'desc', filters: Dict = None) -> Dict:
+        """Get filtered and paginated messages"""
+        try:
+            # Build base query
+            query = self.db.session.query(
+                MessageLog.id,
+                MessageLog.timestamp,
+                MessageLog.direction,
+                MessageLog.raw_text,
+                MessageLog.llm_sentiment,
+                MessageLog.llm_tags,
+                MessageLog.llm_confidence,
+                MessageLog.is_human_handoff,
+                User.phone_number.label('user_phone'),
+                User.current_day.label('user_day'),
+                User.id.label('user_id')
+            ).join(User)
+            
+            # Apply filters
+            if filters:
+                query = self._apply_message_filters(query, filters)
+            
+            # Apply sorting
+            sort_column = getattr(MessageLog, sort_field, MessageLog.timestamp)
+            if sort_order.lower() == 'desc':
+                query = query.order_by(desc(sort_column))
+            else:
+                query = query.order_by(sort_column)
+            
+            # Get total count before pagination
+            total = query.count()
+            
+            # Apply pagination
+            offset = (page - 1) * limit
+            messages = query.offset(offset).limit(limit).all()
+            
+            # Convert to dictionaries
+            message_list = []
+            for msg in messages:
+                message_list.append({
+                    'id': msg.id,
+                    'timestamp': msg.timestamp.isoformat(),
+                    'direction': msg.direction,
+                    'raw_text': msg.raw_text,
+                    'llm_sentiment': msg.llm_sentiment,
+                    'llm_tags': msg.llm_tags or [],
+                    'llm_confidence': msg.llm_confidence,
+                    'is_human_handoff': msg.is_human_handoff,
+                    'user_phone': msg.user_phone,
+                    'user_day': msg.user_day,
+                    'user_id': msg.user_id
+                })
+            
+            # Calculate pagination info
+            total_pages = (total + limit - 1) // limit
+            
+            return {
+                'messages': message_list,
+                'pagination': {
+                    'current_page': page,
+                    'total_pages': total_pages,
+                    'total': total,
+                    'limit': limit
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error getting filtered messages: {e}")
+            return {'messages': [], 'pagination': {'current_page': 1, 'total_pages': 0, 'total': 0, 'limit': limit}}
+    
+    def _apply_message_filters(self, query, filters: Dict):
+        """Apply filters to message query"""
+        if filters.get('date_from'):
+            try:
+                date_from = datetime.strptime(filters['date_from'], '%Y-%m-%d').date()
+                query = query.filter(func.date(MessageLog.timestamp) >= date_from)
+            except ValueError:
+                pass
+                
+        if filters.get('date_to'):
+            try:
+                date_to = datetime.strptime(filters['date_to'], '%Y-%m-%d').date()
+                query = query.filter(func.date(MessageLog.timestamp) <= date_to)
+            except ValueError:
+                pass
+        
+        if filters.get('user_search'):
+            search_term = f"%{filters['user_search']}%"
+            query = query.filter(User.phone_number.like(search_term))
+        
+        if filters.get('sentiment'):
+            query = query.filter(MessageLog.llm_sentiment == filters['sentiment'])
+        
+        if filters.get('tags'):
+            tag_list = filters['tags'].split(',')
+            # Filter messages that contain any of the specified tags
+            tag_conditions = []
+            for tag in tag_list:
+                tag_conditions.append(MessageLog.llm_tags.contains([tag.strip()]))
+            if tag_conditions:
+                query = query.filter(or_(*tag_conditions))
+        
+        if filters.get('human_handoff'):
+            query = query.filter(MessageLog.is_human_handoff == True)
+        
+        if filters.get('direction'):
+            query = query.filter(MessageLog.direction == filters['direction'])
+        
+        return query
+    
+    def get_message_details(self, message_id: int) -> Dict:
+        """Get detailed information about a specific message"""
+        try:
+            message = self.db.session.query(
+                MessageLog.id,
+                MessageLog.timestamp,
+                MessageLog.direction,
+                MessageLog.raw_text,
+                MessageLog.llm_sentiment,
+                MessageLog.llm_tags,
+                MessageLog.llm_confidence,
+                MessageLog.is_human_handoff,
+                User.phone_number.label('user_phone'),
+                User.current_day.label('user_day'),
+                User.id.label('user_id')
+            ).join(User).filter(MessageLog.id == message_id).first()
+            
+            if not message:
+                return None
+            
+            return {
+                'id': message.id,
+                'timestamp': message.timestamp.isoformat(),
+                'direction': message.direction,
+                'raw_text': message.raw_text,
+                'llm_sentiment': message.llm_sentiment,
+                'llm_tags': message.llm_tags or [],
+                'llm_confidence': message.llm_confidence,
+                'is_human_handoff': message.is_human_handoff,
+                'user_phone': message.user_phone,
+                'user_day': message.user_day,
+                'user_id': message.user_id
+            }
+        except Exception as e:
+            logger.error(f"Error getting message details: {e}")
+            return None
+    
+    def export_filtered_messages(self, filters: Dict = None) -> List[Dict]:
+        """Export filtered messages for CSV download"""
+        try:
+            query = self.db.session.query(
+                MessageLog.timestamp,
+                MessageLog.direction,
+                MessageLog.raw_text,
+                MessageLog.llm_sentiment,
+                MessageLog.llm_tags,
+                MessageLog.is_human_handoff,
+                User.phone_number.label('user_phone'),
+                User.current_day.label('user_day')
+            ).join(User)
+            
+            # Apply filters
+            if filters:
+                query = self._apply_message_filters(query, filters)
+            
+            # Order by timestamp desc
+            query = query.order_by(desc(MessageLog.timestamp))
+            
+            messages = query.all()
+            
+            # Convert to list of dictionaries
+            export_data = []
+            for msg in messages:
+                export_data.append({
+                    'timestamp': msg.timestamp.isoformat(),
+                    'user_phone': msg.user_phone,
+                    'direction': msg.direction,
+                    'raw_text': msg.raw_text,
+                    'llm_sentiment': msg.llm_sentiment or '',
+                    'llm_tags': msg.llm_tags or [],
+                    'is_human_handoff': msg.is_human_handoff,
+                    'user_day': msg.user_day or ''
+                })
+            
+            return export_data
+        except Exception as e:
+            logger.error(f"Error exporting messages: {e}")
+            return []
+
     def _get_default_settings(self) -> Dict:
         """Get default chatbot settings"""
         return {

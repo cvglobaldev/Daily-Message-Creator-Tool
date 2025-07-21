@@ -588,6 +588,124 @@ def test_chatbot_response():
         logger.error(f"Error testing response: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Chat Management Routes
+@app.route('/chat-management')
+def chat_management_page():
+    """Display chat management page"""
+    try:
+        stats = db_manager.get_chat_management_stats()
+        return render_template('chat_management.html', stats=stats)
+    except Exception as e:
+        logger.error(f"Error loading chat management page: {e}")
+        return f"Error loading chat management page: {e}", 500
+
+@app.route('/api/chat-management/messages')
+def get_filtered_messages():
+    """API endpoint to get filtered messages"""
+    try:
+        # Get filter parameters
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 20))
+        sort_field = request.args.get('sort_field', 'timestamp')
+        sort_order = request.args.get('sort_order', 'desc')
+        
+        filters = {
+            'date_from': request.args.get('date_from'),
+            'date_to': request.args.get('date_to'),
+            'user_search': request.args.get('user_search'),
+            'sentiment': request.args.get('sentiment'),
+            'tags': request.args.get('tags'),
+            'human_handoff': request.args.get('human_handoff') == 'true',
+            'direction': request.args.get('direction')
+        }
+        
+        # Remove empty filters
+        filters = {k: v for k, v in filters.items() if v is not None and v != ''}
+        
+        # Get filtered messages
+        result = db_manager.get_filtered_messages(
+            page=page,
+            limit=limit,
+            sort_field=sort_field,
+            sort_order=sort_order,
+            filters=filters
+        )
+        
+        # Get stats for current filter
+        stats = db_manager.get_chat_management_stats(filters)
+        
+        return jsonify({
+            'success': True,
+            'messages': result['messages'],
+            'pagination': result['pagination'],
+            'stats': stats
+        })
+    except Exception as e:
+        logger.error(f"Error getting filtered messages: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/chat-management/message/<int:message_id>')
+def get_message_details(message_id):
+    """API endpoint to get detailed message information"""
+    try:
+        message = db_manager.get_message_details(message_id)
+        if not message:
+            return jsonify({'success': False, 'error': 'Message not found'}), 404
+            
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+    except Exception as e:
+        logger.error(f"Error getting message details: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/chat-management/export')
+def export_filtered_chats():
+    """Export filtered chat data as CSV"""
+    try:
+        # Get same filters as the main query
+        filters = {
+            'date_from': request.args.get('date_from'),
+            'date_to': request.args.get('date_to'),
+            'user_search': request.args.get('user_search'),
+            'sentiment': request.args.get('sentiment'),
+            'tags': request.args.get('tags'),
+            'human_handoff': request.args.get('human_handoff') == 'true',
+            'direction': request.args.get('direction')
+        }
+        
+        # Remove empty filters
+        filters = {k: v for k, v in filters.items() if v is not None and v != ''}
+        
+        # Get all matching messages for export
+        export_data = db_manager.export_filtered_messages(filters)
+        
+        # Create CSV content
+        csv_lines = ["Timestamp,Phone,Direction,Message,Sentiment,Tags,Human Handoff,Journey Day"]
+        
+        for message in export_data:
+            tags = ','.join(message.get('llm_tags', []))
+            handoff = 'Yes' if message.get('is_human_handoff') else 'No'
+            
+            # Escape commas and quotes in message text
+            message_text = str(message.get('raw_text', '')).replace('"', '""')
+            if ',' in message_text or '"' in message_text or '\n' in message_text:
+                message_text = f'"{message_text}"'
+            
+            csv_lines.append(f"{message.get('timestamp')},{message.get('user_phone')},{message.get('direction')},{message_text},{message.get('llm_sentiment', '')},{tags},{handoff},{message.get('user_day', '')}")
+        
+        csv_content = '\n'.join(csv_lines)
+        
+        response = make_response(csv_content)
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename=chat_export_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error exporting chats: {e}")
+        return f"Error exporting chats: {e}", 500
+
 if __name__ == '__main__':
     with app.app_context():
         # Create database tables
