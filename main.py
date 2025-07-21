@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, render_template, make_response
 from models import db, User, Content, MessageLog
 from db_manager import DatabaseManager
-from services import WhatsAppService, GeminiService
+from services import WhatsAppService, TelegramService, GeminiService
 from scheduler import ContentScheduler
 import threading
 import time
@@ -31,6 +31,7 @@ db.init_app(app)
 # Initialize services
 db_manager = DatabaseManager()
 whatsapp_service = WhatsAppService()
+telegram_service = TelegramService()
 gemini_service = GeminiService()
 scheduler = ContentScheduler(db_manager, whatsapp_service, gemini_service)
 
@@ -97,6 +98,38 @@ def dashboard():
         logger.error(f"Error loading dashboard: {e}")
         return f"Dashboard error: {e}", 500
 
+@app.route('/telegram', methods=['POST'])
+def telegram_webhook():
+    """Handle incoming Telegram messages"""
+    try:
+        data = request.get_json()
+        logger.debug(f"Received Telegram webhook data: {data}")
+        
+        # Handle Telegram update
+        if 'message' in data:
+            message_data = data['message']
+            chat_id = str(message_data.get('chat', {}).get('id', ''))
+            message_text = message_data.get('text', '').strip()
+            user_info = message_data.get('from', {})
+            username = user_info.get('username', '')
+            first_name = user_info.get('first_name', '')
+            
+            if chat_id and message_text:
+                # Use chat_id as the phone number equivalent for Telegram
+                phone_number = f"tg_{chat_id}"
+                
+                logger.info(f"Telegram message from {chat_id} ({username}): {message_text}")
+                
+                # Process the message
+                process_incoming_message(phone_number, message_text, platform="telegram", 
+                                       user_data={"username": username, "first_name": first_name, "chat_id": chat_id})
+                
+        return jsonify({"status": "ok"}), 200
+        
+    except Exception as e:
+        logger.error(f"Error processing Telegram webhook: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_webhook():
     """Handle incoming WhatsApp messages"""
@@ -112,7 +145,7 @@ def whatsapp_webhook():
                 message_text = message_data.get('text', {}).get('body', '').strip()
                 
                 if phone_number and message_text:
-                    process_incoming_message(phone_number, message_text)
+                    process_incoming_message(phone_number, message_text, platform="whatsapp")
         
         return jsonify({"status": "success"}), 200
         
@@ -120,56 +153,77 @@ def whatsapp_webhook():
         logger.error(f"Error processing WhatsApp webhook: {e}")
         return jsonify({"error": str(e)}), 500
 
-def process_incoming_message(phone_number: str, message_text: str):
+def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None):
     """Process incoming message from user"""
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
         
-        # Normalize phone number
-        if not phone_number.startswith('+'):
+        # Normalize phone number for WhatsApp, keep Telegram chat IDs as-is
+        if platform == "whatsapp" and not phone_number.startswith('+'):
             phone_number = '+' + phone_number
+        elif platform == "telegram" and phone_number.startswith('+tg_'):
+            # Remove incorrect '+' prefix from Telegram IDs
+            phone_number = phone_number[1:]
         
         message_lower = message_text.lower().strip()
         
         # Handle commands
-        if message_lower == 'start':
-            handle_start_command(phone_number)
+        if message_lower == 'start' or message_lower == '/start':
+            handle_start_command(phone_number, platform, user_data)
             return
         
-        elif message_lower == 'stop':
-            handle_stop_command(phone_number)
+        elif message_lower == 'stop' or message_lower == '/stop':
+            handle_stop_command(phone_number, platform)
             return
         
-        elif message_lower == 'help':
-            handle_help_command(phone_number)
+        elif message_lower == 'help' or message_lower == '/help':
+            handle_help_command(phone_number, platform)
             return
         
         # Check for human handoff triggers
         if any(keyword in message_lower for keyword in HUMAN_HANDOFF_KEYWORDS):
-            handle_human_handoff(phone_number, message_text)
+            handle_human_handoff(phone_number, message_text, platform)
             return
         
         # Handle regular response (likely to a reflection question)
-        handle_reflection_response(phone_number, message_text)
+        handle_reflection_response(phone_number, message_text, platform)
         
     except Exception as e:
         logger.error(f"Error processing message from {phone_number}: {e}")
         # Send error message to user
-        whatsapp_service.send_message(
-            phone_number, 
+        send_message_to_platform(
+            phone_number, platform,
             "Sorry, there was an error processing your message. Please try again or type HELP for assistance."
         )
 
-def handle_start_command(phone_number: str):
+def send_message_to_platform(phone_number: str, platform: str, message: str) -> bool:
+    """Send message to the appropriate platform"""
+    try:
+        if platform == "telegram":
+            # Extract chat_id from tg_ prefixed phone number
+            if phone_number.startswith("tg_"):
+                chat_id = phone_number[3:]  # Remove 'tg_' prefix
+                return telegram_service.send_message(chat_id, message)
+            else:
+                logger.error(f"Invalid Telegram chat_id format: {phone_number}")
+                return False
+        else:
+            # Default to WhatsApp
+            return whatsapp_service.send_message(phone_number, message)
+    except Exception as e:
+        logger.error(f"Error sending message to {platform}: {e}")
+        return False
+
+def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None):
     """Handle START command - onboard new user"""
     try:
         # Check if user already exists
         existing_user = db_manager.get_user_by_phone(phone_number)
         
         if existing_user and existing_user.status == 'active':
-            whatsapp_service.send_message(
-                phone_number,
-                "You're already on your faith journey! You'll receive your next content at 8:00 AM daily. Type HELP if you need assistance."
+            send_message_to_platform(
+                phone_number, platform,
+                "You're already on your faith journey! You'll receive your next content every 5 minutes for testing. Type HELP if you need assistance."
             )
             return
         
@@ -186,12 +240,13 @@ def handle_start_command(phone_number: str):
                                  tags=[])
         
         # Send welcome message
-        welcome_message = ("Welcome to your Faith Journey! 🌟\n\n"
-                          "You'll receive daily content for the next 30 days at 8:00 AM. "
+        platform_emoji = "📱" if platform == "telegram" else "📱"
+        welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
+                          "You'll receive daily content for the next 10 days (every 5 minutes for testing). "
                           "After each piece of content, I'll ask you a simple reflection question.\n\n"
                           "Let's start with Day 1 content right now!")
         
-        whatsapp_service.send_message(phone_number, welcome_message)
+        send_message_to_platform(phone_number, platform, welcome_message)
         
         # Send Day 1 content immediately
         scheduler.send_content_to_user(phone_number)
@@ -200,12 +255,12 @@ def handle_start_command(phone_number: str):
         
     except Exception as e:
         logger.error(f"Error handling START command for {phone_number}: {e}")
-        whatsapp_service.send_message(
-            phone_number,
+        send_message_to_platform(
+            phone_number, platform,
             "Sorry, there was an error setting up your journey. Please try again."
         )
 
-def handle_stop_command(phone_number: str):
+def handle_stop_command(phone_number: str, platform: str = "whatsapp"):
     """Handle STOP command - deactivate user"""
     try:
         user = db_manager.get_user_by_phone(phone_number)
@@ -218,26 +273,27 @@ def handle_stop_command(phone_number: str):
         else:
             message = "You weren't subscribed to any journey. Send START to begin your faith journey."
         
-        whatsapp_service.send_message(phone_number, message)
+        send_message_to_platform(phone_number, platform, message)
         logger.info(f"User {phone_number} unsubscribed")
         
     except Exception as e:
         logger.error(f"Error handling STOP command for {phone_number}: {e}")
 
-def handle_help_command(phone_number: str):
+def handle_help_command(phone_number: str, platform: str = "whatsapp"):
     """Handle HELP command"""
+    commands_prefix = "/" if platform == "telegram" else ""
     help_message = ("📖 Faith Journey Help\n\n"
                    "Commands:\n"
-                   "• START - Begin or restart your 30-day journey\n"
-                   "• STOP - Unsubscribe from daily messages\n"
-                   "• HELP - Show this help message\n\n"
-                   "You'll receive daily content at 8:00 AM followed by a reflection question. "
+                   f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
+                   f"• {commands_prefix}STOP - Unsubscribe from messages\n"
+                   f"• {commands_prefix}HELP - Show this help message\n\n"
+                   "You'll receive content every 5 minutes (for testing) followed by a reflection question. "
                    "Feel free to share your thoughts - there are no wrong answers!\n\n"
                    "If you need to speak with someone, just let us know.")
     
-    whatsapp_service.send_message(phone_number, help_message)
+    send_message_to_platform(phone_number, platform, help_message)
 
-def handle_human_handoff(phone_number: str, message_text: str):
+def handle_human_handoff(phone_number: str, message_text: str, platform: str = "whatsapp"):
     """Handle messages that require human intervention"""
     try:
         # Get or create user
@@ -259,14 +315,14 @@ def handle_human_handoff(phone_number: str, message_text: str):
         response_message = ("Thank you for reaching out. A member of our team will contact you shortly. "
                           "In the meantime, know that you are valued and your journey matters. 🙏")
         
-        whatsapp_service.send_message(phone_number, response_message)
+        send_message_to_platform(phone_number, platform, response_message)
         
         logger.warning(f"HUMAN HANDOFF requested by {phone_number}: {message_text}")
         
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
-def handle_reflection_response(phone_number: str, message_text: str):
+def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp"):
     """Handle user's reflection response"""
     try:
         # Analyze the response with Gemini
@@ -297,14 +353,102 @@ def handle_reflection_response(phone_number: str, message_text: str):
         
         import random
         response = random.choice(acknowledgments)
-        whatsapp_service.send_message(phone_number, response)
+        send_message_to_platform(phone_number, platform, response)
         
         logger.info(f"Processed reflection from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
         
     except Exception as e:
         logger.error(f"Error handling reflection response from {phone_number}: {e}")
         # Still acknowledge the user's response
-        whatsapp_service.send_message(phone_number, "Thank you for your reflection. 🙏")
+        send_message_to_platform(phone_number, platform, "Thank you for your reflection. 🙏")
+
+@app.route('/telegram/setup', methods=['POST'])
+def setup_telegram_webhook():
+    """Set up Telegram webhook (for admin use)"""
+    try:
+        data = request.get_json()
+        webhook_url = data.get('webhook_url')
+        secret_token = data.get('secret_token', '')
+        
+        if not webhook_url:
+            return jsonify({"error": "webhook_url is required"}), 400
+        
+        # Set the webhook
+        success = telegram_service.set_webhook(webhook_url, secret_token)
+        
+        if success:
+            return jsonify({
+                "status": "success",
+                "message": "Telegram webhook configured successfully",
+                "webhook_url": webhook_url
+            })
+        else:
+            return jsonify({
+                "status": "error", 
+                "message": "Failed to set Telegram webhook"
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error setting up Telegram webhook: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/telegram/info', methods=['GET'])
+def get_telegram_info():
+    """Get Telegram bot information"""
+    try:
+        bot_info = telegram_service.get_me()
+        webhook_info = telegram_service.get_webhook_info()
+        
+        return jsonify({
+            "bot_info": bot_info,
+            "webhook_info": webhook_info,
+            "simulation_mode": telegram_service.simulate_mode
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting Telegram info: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/telegram/test', methods=['POST'])
+def test_telegram_message():
+    """Test endpoint for simulating Telegram messages"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id', '123456789')
+        message = data.get('message', '/start')
+        username = data.get('username', 'testuser')
+        first_name = data.get('first_name', 'Test User')
+        
+        # Simulate Telegram webhook payload
+        webhook_data = {
+            "update_id": 12345,
+            "message": {
+                "message_id": 1,
+                "date": 1640995200,
+                "chat": {"id": int(chat_id), "type": "private"},
+                "from": {
+                    "id": int(chat_id),
+                    "first_name": first_name,
+                    "username": username
+                },
+                "text": message
+            }
+        }
+        
+        # Process through telegram webhook handler
+        with app.test_request_context('/telegram', method='POST', json=webhook_data):
+            response = telegram_webhook()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Simulated Telegram message from {username} ({chat_id}): {message}",
+            "chat_id": f"tg_{chat_id}",
+            "response": "Check logs for bot responses"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing Telegram message: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():

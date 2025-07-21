@@ -10,6 +10,138 @@ import random
 
 logger = logging.getLogger(__name__)
 
+class TelegramService:
+    """Service for Telegram Bot API integration"""
+    
+    def __init__(self):
+        self.bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        self.api_base_url = f"https://api.telegram.org/bot{self.bot_token}"
+        
+        # For development, we'll simulate message sending
+        self.simulate_mode = not self.bot_token
+        
+        if self.simulate_mode:
+            logger.warning("Telegram service running in simulation mode (no bot token)")
+        else:
+            logger.info("Telegram service initialized with bot token")
+    
+    def send_message(self, chat_id: str, message: str) -> bool:
+        """Send a text message via Telegram"""
+        try:
+            if self.simulate_mode:
+                # Simulate message sending for development
+                print(f"\n📱 TELEGRAM MESSAGE TO {chat_id}:")
+                print(f"   {message}")
+                print("   ✅ Message simulated (development mode)")
+                return True
+            
+            url = f"{self.api_base_url}/sendMessage"
+            payload = {
+                "chat_id": chat_id,
+                "text": message,
+                "parse_mode": "HTML"  # Allow HTML formatting
+            }
+            
+            response = requests.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                logger.info(f"Telegram message sent successfully to {chat_id}")
+                return True
+            else:
+                logger.error(f"Failed to send Telegram message to {chat_id}: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending Telegram message to {chat_id}: {e}")
+            return False
+    
+    def set_webhook(self, webhook_url: str, secret_token: str = "") -> bool:
+        """Set webhook URL for receiving messages"""
+        try:
+            if self.simulate_mode:
+                print(f"📡 TELEGRAM WEBHOOK SETUP (simulated):")
+                print(f"   URL: {webhook_url}")
+                print(f"   Secret Token: {'*' * len(secret_token) if secret_token else 'None'}")
+                print("   ✅ Webhook setup simulated")
+                return True
+            
+            url = f"{self.api_base_url}/setWebhook"
+            payload = {
+                "url": webhook_url
+            }
+            
+            if secret_token:
+                payload["secret_token"] = secret_token
+            
+            response = requests.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("ok"):
+                    logger.info(f"Telegram webhook set successfully to {webhook_url}")
+                    return True
+                else:
+                    logger.error(f"Telegram webhook setup failed: {result.get('description', 'Unknown error')}")
+                    return False
+            else:
+                logger.error(f"Failed to set Telegram webhook: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error setting Telegram webhook: {e}")
+            return False
+    
+    def get_webhook_info(self) -> Dict[str, Any]:
+        """Get current webhook information"""
+        try:
+            if self.simulate_mode:
+                return {
+                    "url": "https://example.com/webhook",
+                    "has_custom_certificate": False,
+                    "pending_update_count": 0,
+                    "simulated": True
+                }
+            
+            url = f"{self.api_base_url}/getWebhookInfo"
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("ok"):
+                    return result.get("result", {})
+            
+            return {}
+                
+        except Exception as e:
+            logger.error(f"Error getting Telegram webhook info: {e}")
+            return {}
+    
+    def get_me(self) -> Dict[str, Any]:
+        """Get basic information about the bot"""
+        try:
+            if self.simulate_mode:
+                return {
+                    "id": 123456789,
+                    "is_bot": True,
+                    "first_name": "Faith Journey Bot",
+                    "username": "faithjourney_bot",
+                    "simulated": True
+                }
+            
+            url = f"{self.api_base_url}/getMe"
+            response = requests.get(url, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("ok"):
+                    return result.get("result", {})
+            
+            return {}
+                
+        except Exception as e:
+            logger.error(f"Error getting bot info: {e}")
+            return {}
+
 class WhatsAppService:
     """Service for WhatsApp Business API integration"""
     
