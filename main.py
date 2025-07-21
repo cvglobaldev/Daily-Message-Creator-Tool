@@ -76,11 +76,11 @@ def start_scheduler():
     def run_scheduler():
         while True:
             try:
-                logger.info("Running content scheduler (every 5 minutes for testing)...")
+                logger.info("Running content scheduler (every 10 minutes for testing)...")
                 with app.app_context():  # Ensure Flask app context for database operations
                     scheduler.send_daily_content()
-                # Sleep for 5 minutes (300 seconds) between content deliveries
-                time.sleep(300)
+                # Sleep for 10 minutes (600 seconds) between content deliveries
+                time.sleep(600)
             except Exception as e:
                 logger.error(f"Error in scheduler: {e}")
                 time.sleep(60)
@@ -286,7 +286,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                                  join_date=datetime.now())
             platform_emoji = "📱" if platform == "telegram" else "📱"
             restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
-                              "You'll receive daily content for the next 10 days (every 5 minutes for testing). "
+                              "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
                               "After each piece of content, I'll ask you a simple reflection question.\n\n"
                               "Day 1 content will arrive in 10 seconds!")
             send_message_to_platform(phone_number, platform, restart_message)
@@ -325,7 +325,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         # Send welcome message
         platform_emoji = "📱" if platform == "telegram" else "📱"
         welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
-                          "You'll receive daily content for the next 10 days (every 5 minutes for testing). "
+                          "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
                           "After each piece of content, I'll ask you a simple reflection question.\n\n"
                           "Day 1 content will arrive in 10 seconds!")
         
@@ -386,7 +386,7 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp"):
                    f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
                    f"• {commands_prefix}STOP - Unsubscribe from messages\n"
                    f"• {commands_prefix}HELP - Show this help message\n\n"
-                   "You'll receive content every 5 minutes (for testing) followed by a reflection question. "
+                   "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
                    "Feel free to share your thoughts - there are no wrong answers!\n\n"
                    "If you need to speak with someone, just let us know.")
     

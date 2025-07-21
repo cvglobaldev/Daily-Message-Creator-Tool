@@ -97,7 +97,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 21, 2025)
 
-### Enhanced Telegram Bot API 2025 Integration (Latest Update)
+### Scheduler Configuration Update (Latest Update)
+- **Content Delivery Frequency**: Changed scheduled content delivery from every 5 minutes to every 10 minutes for testing
+- **User Message Updates**: Updated all user-facing messages to reflect the new 10-minute delivery schedule
+- **Background Scheduler**: Modified both the sleep interval (600 seconds) and log messages for consistency
+- **Testing Optimization**: Provides more reasonable testing intervals while maintaining rapid development feedback
+
+### Enhanced Telegram Bot API 2025 Integration
 - **Modern Telegram Features**: Updated chatbot settings to leverage Telegram Bot API 8.0 (2025) capabilities
 - **Interactive Messaging**: Implemented inline keyboards, quick reply buttons, and callback query handling
 - **Copy Text Buttons**: Added support for copy-to-share functionality for Bible verses and inspirational content
