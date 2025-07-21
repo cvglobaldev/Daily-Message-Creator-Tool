@@ -91,26 +91,40 @@ class ContentScheduler:
             # Add day header with title
             message = f"📖 Day {day} - {title}\n\n{content_text}"
             
-            if media_type == 'text' or not media_url:
-                # Send as text message
-                return self.whatsapp_service.send_message(phone_number, message)
-            
-            elif media_type in ['image', 'video', 'audio']:
-                # Send text first, then media
-                text_sent = self.whatsapp_service.send_message(phone_number, message)
-                if text_sent:
-                    # Small delay before sending media
-                    time.sleep(1)
-                    return self.whatsapp_service.send_media_message(
-                        phone_number, 
-                        media_type, 
-                        media_url
-                    )
-                return False
-            
+            # Determine platform and service based on phone_number
+            if phone_number.startswith('tg_'):
+                # Telegram user
+                platform = "telegram"
+                chat_id = phone_number[3:]  # Remove 'tg_' prefix
+                
+                if media_type == 'text' or not media_url:
+                    return self.telegram_service.send_message(chat_id, message)
+                elif media_type in ['image', 'video', 'audio']:
+                    # For Telegram, send text first, then media if supported
+                    text_sent = self.telegram_service.send_message(chat_id, message)
+                    if text_sent and media_url:
+                        time.sleep(1)
+                        # Note: Telegram media sending would need additional implementation
+                        logger.info(f"Media content delivery to Telegram user {chat_id} - text sent, media URL: {media_url}")
+                    return text_sent
+                else:
+                    return self.telegram_service.send_message(chat_id, message)
             else:
-                # Default to text message
-                return self.whatsapp_service.send_message(phone_number, message)
+                # WhatsApp user (default)
+                if media_type == 'text' or not media_url:
+                    return self.whatsapp_service.send_message(phone_number, message)
+                elif media_type in ['image', 'video', 'audio']:
+                    text_sent = self.whatsapp_service.send_message(phone_number, message)
+                    if text_sent:
+                        time.sleep(1)
+                        return self.whatsapp_service.send_media_message(
+                            phone_number, 
+                            media_type, 
+                            media_url
+                        )
+                    return False
+                else:
+                    return self.whatsapp_service.send_message(phone_number, message)
                 
         except Exception as e:
             logger.error(f"Error delivering content: {e}")
@@ -128,7 +142,16 @@ class ContentScheduler:
                     reflection_question = content.get('reflection_question', '')
                     if reflection_question:
                         message = f"💭 Reflection Question:\n\n{reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
-                        self.whatsapp_service.send_message(phone_number, message)
+                        
+                        # Determine platform and send accordingly
+                        if phone_number.startswith('tg_'):
+                            # Telegram user
+                            chat_id = phone_number[3:]  # Remove 'tg_' prefix
+                            self.telegram_service.send_message(chat_id, message)
+                        else:
+                            # WhatsApp user (default)
+                            self.whatsapp_service.send_message(phone_number, message)
+                        
                         logger.info(f"Reflection question sent to {phone_number}")
                 except Exception as e:
                     logger.error(f"Error sending reflection question to {phone_number}: {e}")

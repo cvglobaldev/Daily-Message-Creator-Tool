@@ -33,7 +33,7 @@ db_manager = DatabaseManager()
 whatsapp_service = WhatsAppService()
 telegram_service = TelegramService()
 gemini_service = GeminiService()
-scheduler = ContentScheduler(db_manager, whatsapp_service, gemini_service)
+scheduler = ContentScheduler(whatsapp_service, telegram_service, db_manager)
 
 # Global flag to ensure scheduler starts only once
 scheduler_started = False
