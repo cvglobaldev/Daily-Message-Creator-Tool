@@ -30,7 +30,7 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="card-title mb-1">Active Users</h5>
-                                <h2 class="mb-0">{{ active_users }}</h2>
+                                <h2 class="mb-0">{{ user_stats.active_users }}</h2>
                                 <small class="text-muted">Currently on their journey</small>
                             </div>
                         </div>
@@ -46,7 +46,7 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="card-title mb-1">Total Users</h5>
-                                <h2 class="mb-0">{{ total_users }}</h2>
+                                <h2 class="mb-0">{{ user_stats.total_users }}</h2>
                                 <small class="text-muted">All time registrations</small>
                             </div>
                         </div>
@@ -117,7 +117,7 @@
                                         {% for message in recent_messages %}
                                         <tr>
                                             <td>
-                                                <code class="text-muted">{{ message.user_id[-4:] }}****</code>
+                                                <code class="text-muted">{{ message.user_phone[-4:] if message.user_phone else 'N/A' }}****</code>
                                             </td>
                                             <td>
                                                 <div class="message-preview">

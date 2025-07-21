@@ -12,24 +12,25 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend Architecture
 - **Framework**: Flask web application with Python
-- **Database**: Replit Database (key-value store) for user data and message logging
+- **Database**: PostgreSQL database with comprehensive relational schema (upgraded from key-value store)
 - **AI Integration**: Google Gemini API for response sentiment analysis and keyword tagging
 - **Messaging**: WhatsApp Business API integration with fallback simulation mode
 - **Scheduling**: Background thread-based scheduler for daily content delivery
 
 ### Key Design Decisions
-- **Simple Storage**: Uses Replit's built-in database instead of complex SQL databases for rapid MVP development
+- **PostgreSQL Database**: Upgraded to full relational database with proper schemas, relationships, and indexing for production scalability
 - **Simulation Mode**: Includes development-friendly message simulation when API credentials aren't available
 - **Thread-based Scheduling**: Uses background threads instead of external cron jobs for simplicity in Replit environment
 - **Cultural Sensitivity**: Designed specifically for Muslim-to-Christian spiritual journey with appropriate terminology
 
 ## Key Components
 
-### Database Manager (`database.py`)
-- Handles user CRUD operations with phone numbers as primary keys
-- Stores user data as JSON strings in key-value format
-- Manages user status tracking (active/inactive)
-- Uses prefixed keys (`users:phone_number`) for organization
+### Database Manager (`db_manager.py`)
+- **PostgreSQL Schema**: Full relational database with users, content, message_logs, and system_settings tables
+- **User Management**: Comprehensive CRUD operations with proper foreign key relationships
+- **Message Logging**: Detailed interaction tracking with sentiment analysis and AI tagging
+- **Content Management**: Structured 30-day content delivery system with reflection questions
+- **Analytics**: Built-in user statistics, sentiment analysis, and progress tracking
 
 ### Services Layer (`services.py`)
 - **WhatsAppService**: Manages message sending via WhatsApp Business API
@@ -77,18 +78,34 @@ Preferred communication style: Simple, everyday language.
 ## Deployment Strategy
 
 ### Replit-Optimized Design
-- Uses Replit's built-in database for zero-configuration data storage
+- Uses Replit's PostgreSQL database for production-ready data storage
 - Includes simulation modes for development without external API setup
 - Background scheduler runs as application thread (no separate cron needed)
-- Static files and templates included for admin dashboard
+- Enhanced admin dashboard with real-time analytics and human handoff monitoring
 
 ### Scaling Considerations
-- Current design supports moderate user loads with thread-based scheduling
-- Database uses simple key-value storage suitable for MVP scale
+- PostgreSQL database supports production-scale user loads with proper indexing
+- Thread-based scheduling suitable for moderate concurrent users
 - Rate limiting implemented to respect API quotas
-- Graceful error handling prevents system crashes
+- Comprehensive error handling and transaction management
+- Database relationships ensure data integrity and enable complex analytics
 
 ### Development vs Production
-- **Development Mode**: Simulates WhatsApp messages, uses console logging
+- **Development Mode**: Simulates WhatsApp messages, uses console logging, PostgreSQL database available
 - **Production Mode**: Requires actual API credentials, sends real messages
 - Environment-based configuration switches between modes automatically
+
+## Recent Changes (July 21, 2025)
+
+### Major Database Upgrade - PostgreSQL Migration
+- **Migrated from key-value store to PostgreSQL**: Full relational database with proper schema design
+- **Enhanced Data Models**: 
+  - Users table with proper typing and relationships
+  - Content table for structured 30-day journey management
+  - Message logs with detailed AI analysis tracking
+  - System settings for configuration management
+- **Improved Analytics**: Real-time user statistics, sentiment analysis, and progress tracking
+- **Human Handoff System**: Automated detection and logging of messages requiring human intervention
+- **Database Integrity**: Foreign key constraints, indexes, and transaction management
+- **API Enhancements**: New test endpoints and user management APIs
+- **Dashboard Improvements**: Real-time data display with proper PostgreSQL integration

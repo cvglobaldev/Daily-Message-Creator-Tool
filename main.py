@@ -3,7 +3,8 @@ import json
 import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template
-from database import DatabaseManager
+from models import db, User, Content, MessageLog
+from db_manager import DatabaseManager
 from services import WhatsAppService, GeminiService
 from scheduler import ContentScheduler
 import threading
@@ -17,11 +18,21 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
 
+# Configure PostgreSQL database
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+
+# Initialize database
+db.init_app(app)
+
 # Initialize services
-db = DatabaseManager()
+db_manager = DatabaseManager()
 whatsapp_service = WhatsAppService()
 gemini_service = GeminiService()
-scheduler = ContentScheduler(db, whatsapp_service, gemini_service)
+scheduler = ContentScheduler(db_manager, whatsapp_service, gemini_service)
 
 # Keywords that trigger human handoff
 HUMAN_HANDOFF_KEYWORDS = [
@@ -58,14 +69,18 @@ def dashboard():
     """Simple dashboard to monitor the system"""
     try:
         # Get basic stats
-        active_users = db.get_active_users_count()
-        total_users = db.get_total_users_count()
-        recent_messages = db.get_recent_messages(limit=10)
+        user_stats = db_manager.get_user_stats()
+        recent_messages = db_manager.get_recent_messages(limit=10)
+        human_handoffs = db_manager.get_human_handoff_requests()
+        
+        # Convert message objects to dicts for template
+        recent_messages_data = [msg.to_dict() for msg in recent_messages]
+        human_handoff_data = [msg.to_dict() for msg in human_handoffs]
         
         return render_template('dashboard.html', 
-                             active_users=active_users,
-                             total_users=total_users,
-                             recent_messages=recent_messages)
+                             user_stats=user_stats,
+                             recent_messages=recent_messages_data,
+                             human_handoffs=human_handoff_data)
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
         return f"Dashboard error: {e}", 500
@@ -137,9 +152,9 @@ def handle_start_command(phone_number: str):
     """Handle START command - onboard new user"""
     try:
         # Check if user already exists
-        existing_user = db.get_user(phone_number)
+        existing_user = db_manager.get_user_by_phone(phone_number)
         
-        if existing_user and existing_user.get('status') == 'active':
+        if existing_user and existing_user.status == 'active':
             whatsapp_service.send_message(
                 phone_number,
                 "You're already on your faith journey! You'll receive your next content at 8:00 AM daily. Type HELP if you need assistance."
@@ -147,12 +162,16 @@ def handle_start_command(phone_number: str):
             return
         
         # Create or reactivate user
-        db.create_or_update_user(phone_number, {
-            'status': 'active',
-            'current_day': 1,
-            'join_date': datetime.now().isoformat(),
-            'tags': []
-        })
+        if existing_user:
+            db_manager.update_user(phone_number, 
+                                 status='active', 
+                                 current_day=1, 
+                                 join_date=datetime.now())
+        else:
+            db_manager.create_user(phone_number, 
+                                 status='active', 
+                                 current_day=1, 
+                                 tags=[])
         
         # Send welcome message
         welcome_message = ("Welcome to your Faith Journey! 🌟\n\n"
@@ -177,12 +196,9 @@ def handle_start_command(phone_number: str):
 def handle_stop_command(phone_number: str):
     """Handle STOP command - deactivate user"""
     try:
-        user = db.get_user(phone_number)
+        user = db_manager.get_user_by_phone(phone_number)
         if user:
-            db.create_or_update_user(phone_number, {
-                **user,
-                'status': 'inactive'
-            })
+            db_manager.update_user(phone_number, status='inactive')
             
             message = ("You have been unsubscribed from the Faith Journey. "
                       "If you'd like to restart your journey, simply send START anytime. "
@@ -212,18 +228,20 @@ def handle_help_command(phone_number: str):
 def handle_human_handoff(phone_number: str, message_text: str):
     """Handle messages that require human intervention"""
     try:
-        # Log the handoff request
-        log_data = {
-            'user_id': phone_number,
-            'timestamp': datetime.now().isoformat(),
-            'direction': 'incoming',
-            'raw_text': message_text,
-            'llm_sentiment': 'neutral',
-            'llm_tags': ['HUMAN_HANDOFF', 'URGENT']
-        }
+        # Get or create user
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number)
         
-        log_id = f"{phone_number}_{int(datetime.now().timestamp())}"
-        db.log_message(log_id, log_data)
+        # Log the handoff request
+        db_manager.log_message(
+            user=user,
+            direction='incoming',
+            raw_text=message_text,
+            sentiment='neutral',
+            tags=['HUMAN_HANDOFF', 'URGENT'],
+            is_human_handoff=True
+        )
         
         # Send response to user
         response_message = ("Thank you for reaching out. A member of our team will contact you shortly. "
@@ -242,18 +260,20 @@ def handle_reflection_response(phone_number: str, message_text: str):
         # Analyze the response with Gemini
         analysis = gemini_service.analyze_response(message_text)
         
-        # Log the response
-        log_data = {
-            'user_id': phone_number,
-            'timestamp': datetime.now().isoformat(),
-            'direction': 'incoming',
-            'raw_text': message_text,
-            'llm_sentiment': analysis['sentiment'],
-            'llm_tags': analysis['tags']
-        }
+        # Get or create user
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number)
         
-        log_id = f"{phone_number}_{int(datetime.now().timestamp())}"
-        db.log_message(log_id, log_data)
+        # Log the response
+        db_manager.log_message(
+            user=user,
+            direction='incoming',
+            raw_text=message_text,
+            sentiment=analysis['sentiment'],
+            tags=analysis['tags'],
+            confidence=analysis.get('confidence')
+        )
         
         # Send acknowledgment
         acknowledgments = [
@@ -287,9 +307,53 @@ def health_check():
         }
     })
 
+@app.route('/test', methods=['POST'])
+def test_message():
+    """Test endpoint for simulating WhatsApp messages"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number', '+14155551234')
+        message = data.get('message', 'START')
+        
+        # Process message
+        message_text = message.strip().upper()
+        
+        if message_text == 'START':
+            handle_start_command(phone_number)
+        elif message_text == 'STOP':
+            handle_stop_command(phone_number)
+        elif message_text == 'HELP':
+            handle_help_command(phone_number)
+        else:
+            # Check for human handoff triggers
+            if gemini_service.should_trigger_human_handoff(message):
+                handle_human_handoff(phone_number, message)
+            else:
+                handle_reflection_response(phone_number, message)
+        
+        return jsonify({"status": "success", "message": "Message processed"})
+        
+    except Exception as e:
+        logger.error(f"Error in test endpoint: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    """API endpoint to get user data"""
+    try:
+        users = db_manager.get_active_users()
+        return jsonify([user.to_dict() for user in users])
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    # Initialize database with sample content
-    db.initialize_content()
+    with app.app_context():
+        # Create database tables
+        db.create_all()
+        
+        # Initialize database with sample content
+        db_manager.initialize_sample_content()
     
     # Start background scheduler
     start_scheduler()

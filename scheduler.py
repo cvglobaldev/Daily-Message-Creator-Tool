@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from typing import List
-from database import DatabaseManager
+from db_manager import DatabaseManager
 from services import WhatsAppService, GeminiService
 import time
 
@@ -21,13 +21,13 @@ class ContentScheduler:
             active_users = self.db.get_active_users()
             logger.info(f"Sending daily content to {len(active_users)} active users")
             
-            for phone_number in active_users:
+            for user in active_users:
                 try:
-                    self.send_content_to_user(phone_number)
+                    self.send_content_to_user(user.phone_number)
                     # Small delay between users to avoid rate limiting
                     time.sleep(1)
                 except Exception as e:
-                    logger.error(f"Error sending content to {phone_number}: {e}")
+                    logger.error(f"Error sending content to {user.phone_number}: {e}")
             
             logger.info("Daily content delivery completed")
             
@@ -37,12 +37,12 @@ class ContentScheduler:
     def send_content_to_user(self, phone_number: str) -> bool:
         """Send content to a specific user and advance their journey"""
         try:
-            user = self.db.get_user(phone_number)
-            if not user or user.get('status') != 'active':
+            user = self.db.get_user_by_phone(phone_number)
+            if not user or user.status != 'active':
                 logger.warning(f"User {phone_number} is not active, skipping content delivery")
                 return False
             
-            current_day = user.get('current_day', 1)
+            current_day = user.current_day
             
             # Check if user has completed the journey
             if current_day > 30:
@@ -50,30 +50,27 @@ class ContentScheduler:
                 return True
             
             # Get content for current day
-            content = self.db.get_content(current_day)
+            content = self.db.get_content_by_day(current_day)
             if not content:
                 logger.error(f"No content found for day {current_day}")
                 return False
             
             # Send the main content
-            success = self._deliver_content(phone_number, content)
+            success = self._deliver_content(phone_number, content.to_dict())
             
             if success:
                 # Schedule reflection question after a short delay
-                self._schedule_reflection_question(phone_number, content, delay_minutes=2)
+                self._schedule_reflection_question(phone_number, content.to_dict(), delay_minutes=2)
                 
                 # Advance user to next day
                 next_day = current_day + 1
-                updated_user = {
-                    **user,
-                    'current_day': next_day
-                }
                 
                 # Complete journey if this was day 30
                 if current_day == 30:
-                    updated_user['status'] = 'completed'
+                    self.db.update_user(phone_number, current_day=next_day, status='completed', completion_date=datetime.now())
+                else:
+                    self.db.update_user(phone_number, current_day=next_day)
                 
-                self.db.create_or_update_user(phone_number, updated_user)
                 logger.info(f"User {phone_number} advanced to day {next_day}")
             
             return success
@@ -142,7 +139,7 @@ class ContentScheduler:
         except Exception as e:
             logger.error(f"Error scheduling reflection question for {phone_number}: {e}")
     
-    def _complete_user_journey(self, phone_number: str, user: dict):
+    def _complete_user_journey(self, phone_number: str, user):
         """Complete user's 30-day journey"""
         try:
             completion_message = (
@@ -157,13 +154,7 @@ class ContentScheduler:
             self.whatsapp_service.send_message(phone_number, completion_message)
             
             # Update user status to completed
-            completed_user = {
-                **user,
-                'status': 'completed',
-                'completion_date': datetime.now().isoformat()
-            }
-            
-            self.db.create_or_update_user(phone_number, completed_user)
+            self.db.update_user(phone_number, status='completed', completion_date=datetime.now())
             logger.info(f"User {phone_number} completed their 30-day journey")
             
         except Exception as e:
@@ -172,13 +163,13 @@ class ContentScheduler:
     def get_user_progress(self, phone_number: str) -> dict:
         """Get user's current progress"""
         try:
-            user = self.db.get_user(phone_number)
+            user = self.db.get_user_by_phone(phone_number)
             if not user:
                 return {"error": "User not found"}
             
-            current_day = user.get('current_day', 1)
-            status = user.get('status', 'inactive')
-            join_date = user.get('join_date', '')
+            current_day = user.current_day
+            status = user.status
+            join_date = user.join_date.isoformat() if user.join_date else ''
             
             progress_percentage = min(100, (current_day / 30) * 100)
             

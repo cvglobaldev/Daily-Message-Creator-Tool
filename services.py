@@ -258,3 +258,40 @@ class GeminiService:
             "tags": tags,
             "confidence": 0.6  # Medium confidence for fallback analysis
         }
+    
+    def should_trigger_human_handoff(self, user_message: str) -> bool:
+        """Determine if a message should trigger human handoff"""
+        if not self.client:
+            # Simple keyword-based detection in simulation mode
+            handoff_keywords = ['doubt', 'confused', 'angry', 'help me', 'talk to someone', 'need support']
+            message_lower = user_message.lower()
+            return any(keyword in message_lower for keyword in handoff_keywords)
+        
+        try:
+            prompt = f"""
+            Analyze this user message from someone on a faith journey learning about Jesus. 
+            Determine if they need human support (true/false).
+            
+            Trigger human handoff if the user:
+            - Expresses doubts or confusion that need personal guidance
+            - Shows anger or distress
+            - Explicitly asks to speak with someone
+            - Indicates they're struggling emotionally
+            - Has theological questions beyond basic content
+            
+            User message: {user_message}
+            
+            Respond only with: true or false
+            """
+            
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            
+            return response.text.strip().lower() == 'true'
+            
+        except Exception as e:
+            logger.error(f"Error determining human handoff: {e}")
+            # Default to false to avoid unnecessary handoffs
+            return False
