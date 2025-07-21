@@ -83,12 +83,13 @@ class ContentScheduler:
         """Deliver the actual content based on media type"""
         try:
             media_type = content.get('media_type', 'text')
-            content_text = content.get('content_text', '')
+            content_text = content.get('content', '')  # Updated to match our Content model
             media_url = content.get('media_url')
-            day = content.get('day', 0)
+            day = content.get('day_number', 0)  # Updated to match our Content model
+            title = content.get('title', 'Faith Journey')  # Add title
             
-            # Add day header
-            message = f"📖 Day {day} - Faith Journey\n\n{content_text}"
+            # Add day header with title
+            message = f"📖 Day {day} - {title}\n\n{content_text}"
             
             if media_type == 'text' or not media_url:
                 # Send as text message
