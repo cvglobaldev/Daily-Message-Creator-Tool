@@ -1,0 +1,160 @@
+## Role and Goal
+
+You are an expert full-stack developer. Your goal is to create a fully functional Minimum Viable Product (MVP) for a "Faith Journey Drip Content" service. The application will be a WhatsApp-based chatbot that delivers a scheduled 30-day sequence of mixed-media content to users, captures their reflections, and tags their interactions for analysis.
+
+## Project Overview
+
+The project is a WhatsApp chatbot designed to guide young adults (18-24), specifically from a Muslim background, on a 30-day journey to learn about Jesus. It will deliver daily content, ask simple reflective questions, and use an LLM to analyze and tag user responses. The entire system should be built with a decoupled architecture in mind, even if the MVP combines some components for simplicity.
+
+## Core MVP Functionality
+
+WhatsApp Integration: The application must connect to the WhatsApp Business API (via a provider like Twilio or Meta's own API) to send and receive messages.
+
+User Onboarding: When a new user sends the keyword START, the system should:
+
+Register their phone number.
+
+Set their status to active.
+
+Initialize their journey at Day 1.
+
+Immediately send the content for Day 1.
+
+Daily Content Scheduler: A scheduled task (e.g., a cron job) must run once a day (e.g., at 8:00 AM user's local time, or a fixed time like 8:00 AM UTC for the MVP). This job will:
+
+Query the database for all active users.
+
+For each user, retrieve the content corresponding to their current_day.
+
+Send the content via WhatsApp.
+
+Increment the user's current_day counter.
+
+Deactivate users who have completed Day 30.
+
+Mixed-Media Content Delivery: The system must be able to send different types of media as defined in the content database: text, images, short video links (e.g., YouTube Shorts), and audio file links.
+
+Interactive Reflection: After delivering the daily content, the system will wait a short period (e.g., 1-2 minutes) and then send a pre-defined, open-ended question for that day (e.g., "What's one word that comes to mind after watching this?").
+
+AI-Powered Response Handling: When a user replies to the reflection question, the system must:
+
+Take the user's text response.
+
+Send it to the Google Gemini API with a specific prompt to perform two tasks:
+
+Sentiment Analysis: Classify the response as positive, negative, or neutral.
+
+Keyword Tagging: Identify and assign relevant tags from a predefined list. For the MVP, the list is: "Bible Engagement", "Gospel Presentation", "Christian Learning", "Bible Exposure", "Salvation Prayer", "Question", "Doubt", "Positive Feedback".
+
+Log the raw response, sentiment, and tags in a MessageLog table.
+
+Basic User Commands: The system must recognize and respond to the following keywords:
+
+STOP: Sets the user's status to inactive and sends a confirmation message.
+
+HELP: Provides a simple help message explaining the commands.
+
+Human Handoff Trigger: If a user's message contains keywords like "talk to someone", "speak to a person", or "pray with me", the system should:
+
+Tag the conversation with a high-priority HUMAN_HANDOFF tag.
+
+Send an automated message like, "Thank you for reaching out. A member of our team will contact you shortly."
+
+(For the MVP, this is a logging function. No real-time alert is needed, but the data must be captured).
+
+## Technology Stack & Architecture
+
+Please use the following stack. Use the Replit environment to its full potential.
+
+Backend Language/Framework: Python (using Flask or FastAPI).
+
+Database: Use the built-in Replit Database for simplicity. This will act as our combined "Content Store" and "Data Store".
+
+Workflow Automation: For the MVP, implement the daily scheduler as a simple cron job or a background thread within the Replit instance. We will replace this with a tool like n8n later.
+
+Messaging API: Structure the code to call the WhatsApp Business API. For development, you can create a wrapper function that prints to the console, simulating a message send.
+
+Intelligence API: Use the Google Gemini API for response analysis.
+
+Secrets Management: Use Replit Secrets to store all API keys (Gemini API Key, WhatsApp token, etc.).
+
+## Data Models (Replit DB Schema)
+
+Please structure the Replit Database with the following key-value structures:
+
+users Collection:
+
+Key: whatsapp_phone_number (e.g., +14155552671)
+
+Value (JSON Object):
+
+JSON
+
+{
+  "status": "active", // active, inactive, completed
+  "current_day": 1,
+  "join_date": "YYYY-MM-DDTHH:MM:SSZ",
+  "tags": []
+}
+content Collection:
+
+Key: day_number (e.g., 1, 2, 3)
+
+Value (JSON Object):
+
+JSON
+
+{
+  "day": 1,
+  "media_type": "video", // text, image, video, audio
+  "content_text": "Welcome! Here is a short story about the concept of light in the teachings of Isa al-Masih (Jesus).",
+  "media_url": "https://youtube.com/shorts/example123",
+  "reflection_question": "What is one thing that stood out to you from this video?"
+}
+message_logs Collection:
+
+Key: A unique ID, perhaps f"{phone_number}_{timestamp}"
+
+Value (JSON Object):
+
+JSON
+
+{
+  "user_id": "+14155552671",
+  "timestamp": "YYYY-MM-DDTHH:MM:SSZ",
+  "direction": "incoming", // or "outgoing"
+  "raw_text": "I thought it was very peaceful.",
+  "llm_sentiment": "positive",
+  "llm_tags": ["Positive Feedback", "Christian Learning"]
+}
+## Getting Started: Initial File Structure
+
+Please generate the initial project structure.
+
+/
+├── main.py             # Main Flask/FastAPI app, handles incoming webhooks
+├── scheduler.py        # Logic for the daily cron job
+├── services.py         # Functions to interact with external APIs (WhatsApp, Gemini)
+├── database.py         # Helper functions for interacting with Replit DB
+├── prompts.py          # Stores the specific prompts for the Gemini API
+├── requirements.txt    # Python package dependencies
+├── .replit
+└── replit.nix
+Please populate requirements.txt with flask, requests, google-generativeai, and python-dotenv.
+
+In database.py, create placeholder content for the first 3 days in the content collection so the application can be tested immediately. Use the culturally contextualized example below for Day 1.
+
+## Example Content (for context)
+
+content entry for Day 1:
+
+JSON
+
+{
+  "day": 1,
+  "media_type": "text",
+  "content_text": "As-salamu alaykum and welcome to your Faith Journey. We're glad you're here. In the holy Injil, the prophet Isa al-Masih (Jesus) is often described as a light. He said, 'I am the light of the world. Whoever follows me will never walk in darkness, but will have the light of life.' (John 8:12)",
+  "media_url": null,
+  "reflection_question": "What does the idea of 'light' mean to you in your own life?"
+}
+Please begin by setting up this file structure and the basic Flask/FastAPI server in main.py with a single webhook endpoint /whatsapp that can receive POST requests. Then, proceed to build out the other modules.
