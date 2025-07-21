@@ -232,6 +232,16 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                               "Day 1 content will arrive in 10 seconds!")
             send_message_to_platform(phone_number, platform, restart_message)
             
+            # Log the RESTART command for chat management visibility
+            db_manager.log_message(
+                user=existing_user,
+                direction='incoming',
+                raw_text=f'/start' if platform == 'telegram' else 'START',
+                sentiment='positive',
+                tags=['RESTART', 'RETURNING_USER', 'ONBOARDING'],
+                confidence=1.0
+            )
+            
             # Send Day 1 content after 10 second delay
             def delayed_content():
                 with app.app_context():
@@ -261,6 +271,18 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                           "Day 1 content will arrive in 10 seconds!")
         
         send_message_to_platform(phone_number, platform, welcome_message)
+        
+        # Log the START command for chat management visibility
+        user = db_manager.get_user_by_phone(phone_number)
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=f'/start' if platform == 'telegram' else 'START',
+                sentiment='positive',
+                tags=['START', 'NEW_USER', 'ONBOARDING'],
+                confidence=1.0
+            )
         
         # Send Day 1 content after 10 second delay
         def delayed_content():
@@ -901,6 +923,55 @@ def export_filtered_chats():
     except Exception as e:
         logger.error(f"Error exporting chats: {e}")
         return f"Error exporting chats: {e}", 500
+
+@app.route('/api/users/<user_phone>/clear', methods=['POST'])
+def clear_user_data(user_phone):
+    """Clear all data for a specific user - useful for testing"""
+    try:
+        # Get user first
+        user = db_manager.get_user_by_phone(user_phone)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Delete all message logs for this user
+        message_count = MessageLog.query.filter_by(user_id=user.id).count()
+        MessageLog.query.filter_by(user_id=user.id).delete()
+        
+        # Delete the user record
+        User.query.filter_by(phone_number=user_phone).delete()
+        
+        # Commit the changes
+        db.session.commit()
+        
+        logger.info(f"Cleared user data for {user_phone}: {message_count} messages deleted")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully cleared user {user_phone}',
+            'deleted_messages': message_count
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error clearing user data for {user_phone}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recent-messages')
+def get_recent_messages():
+    """Get recent messages for dashboard display"""
+    try:
+        # Get the 10 most recent messages
+        messages = db_manager.get_filtered_messages(
+            page=1,
+            limit=10,
+            sort_field='timestamp',
+            sort_order='desc',
+            filters={}
+        )
+        
+        return jsonify(messages['messages'])
+    except Exception as e:
+        logger.error(f"Error getting recent messages: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/chat/<int:user_id>')
 def view_full_chat(user_id):

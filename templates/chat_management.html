@@ -101,6 +101,36 @@
             </div>
         </div>
 
+        <!-- User Management Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>User Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="userSearch" class="form-label">Search User (Phone Number)</label>
+                        <input type="text" class="form-control" id="userSearch" placeholder="e.g., tg_960173404">
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-info" id="searchUser">
+                                <i class="fas fa-search me-2"></i>Find User
+                            </button>
+                            <button class="btn btn-danger" id="clearUserData" disabled>
+                                <i class="fas fa-trash me-2"></i>Clear User Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="userDetails" class="mt-3" style="display: none;">
+                    <!-- User details will be shown here -->
+                </div>
+            </div>
+        </div>
+
         <!-- Filters Section -->
         <div class="filter-section">
             <div class="row">
@@ -580,6 +610,85 @@
         // Initialize chat manager when page loads
         document.addEventListener('DOMContentLoaded', () => {
             window.chatManager = new ChatManager();
+            
+            // User management functionality
+            const searchUserBtn = document.getElementById('searchUser');
+            const clearUserBtn = document.getElementById('clearUserData');
+            const userSearchInput = document.getElementById('userSearch');
+            const userDetailsDiv = document.getElementById('userDetails');
+            let currentUser = null;
+            
+            searchUserBtn.addEventListener('click', async () => {
+                const phoneNumber = userSearchInput.value.trim();
+                if (!phoneNumber) {
+                    alert('Please enter a phone number');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/users`);
+                    const users = await response.json();
+                    const user = users.find(u => u.phone_number === phoneNumber);
+                    
+                    if (user) {
+                        currentUser = user;
+                        userDetailsDiv.style.display = 'block';
+                        userDetailsDiv.innerHTML = `
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-user me-2"></i>User Found: ${user.phone_number}</h6>
+                                <p class="mb-1"><strong>Status:</strong> ${user.status}</p>
+                                <p class="mb-1"><strong>Current Day:</strong> ${user.current_day}</p>
+                                <p class="mb-1"><strong>Join Date:</strong> ${new Date(user.join_date).toLocaleString()}</p>
+                                <p class="mb-0"><strong>Platform:</strong> ${user.phone_number.startsWith('tg_') ? 'Telegram' : 'WhatsApp'}</p>
+                            </div>
+                        `;
+                        clearUserBtn.disabled = false;
+                    } else {
+                        userDetailsDiv.style.display = 'block';
+                        userDetailsDiv.innerHTML = '<div class="alert alert-warning">User not found in database</div>';
+                        clearUserBtn.disabled = true;
+                        currentUser = null;
+                    }
+                } catch (error) {
+                    console.error('Error searching user:', error);
+                    alert('Error searching for user');
+                }
+            });
+            
+            clearUserBtn.addEventListener('click', async () => {
+                if (!currentUser || !confirm(`Are you sure you want to clear all data for user ${currentUser.phone_number}? This action cannot be undone.`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/users/${currentUser.phone_number}/clear`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(`Successfully cleared user data. ${result.deleted_messages} messages deleted.`);
+                        userDetailsDiv.innerHTML = '<div class="alert alert-success">User data cleared successfully</div>';
+                        clearUserBtn.disabled = true;
+                        currentUser = null;
+                        // Refresh the chat table
+                        window.chatManager.loadMessages();
+                    } else {
+                        alert('Error clearing user data: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error clearing user:', error);
+                    alert('Error clearing user data');
+                }
+            });
+            
+            // Allow enter key in search input
+            userSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchUserBtn.click();
+                }
+            });
         });
 
         // Global functions for inline onclick handlers
