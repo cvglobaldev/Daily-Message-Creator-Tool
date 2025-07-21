@@ -138,6 +138,35 @@ def telegram_webhook():
                 # Process the message
                 process_incoming_message(phone_number, message_text, platform="telegram", 
                                        user_data={"username": username, "first_name": first_name, "chat_id": chat_id})
+        
+        # Handle callback queries from inline keyboards (2025 feature)
+        elif 'callback_query' in data:
+            callback_query = data['callback_query']
+            callback_query_id = callback_query.get('id')
+            callback_data = callback_query.get('data', '')
+            chat_id = str(callback_query.get('message', {}).get('chat', {}).get('id', ''))
+            user_info = callback_query.get('from', {})
+            
+            if chat_id and callback_data:
+                phone_number = f"tg_{chat_id}"
+                
+                # Handle different types of callback queries
+                if callback_data.startswith('quick_reply:'):
+                    reply_text = callback_data.replace('quick_reply:', '')
+                    logger.info(f"Quick reply from {chat_id}: {reply_text}")
+                    
+                    # Process as regular message
+                    process_incoming_message(phone_number, reply_text, platform="telegram", 
+                                           user_data={"username": user_info.get('username', ''), 
+                                                     "first_name": user_info.get('first_name', ''), 
+                                                     "chat_id": chat_id})
+                    
+                    # Answer the callback query
+                    telegram_service.answer_callback_query(callback_query_id, "Thank you for your response!")
+                
+                else:
+                    # Answer unknown callback queries
+                    telegram_service.answer_callback_query(callback_query_id, "Response received")
                 
         return jsonify({"status": "ok"}), 200
         
@@ -211,19 +240,34 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             "Sorry, there was an error processing your message. Please try again or type HELP for assistance."
         )
 
-def send_message_to_platform(phone_number: str, platform: str, message: str) -> bool:
-    """Send message to the appropriate platform"""
+def send_message_to_platform(phone_number: str, platform: str, message: str, 
+                           with_quick_replies: bool = False, copy_text: str = "", 
+                           copy_label: str = "Copy Text") -> bool:
+    """Send message to the appropriate platform with enhanced features"""
     try:
         if platform == "telegram":
             # Extract chat_id from tg_ prefixed phone number
             if phone_number.startswith("tg_"):
                 chat_id = phone_number[3:]  # Remove 'tg_' prefix
-                return telegram_service.send_message(chat_id, message)
+                
+                # Enhanced Telegram messaging with 2025 features
+                if copy_text and copy_label:
+                    # Send message with copy button for Bible verses or inspirational content
+                    return telegram_service.send_copy_text_message(chat_id, message, copy_text, copy_label)
+                elif with_quick_replies:
+                    # Send message with quick reply buttons for common responses
+                    quick_replies = [
+                        "Tell me more", "I have a question", 
+                        "This is helpful", "I need time to think"
+                    ]
+                    return telegram_service.send_quick_reply_message(chat_id, message, quick_replies)
+                else:
+                    return telegram_service.send_message(chat_id, message)
             else:
                 logger.error(f"Invalid Telegram chat_id format: {phone_number}")
                 return False
         else:
-            # Default to WhatsApp
+            # Default to WhatsApp (enhanced features not yet implemented)
             return whatsapp_service.send_message(phone_number, message)
     except Exception as e:
         logger.error(f"Error sending message to {platform}: {e}")

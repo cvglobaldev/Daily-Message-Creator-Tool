@@ -25,13 +25,15 @@ class TelegramService:
         else:
             logger.info("Telegram service initialized with bot token")
     
-    def send_message(self, chat_id: str, message: str) -> bool:
-        """Send a text message via Telegram"""
+    def send_message(self, chat_id: str, message: str, reply_markup=None, parse_mode="HTML") -> bool:
+        """Send a text message via Telegram with optional inline keyboards"""
         try:
             if self.simulate_mode:
                 # Simulate message sending for development
                 print(f"\n📱 TELEGRAM MESSAGE TO {chat_id}:")
                 print(f"   {message}")
+                if reply_markup:
+                    print(f"   📱 Inline Keyboard: {reply_markup}")
                 print("   ✅ Message simulated (development mode)")
                 return True
             
@@ -39,8 +41,11 @@ class TelegramService:
             payload = {
                 "chat_id": chat_id,
                 "text": message,
-                "parse_mode": "HTML"  # Allow HTML formatting
+                "parse_mode": parse_mode
             }
+            
+            if reply_markup:
+                payload["reply_markup"] = reply_markup
             
             response = requests.post(url, json=payload, timeout=30)
             
@@ -53,6 +58,50 @@ class TelegramService:
                 
         except Exception as e:
             logger.error(f"Error sending Telegram message to {chat_id}: {e}")
+            return False
+    
+    def send_message_with_inline_keyboard(self, chat_id: str, message: str, buttons: List[List[Dict[str, str]]]) -> bool:
+        """Send message with inline keyboard buttons"""
+        try:
+            reply_markup = {
+                "inline_keyboard": buttons
+            }
+            return self.send_message(chat_id, message, reply_markup)
+        except Exception as e:
+            logger.error(f"Error sending message with inline keyboard: {e}")
+            return False
+    
+    def send_quick_reply_message(self, chat_id: str, message: str, quick_replies: List[str]) -> bool:
+        """Send message with quick reply buttons for common faith journey responses"""
+        try:
+            # Convert quick replies to inline keyboard format
+            buttons = []
+            for i in range(0, len(quick_replies), 2):  # 2 buttons per row
+                row = []
+                for j in range(2):
+                    if i + j < len(quick_replies):
+                        row.append({
+                            "text": quick_replies[i + j],
+                            "callback_data": f"quick_reply:{quick_replies[i + j][:20]}"  # Limit callback data
+                        })
+                buttons.append(row)
+            
+            return self.send_message_with_inline_keyboard(chat_id, message, buttons)
+        except Exception as e:
+            logger.error(f"Error sending quick reply message: {e}")
+            return False
+    
+    def send_copy_text_message(self, chat_id: str, message: str, copy_text: str, copy_label: str = "Copy Verse") -> bool:
+        """Send message with copy text button for Bible verses or inspirational content"""
+        try:
+            buttons = [[{
+                "text": f"📋 {copy_label}",
+                "copy_text": {"text": copy_text}
+            }]]
+            
+            return self.send_message_with_inline_keyboard(chat_id, message, buttons)
+        except Exception as e:
+            logger.error(f"Error sending copy text message: {e}")
             return False
     
     def set_webhook(self, webhook_url: str, secret_token: str = "") -> bool:
@@ -141,6 +190,50 @@ class TelegramService:
         except Exception as e:
             logger.error(f"Error getting bot info: {e}")
             return {}
+    
+    def answer_callback_query(self, callback_query_id: str, text: str = "", show_alert: bool = False) -> bool:
+        """Answer callback query from inline keyboards"""
+        try:
+            if self.simulate_mode:
+                print(f"📱 CALLBACK QUERY ANSWER (simulated): {text}")
+                return True
+            
+            url = f"{self.api_base_url}/answerCallbackQuery"
+            payload = {
+                "callback_query_id": callback_query_id,
+                "text": text,
+                "show_alert": show_alert
+            }
+            
+            response = requests.post(url, json=payload, timeout=30)
+            return response.status_code == 200
+            
+        except Exception as e:
+            logger.error(f"Error answering callback query: {e}")
+            return False
+    
+    def set_emoji_status(self, chat_id: str, emoji: str, duration: int = 3600) -> bool:
+        """Set emoji status for enhanced user engagement (2025 feature)"""
+        try:
+            if self.simulate_mode:
+                print(f"📱 EMOJI STATUS SET (simulated): {emoji} for {duration}s")
+                return True
+            
+            url = f"{self.api_base_url}/setUserEmojiStatus"
+            payload = {
+                "user_id": chat_id,
+                "emoji_status": {
+                    "custom_emoji_id": emoji,
+                    "expiration_date": duration
+                }
+            }
+            
+            response = requests.post(url, json=payload, timeout=30)
+            return response.status_code == 200
+            
+        except Exception as e:
+            logger.error(f"Error setting emoji status: {e}")
+            return False
 
 class WhatsAppService:
     """Service for WhatsApp Business API integration"""
