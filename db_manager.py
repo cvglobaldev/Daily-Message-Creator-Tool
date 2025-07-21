@@ -175,6 +175,18 @@ class DatabaseManager:
             logger.error(f"Error getting messages for user {phone_number}: {e}")
             return []
     
+    def get_user_messages_by_id(self, user_id: int, limit: int = 50) -> List[MessageLog]:
+        """Get messages for specific user by user ID"""
+        try:
+            return (MessageLog.query
+                   .filter_by(user_id=user_id)
+                   .order_by(MessageLog.timestamp.asc())
+                   .limit(limit)
+                   .all())
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting messages for user {user_id}: {e}")
+            return []
+    
     def get_human_handoff_requests(self, unresolved_only: bool = True) -> List[MessageLog]:
         """Get human handoff requests"""
         try:

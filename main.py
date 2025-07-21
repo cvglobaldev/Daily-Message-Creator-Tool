@@ -706,6 +706,23 @@ def export_filtered_chats():
         logger.error(f"Error exporting chats: {e}")
         return f"Error exporting chats: {e}", 500
 
+@app.route('/chat/<int:user_id>')
+def view_full_chat(user_id):
+    """Display full chat history for a specific user"""
+    try:
+        # Get user information
+        user = User.query.get(user_id)
+        if not user:
+            return "User not found", 404
+        
+        # Get all messages for this user
+        messages = db_manager.get_user_messages_by_id(user_id, limit=1000)
+        
+        return render_template('full_chat.html', user=user, messages=messages)
+    except Exception as e:
+        logger.error(f"Error loading chat history: {e}")
+        return f"Error loading chat history: {e}", 500
+
 if __name__ == '__main__':
     with app.app_context():
         # Create database tables

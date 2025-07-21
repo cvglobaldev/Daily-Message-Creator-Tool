@@ -345,7 +345,7 @@
                     const handoffClass = message.is_human_handoff ? 'human-handoff-indicator' : '';
                     
                     return `
-                        <tr class="chat-row ${handoffClass}" onclick="this.viewMessage(${message.id})" data-message-id="${message.id}">
+                        <tr class="chat-row ${handoffClass}" data-message-id="${message.id}">
                             <td>
                                 <div>${new Date(message.timestamp).toLocaleDateString()}</div>
                                 <small class="text-muted">${new Date(message.timestamp).toLocaleTimeString()}</small>
@@ -375,10 +375,10 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="event.stopPropagation(); this.viewMessage(${message.id})" title="View Details">
+                                    <button class="btn btn-outline-primary" onclick="event.stopPropagation(); window.chatManager.viewMessage(${message.id})" title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-outline-info" onclick="event.stopPropagation(); this.viewFullChat(${message.user_id})" title="Full Chat">
+                                    <button class="btn btn-outline-info" onclick="event.stopPropagation(); window.chatManager.viewFullChat(${message.user_id})" title="Full Chat">
                                         <i class="fas fa-comments"></i>
                                     </button>
                                 </div>
