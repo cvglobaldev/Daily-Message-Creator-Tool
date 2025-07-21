@@ -718,7 +718,16 @@ def view_full_chat(user_id):
         # Get all messages for this user
         messages = db_manager.get_user_messages_by_id(user_id, limit=1000)
         
-        return render_template('full_chat.html', user=user, messages=messages)
+        # Create a user dict to ensure template compatibility
+        user_dict = {
+            'id': user.id,
+            'phone_number': user.phone_number,
+            'status': user.status,
+            'current_day': user.current_day,
+            'join_date': user.join_date
+        }
+        
+        return render_template('full_chat.html', user=user_dict, messages=messages)
     except Exception as e:
         logger.error(f"Error loading chat history: {e}")
         return f"Error loading chat history: {e}", 500

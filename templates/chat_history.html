@@ -122,7 +122,7 @@
                             </span>
                         </p>
                         <p><strong>Journey Day:</strong> {{ user.current_day_number }} / {{ user.journey_duration_days }}</p>
-                        <p><strong>Started:</strong> {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+                        <p><strong>Started:</strong> {{ user.join_date.strftime('%Y-%m-%d') if user.join_date else 'N/A' }}</p>
                         {% if user.last_message_at %}
                         <p><strong>Last Message:</strong> {{ user.last_message_at.strftime('%Y-%m-%d %H:%M') }}</p>
                         {% endif %}
