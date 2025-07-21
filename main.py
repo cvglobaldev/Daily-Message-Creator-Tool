@@ -347,6 +347,11 @@ def get_users():
         logger.error(f"Error getting users: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/test-interface')
+def test_interface():
+    """Test interface for simulating WhatsApp messages"""
+    return render_template('test.html')
+
 if __name__ == '__main__':
     with app.app_context():
         # Create database tables
