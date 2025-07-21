@@ -333,7 +333,7 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
 def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp"):
-    """Handle user's reflection response"""
+    """Handle user's reflection response with contextual AI response"""
     try:
         # Analyze the response with Gemini
         analysis = gemini_service.analyze_response(message_text)
@@ -353,24 +353,46 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
             confidence=analysis.get('confidence')
         )
         
-        # Send acknowledgment
-        acknowledgments = [
-            "Thank you for sharing your reflection. 🙏",
-            "I appreciate you taking the time to reflect on this.",
-            "Your thoughts are valuable. Thank you for sharing.",
-            "Thank you for your honest reflection.",
-        ]
+        # Get current day content for contextual response
+        current_day = user.current_day - 1  # User was advanced after receiving content, so subtract 1 for the content they just reflected on
+        content = db_manager.get_content_by_day(current_day) if current_day > 0 else None
         
-        import random
-        response = random.choice(acknowledgments)
-        send_message_to_platform(phone_number, platform, response)
+        if content:
+            # Generate contextual response based on current day's content
+            contextual_response = gemini_service.generate_contextual_response(
+                user_reflection=message_text,
+                day_number=content.day_number,
+                content_title=content.title,
+                content_text=content.content,
+                reflection_question=content.reflection_question
+            )
+            
+            logger.info(f"Generated contextual response for {phone_number} (Day {content.day_number})")
+        else:
+            # Fallback acknowledgment if no content found
+            contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
+            logger.warning(f"No content found for contextual response to {phone_number}")
+        
+        # Send the contextual response
+        send_message_to_platform(phone_number, platform, contextual_response)
+        
+        # Log the outgoing contextual response
+        db_manager.log_message(
+            user=user,
+            direction='outgoing',
+            raw_text=contextual_response,
+            sentiment='positive',
+            tags=['AI_Response', 'Contextual'],
+            confidence=0.9
+        )
         
         logger.info(f"Processed reflection from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
         
     except Exception as e:
         logger.error(f"Error handling reflection response from {phone_number}: {e}")
-        # Still acknowledge the user's response
-        send_message_to_platform(phone_number, platform, "Thank you for your reflection. 🙏")
+        # Still acknowledge the user's response with fallback
+        fallback_response = "Thank you for your reflection. Your thoughtfulness is appreciated."
+        send_message_to_platform(phone_number, platform, fallback_response)
 
 @app.route('/telegram/setup', methods=['POST'])
 def setup_telegram_webhook():

@@ -391,6 +391,54 @@ class GeminiService:
             "confidence": 0.6  # Medium confidence for fallback analysis
         }
     
+    def generate_contextual_response(self, user_reflection: str, day_number: int, content_title: str, content_text: str, reflection_question: str) -> str:
+        """Generate a contextual response to user's reflection based on current day's content"""
+        try:
+            if not self.client:
+                # Fallback response if Gemini is not available
+                return self._get_fallback_contextual_response(user_reflection)
+            
+            from prompts import CONTEXTUAL_RESPONSE_PROMPT
+            
+            # Create the prompt with context
+            prompt = CONTEXTUAL_RESPONSE_PROMPT.format(
+                day_number=day_number,
+                content_title=content_title,
+                content_text=content_text,
+                reflection_question=reflection_question,
+                user_reflection=user_reflection
+            )
+            
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            
+            if response.text:
+                # Clean up the response (remove any extra formatting)
+                contextual_response = response.text.strip()
+                logger.info(f"Generated contextual response for reflection (length: {len(contextual_response)})")
+                return contextual_response
+            else:
+                return self._get_fallback_contextual_response(user_reflection)
+                
+        except Exception as e:
+            logger.error(f"Error generating contextual response: {e}")
+            return self._get_fallback_contextual_response(user_reflection)
+    
+    def _get_fallback_contextual_response(self, user_reflection: str) -> str:
+        """Provide fallback contextual responses when Gemini is unavailable"""
+        responses = [
+            "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth.",
+            "I appreciate you taking time to reflect on this. Your insights show that you're truly engaging with these important concepts.",
+            "Your reflection shows deep thinking. These are exactly the kind of questions that lead to meaningful spiritual growth.",
+            "Thank you for your honest response. Your willingness to explore these ideas is encouraging to see.",
+            "I'm grateful you shared your thoughts. Your reflection shows you're genuinely considering what this means for your own life."
+        ]
+        
+        import random
+        return random.choice(responses)
+    
     def should_trigger_human_handoff(self, user_message: str) -> bool:
         """Determine if a message should trigger human handoff"""
         if not self.client:
@@ -428,33 +476,4 @@ class GeminiService:
             # Default to false to avoid unnecessary handoffs
             return False
 
-    def generate_contextual_response(self, message: str, system_prompt: str, style: str = 'compassionate'):
-        """Generate contextual response with custom system prompt and style"""
-        try:
-            if not self.client:
-                return None
-            
-            style_modifiers = {
-                'compassionate': 'Respond with deep empathy, warmth, and understanding.',
-                'educational': 'Focus on teaching and providing informative, educational content.',
-                'encouraging': 'Provide uplifting, motivational, and supportive responses.',
-                'balanced': 'Balance compassion, education, and encouragement in your response.'
-            }
-            
-            full_prompt = f"""{system_prompt}
 
-Style guidance: {style_modifiers.get(style, style_modifiers['compassionate'])}
-
-User message: "{message}"
-
-Please respond according to your role and the style guidance above."""
-
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=full_prompt
-            )
-            
-            return response.text if response.text else None
-        except Exception as e:
-            logger.error(f"Error generating contextual response: {e}")
-            return None
