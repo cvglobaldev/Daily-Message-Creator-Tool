@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Settings - Faith Journey</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .settings-section {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-chat-container {
+            background: var(--bs-gray-dark);
+            border-radius: 10px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+        }
+        .test-message {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 15px;
+        }
+        .test-user {
+            background: var(--bs-secondary);
+            margin-right: 20%;
+        }
+        .test-bot {
+            background: var(--bs-primary);
+            margin-left: 20%;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Dashboard
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link" href="/cms">
+                    <i class="fas fa-edit me-1"></i>Content Management
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">
+            <i class="fas fa-cogs me-3"></i>Chatbot Settings
+        </h2>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="settings-section">
+                    <h4>
+                        <i class="fas fa-robot me-2"></i>AI Response Configuration
+                    </h4>
+                    
+                    <form id="settingsForm">
+                        <div class="mb-3">
+                            <label for="systemPrompt" class="form-label">System Prompt</label>
+                            <textarea class="form-control" id="systemPrompt" rows="8" placeholder="Define how the AI should respond...">{{ settings.system_prompt or default_prompt }}</textarea>
+                            <div class="form-text">This prompt defines the AI's personality, role, and response style.</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="responseStyle" class="form-label">Response Style</label>
+                                <select class="form-select" id="responseStyle">
+                                    <option value="compassionate" {% if settings.response_style == 'compassionate' %}selected{% endif %}>Compassionate</option>
+                                    <option value="educational" {% if settings.response_style == 'educational' %}selected{% endif %}>Educational</option>
+                                    <option value="encouraging" {% if settings.response_style == 'encouraging' %}selected{% endif %}>Encouraging</option>
+                                    <option value="balanced" {% if settings.response_style == 'balanced' %}selected{% endif %}>Balanced</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contextAwareness" class="form-label">Context Awareness</label>
+                                <select class="form-select" id="contextAwareness">
+                                    <option value="high" {% if settings.context_awareness == 'high' %}selected{% endif %}>High</option>
+                                    <option value="medium" {% if settings.context_awareness == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="low" {% if settings.context_awareness == 'low' %}selected{% endif %}>Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="useDailyContent" {% if settings.use_daily_content_context %}checked{% endif %}>
+                                <label class="form-check-label" for="useDailyContent">
+                                    Use Daily Content Context
+                                </label>
+                                <div class="form-text">Reference the user's current day content when generating responses.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableAutoTagging" {% if settings.enable_auto_tagging %}checked{% endif %}>
+                                <label class="form-check-label" for="enableAutoTagging">
+                                    Enable Auto-Tagging
+                                </label>
+                                <div class="form-text">Automatically tag messages with AI-generated categories.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="handoffTriggers" class="form-label">Human Handoff Triggers</label>
+                            <textarea class="form-control" id="handoffTriggers" rows="2" placeholder="comma, separated, keywords">{{ settings.handoff_triggers or 'suicide, depression, abuse, crisis, emergency, help me, urgent' }}</textarea>
+                            <div class="form-text">Keywords that will automatically flag messages for human intervention.</div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="resetSettings">
+                                <i class="fas fa-undo me-2"></i>Reset to Defaults
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="settings-section">
+                    <h5>
+                        <i class="fas fa-vial me-2"></i>Test AI Response
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label for="testMessage" class="form-label">Test Message</label>
+                        <textarea class="form-control" id="testMessage" rows="2" placeholder="Type a message to test...">I'm feeling confused about faith and need guidance</textarea>
+                    </div>
+                    
+                    <button type="button" class="btn btn-info w-100 mb-3" id="testResponse">
+                        <i class="fas fa-play me-2"></i>Test Response
+                    </button>
+                    
+                    <div class="test-chat-container" id="testChatContainer">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-comments fa-2x mb-2"></i>
+                            <p>Test AI responses here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const settings = {
+                system_prompt: document.getElementById('systemPrompt').value,
+                response_style: document.getElementById('responseStyle').value,
+                context_awareness: document.getElementById('contextAwareness').value,
+                use_daily_content_context: document.getElementById('useDailyContent').checked,
+                enable_auto_tagging: document.getElementById('enableAutoTagging').checked,
+                handoff_triggers: document.getElementById('handoffTriggers').value
+            };
+            
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Settings saved successfully!');
+                } else {
+                    alert('Failed to save settings: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error saving settings: ' + error.message);
+            }
+        });
+        
+        document.getElementById('resetSettings').addEventListener('click', async function() {
+            if (confirm('Reset all settings to defaults?')) {
+                try {
+                    const response = await fetch('/api/settings/reset', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Failed to reset settings: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    alert('Error resetting settings: ' + error.message);
+                }
+            }
+        });
+        
+        document.getElementById('testResponse').addEventListener('click', async function() {
+            const testMessage = document.getElementById('testMessage').value.trim();
+            if (!testMessage) return;
+            
+            const settings = {
+                system_prompt: document.getElementById('systemPrompt').value,
+                response_style: document.getElementById('responseStyle').value,
+                context_awareness: document.getElementById('contextAwareness').value,
+                use_daily_content_context: document.getElementById('useDailyContent').checked,
+                enable_auto_tagging: document.getElementById('enableAutoTagging').checked,
+                handoff_triggers: document.getElementById('handoffTriggers').value
+            };
+            
+            // Add user message to chat
+            const chatContainer = document.getElementById('testChatContainer');
+            chatContainer.innerHTML += `<div class="test-message test-user">${testMessage}</div>`;
+            
+            // Add loading indicator
+            chatContainer.innerHTML += `<div class="test-message test-bot" id="loadingMessage"><i class="fas fa-spinner fa-spin"></i> Generating response...</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            try {
+                const response = await fetch('/api/test-response', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: testMessage,
+                        settings: settings
+                    })
+                });
+                
+                const result = await response.json();
+                
+                // Remove loading indicator
+                document.getElementById('loadingMessage').remove();
+                
+                if (result.success) {
+                    chatContainer.innerHTML += `<div class="test-message test-bot">${result.response}</div>`;
+                } else {
+                    chatContainer.innerHTML += `<div class="test-message test-bot text-danger">Error: ${result.error || 'Failed to generate response'}</div>`;
+                }
+                
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } catch (error) {
+                document.getElementById('loadingMessage').remove();
+                chatContainer.innerHTML += `<div class="test-message test-bot text-danger">Error: ${error.message}</div>`;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>

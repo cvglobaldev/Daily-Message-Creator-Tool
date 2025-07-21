@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, make_response
 from models import db, User, Content, MessageLog
 from db_manager import DatabaseManager
 from services import WhatsAppService, GeminiService
@@ -430,6 +430,163 @@ def delete_content(content_id):
     except Exception as e:
         logger.error(f"Error deleting content: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# Contextual Response Generation
+def generate_contextual_response(user_message: str, user = None, custom_settings = None):
+    """Generate contextual AI response based on user's journey progress"""
+    try:
+        # Get settings
+        if custom_settings:
+            settings = custom_settings
+        else:
+            settings = db_manager.get_chatbot_settings()
+        
+        # Get user's current day content if available
+        daily_content = None
+        if user and settings.get('use_daily_content_context', True):
+            daily_content = db_manager.get_content_by_day(user.current_day_number)
+        
+        # Build context-aware prompt
+        system_prompt = settings.get('system_prompt', '')
+        if daily_content and settings.get('use_daily_content_context', True):
+            context_prompt = f"""
+Current day content context:
+Title: {daily_content.title}
+Content: {daily_content.content[:300]}...
+Reflection Question: {daily_content.reflection_question}
+
+Use this context to provide relevant, personalized responses to the user's message.
+"""
+            system_prompt += "\n\n" + context_prompt
+        
+        # Generate response using Gemini
+        response = gemini_service.generate_contextual_response(
+            message=user_message,
+            system_prompt=system_prompt,
+            style=settings.get('response_style', 'compassionate')
+        )
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error generating contextual response: {e}")
+        return "Thank you for your message. I'm here to support you on your faith journey. Please feel free to share your thoughts or questions."
+
+# Chat Management Routes
+@app.route('/chat/<int:user_id>')
+def chat_history(user_id):
+    """Display chat history for a specific user"""
+    try:
+        user = db_manager.get_user_by_id(user_id)
+        if not user:
+            return "User not found", 404
+            
+        messages = db_manager.get_user_messages(user_id)
+        return render_template('chat_history.html', user=user, messages=messages)
+    except Exception as e:
+        logger.error(f"Error loading chat history: {e}")
+        return f"Error loading chat history: {e}", 500
+
+@app.route('/settings')
+def settings_page():
+    """Display chatbot settings page"""
+    try:
+        settings = db_manager.get_chatbot_settings()
+        default_prompt = """You are a compassionate AI assistant helping people on their faith journey to learn about Jesus. 
+
+Your role:
+- Respond with warmth, understanding, and respect for the user's background
+- Reference their current day's content when relevant
+- Encourage reflection and spiritual growth
+- Be sensitive to users from Muslim backgrounds
+- Provide biblical insights in an accessible way
+- Guide users toward a deeper understanding of Jesus
+
+Always maintain a respectful, caring tone and be ready to offer prayer or encouragement when needed."""
+        
+        return render_template('settings.html', settings=settings, default_prompt=default_prompt)
+    except Exception as e:
+        logger.error(f"Error loading settings: {e}")
+        return f"Error loading settings: {e}", 500
+
+@app.route('/api/send-message', methods=['POST'])
+def send_message_to_user():
+    """Send a message from admin to user"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        message = data.get('message')
+        tags = data.get('tags', [])
+        
+        user = db_manager.get_user_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+            
+        # Send message via WhatsApp
+        success = whatsapp_service.send_message(user.phone_number, message)
+        
+        if success:
+            # Log the message
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=message,
+                tags=tags
+            )
+            
+        return jsonify({'success': success})
+    except Exception as e:
+        logger.error(f"Error sending message: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/update-message-tags', methods=['POST'])
+def update_message_tags():
+    """Update tags for a specific message"""
+    try:
+        data = request.get_json()
+        message_id = data.get('message_id')
+        tags = data.get('tags', [])
+        
+        success = db_manager.update_message_tags(message_id, tags)
+        return jsonify({'success': success})
+    except Exception as e:
+        logger.error(f"Error updating message tags: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/settings', methods=['POST'])
+def save_chatbot_settings():
+    """Save chatbot settings"""
+    try:
+        data = request.get_json()
+        success = db_manager.save_chatbot_settings(data)
+        return jsonify({'success': success})
+    except Exception as e:
+        logger.error(f"Error saving settings: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/settings/reset', methods=['POST'])
+def reset_chatbot_settings():
+    """Reset chatbot settings to defaults"""
+    try:
+        success = db_manager.reset_chatbot_settings()
+        return jsonify({'success': success})
+    except Exception as e:
+        logger.error(f"Error resetting settings: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/test-response', methods=['POST'])
+def test_chatbot_response():
+    """Test chatbot response with current settings"""
+    try:
+        data = request.get_json()
+        test_message = data.get('message')
+        settings = data.get('settings')
+        
+        # Generate a contextual response
+        response = generate_contextual_response(test_message, None, settings)
+        return jsonify({'success': True, 'response': response})
+    except Exception as e:
+        logger.error(f"Error testing response: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

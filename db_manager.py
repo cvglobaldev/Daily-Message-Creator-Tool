@@ -367,3 +367,95 @@ class DatabaseManager:
             self.db.session.rollback()
             logger.error(f"Error deleting content: {e}")
             return False
+    
+    # Additional User and Message Management Methods
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        """Get user by ID"""
+        try:
+            return User.query.get(user_id)
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting user by ID {user_id}: {e}")
+            return None
+    
+    def get_user_messages(self, user_id: int) -> List[MessageLog]:
+        """Get all messages for a specific user"""
+        try:
+            return MessageLog.query.filter_by(user_id=user_id).order_by(MessageLog.timestamp.asc()).all()
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting user messages: {e}")
+            return []
+    
+    def update_message_tags(self, message_id: int, tags: List[str]) -> bool:
+        """Update tags for a specific message"""
+        try:
+            message = MessageLog.query.get(message_id)
+            if not message:
+                logger.error(f"Message with id {message_id} not found")
+                return False
+            
+            message.llm_tags = tags
+            self.db.session.commit()
+            logger.info(f"Message {message_id} tags updated successfully")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error updating message tags: {e}")
+            return False
+    
+    def get_chatbot_settings(self) -> Dict:
+        """Get chatbot settings"""
+        try:
+            settings = SystemSetting.query.filter_by(key='chatbot_settings').first()
+            if settings:
+                return json.loads(settings.value) if settings.value else {}
+            return self._get_default_settings()
+        except (SQLAlchemyError, json.JSONDecodeError) as e:
+            logger.error(f"Error getting chatbot settings: {e}")
+            return self._get_default_settings()
+    
+    def save_chatbot_settings(self, settings: Dict) -> bool:
+        """Save chatbot settings"""
+        try:
+            setting = SystemSetting.query.filter_by(key='chatbot_settings').first()
+            if not setting:
+                setting = SystemSetting(key='chatbot_settings')
+                self.db.session.add(setting)
+            
+            setting.value = json.dumps(settings)
+            self.db.session.commit()
+            logger.info("Chatbot settings saved successfully")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error saving chatbot settings: {e}")
+            return False
+    
+    def reset_chatbot_settings(self) -> bool:
+        """Reset chatbot settings to defaults"""
+        try:
+            default_settings = self._get_default_settings()
+            return self.save_chatbot_settings(default_settings)
+        except Exception as e:
+            logger.error(f"Error resetting chatbot settings: {e}")
+            return False
+    
+    def _get_default_settings(self) -> Dict:
+        """Get default chatbot settings"""
+        return {
+            'system_prompt': """You are a compassionate AI assistant helping people on their faith journey to learn about Jesus. 
+
+Your role:
+- Respond with warmth, understanding, and respect for the user's background
+- Reference their current day's content when relevant
+- Encourage reflection and spiritual growth
+- Be sensitive to users from Muslim backgrounds
+- Provide biblical insights in an accessible way
+- Guide users toward a deeper understanding of Jesus
+
+Always maintain a respectful, caring tone and be ready to offer prayer or encouragement when needed.""",
+            'response_style': 'compassionate',
+            'context_awareness': 'high',
+            'use_daily_content_context': True,
+            'enable_auto_tagging': True,
+            'handoff_triggers': 'suicide, depression, abuse, crisis, emergency, help me, urgent'
+        }

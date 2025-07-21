@@ -295,3 +295,34 @@ class GeminiService:
             logger.error(f"Error determining human handoff: {e}")
             # Default to false to avoid unnecessary handoffs
             return False
+
+    def generate_contextual_response(self, message: str, system_prompt: str, style: str = 'compassionate'):
+        """Generate contextual response with custom system prompt and style"""
+        try:
+            if not self.client:
+                return None
+            
+            style_modifiers = {
+                'compassionate': 'Respond with deep empathy, warmth, and understanding.',
+                'educational': 'Focus on teaching and providing informative, educational content.',
+                'encouraging': 'Provide uplifting, motivational, and supportive responses.',
+                'balanced': 'Balance compassion, education, and encouragement in your response.'
+            }
+            
+            full_prompt = f"""{system_prompt}
+
+Style guidance: {style_modifiers.get(style, style_modifiers['compassionate'])}
+
+User message: "{message}"
+
+Please respond according to your role and the style guidance above."""
+
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=full_prompt
+            )
+            
+            return response.text if response.text else None
+        except Exception as e:
+            logger.error(f"Error generating contextual response: {e}")
+            return None
