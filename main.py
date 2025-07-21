@@ -315,23 +315,41 @@ def test_message():
         phone_number = data.get('phone_number', '+14155551234')
         message = data.get('message', 'START')
         
-        # Process message
-        message_text = message.strip().upper()
+        # Capture simulated responses
+        simulated_responses = []
         
-        if message_text == 'START':
-            handle_start_command(phone_number)
-        elif message_text == 'STOP':
-            handle_stop_command(phone_number)
-        elif message_text == 'HELP':
-            handle_help_command(phone_number)
-        else:
-            # Check for human handoff triggers
-            if gemini_service.should_trigger_human_handoff(message):
-                handle_human_handoff(phone_number, message)
+        # Temporarily override WhatsApp service to capture responses
+        original_send = whatsapp_service.send_message
+        def capture_send(to, text):
+            simulated_responses.append(f"Bot: {text}")
+            return original_send(to, text)
+        whatsapp_service.send_message = capture_send
+        
+        try:
+            # Process message
+            message_text = message.strip().upper()
+            
+            if message_text == 'START':
+                handle_start_command(phone_number)
+            elif message_text == 'STOP':
+                handle_stop_command(phone_number)
+            elif message_text == 'HELP':
+                handle_help_command(phone_number)
             else:
-                handle_reflection_response(phone_number, message)
+                # Check for human handoff triggers
+                if gemini_service.should_trigger_human_handoff(message):
+                    handle_human_handoff(phone_number, message)
+                else:
+                    handle_reflection_response(phone_number, message)
+        finally:
+            # Restore original method
+            whatsapp_service.send_message = original_send
         
-        return jsonify({"status": "success", "message": "Message processed"})
+        return jsonify({
+            "status": "success", 
+            "message": "Message processed",
+            "bot_responses": simulated_responses
+        })
         
     except Exception as e:
         logger.error(f"Error in test endpoint: {e}")
