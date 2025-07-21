@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
@@ -25,13 +26,12 @@ class DatabaseManager:
     def create_user(self, phone_number: str, **kwargs) -> Optional[User]:
         """Create a new user"""
         try:
-            user = User(
-                phone_number=phone_number,
-                status=kwargs.get('status', 'active'),
-                current_day=kwargs.get('current_day', 1),
-                join_date=kwargs.get('join_date', datetime.utcnow()),
-                tags=kwargs.get('tags', [])
-            )
+            user = User()
+            user.phone_number = phone_number
+            user.status = kwargs.get('status', 'active')
+            user.current_day = kwargs.get('current_day', 1)
+            user.join_date = kwargs.get('join_date', datetime.utcnow())
+            user.tags = kwargs.get('tags', [])
             self.db.session.add(user)
             self.db.session.commit()
             logger.info(f"User {phone_number} created successfully")
@@ -111,7 +111,6 @@ class DatabaseManager:
             title="Legacy Content",
             content=content_text,
             reflection_question=reflection_question,
-            cultural_note="",
             is_active=True
         )
     
@@ -132,15 +131,14 @@ class DatabaseManager:
                    confidence: Optional[float] = None, is_human_handoff: bool = False) -> Optional[MessageLog]:
         """Log a message"""
         try:
-            message_log = MessageLog(
-                user_id=user.id,
-                direction=direction,
-                raw_text=raw_text,
-                llm_sentiment=sentiment,
-                llm_tags=tags or [],
-                llm_confidence=confidence,
-                is_human_handoff=is_human_handoff
-            )
+            message_log = MessageLog()
+            message_log.user_id = user.id
+            message_log.direction = direction
+            message_log.raw_text = raw_text
+            message_log.llm_sentiment = sentiment
+            message_log.llm_tags = tags or []
+            message_log.llm_confidence = confidence
+            message_log.is_human_handoff = is_human_handoff
             self.db.session.add(message_log)
             self.db.session.commit()
             return message_log
@@ -311,14 +309,13 @@ class DatabaseManager:
     def create_content(self, day_number, title, content, reflection_question, tags=None, is_active=True):
         """Create new content"""
         try:
-            new_content = Content(
-                day_number=day_number,
-                title=title,
-                content=content,
-                reflection_question=reflection_question,
-                tags=tags or [],
-                is_active=is_active
-            )
+            new_content = Content()
+            new_content.day_number = day_number
+            new_content.title = title
+            new_content.content = content
+            new_content.reflection_question = reflection_question
+            new_content.tags = tags or []
+            new_content.is_active = is_active
             self.db.session.add(new_content)
             self.db.session.commit()
             logger.info(f"Content for day {day_number} created successfully")
@@ -405,7 +402,7 @@ class DatabaseManager:
     def get_chatbot_settings(self) -> Dict:
         """Get chatbot settings"""
         try:
-            settings = SystemSetting.query.filter_by(key='chatbot_settings').first()
+            settings = SystemSettings.query.filter_by(key='chatbot_settings').first()
             if settings:
                 return json.loads(settings.value) if settings.value else {}
             return self._get_default_settings()
@@ -416,9 +413,9 @@ class DatabaseManager:
     def save_chatbot_settings(self, settings: Dict) -> bool:
         """Save chatbot settings"""
         try:
-            setting = SystemSetting.query.filter_by(key='chatbot_settings').first()
+            setting = SystemSettings.query.filter_by(key='chatbot_settings').first()
             if not setting:
-                setting = SystemSetting(key='chatbot_settings')
+                setting = SystemSettings(key='chatbot_settings')
                 self.db.session.add(setting)
             
             setting.value = json.dumps(settings)
