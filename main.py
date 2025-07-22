@@ -280,6 +280,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
 def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None):
     """Handle START command - onboard new user"""
     try:
+        logger.info(f"Processing START command for {phone_number} on {platform}")
         # Check if user already exists
         existing_user = db_manager.get_user_by_phone(phone_number)
         
@@ -343,6 +344,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                           f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
                           "Day 1 content will arrive in 10 seconds!")
         
+        logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
         send_message_to_platform(phone_number, platform, welcome_message)
         
         # Log the START command for chat management visibility
