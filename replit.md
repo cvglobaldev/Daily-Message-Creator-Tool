@@ -97,7 +97,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 22, 2025)
 
-### Complete Media Preview System Implementation (Latest Update)
+### Video/Audio File Upload Delivery Fix (Latest Update)
+- **File Upload API**: Fixed video and audio delivery by switching from URL-based to direct file upload method in Telegram API
+- **Multipart Form Data**: Implemented proper multipart/form-data requests for sendVideo and sendAudio endpoints
+- **File Path Resolution**: Added logic to extract filenames from media URLs and locate files in static/uploads directories  
+- **Timeout Handling**: Increased timeout to 120 seconds for large video/audio file uploads
+- **Audio Method Addition**: Added dedicated send_audio() method to TelegramService for proper audio file delivery
+- **Scheduler Integration**: Updated scheduler to use new send_audio() method for audio content delivery
+- **Error Handling**: Enhanced error logging for file not found and API response failures
+- **Fallback Support**: Maintained URL-based sending for external media URLs while using file upload for local uploads
+
+### Complete Media Preview System Implementation
 - **Universal Media Preview**: Implemented comprehensive live preview functionality for all media types in CMS
 - **Image Upload Preview**: Images show immediate thumbnail preview when selected with file size information
 - **Audio Upload Preview**: Audio files display live player controls for immediate testing and validation  

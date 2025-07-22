@@ -127,8 +127,13 @@ class ContentScheduler:
                             media_sent = self.telegram_service.send_video(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Video sent to {chat_id}, success: {media_sent}")
                             return media_sent
+                        elif media_type == 'audio':
+                            # Send audio via Telegram API
+                            media_sent = self.telegram_service.send_audio(chat_id, media_url)
+                            logger.info(f"🔴 TELEGRAM: Audio sent to {chat_id}, success: {media_sent}")
+                            return media_sent
                         else:
-                            # For audio, log but don't implement yet
+                            # For other media types, log but don't implement yet
                             logger.info(f"Media content delivery to Telegram user {chat_id} - {media_type} not yet implemented, media URL: {media_url}")
                     return text_sent
                 else:

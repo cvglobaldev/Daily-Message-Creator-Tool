@@ -290,32 +290,141 @@ class TelegramService:
                     logger.error(f"Failed to send Telegram YouTube video: {response.text}")
                     return False
             else:
-                # For direct video files, use the video API
-                url = f"{self.api_base_url}/sendVideo"
+                # For uploaded video files, send the file directly using multipart/form-data
+                import os
+                
+                # Extract filename from URL
+                if "/static/uploads/videos/" in video_url:
+                    filename = video_url.split("/static/uploads/videos/")[-1]
+                    file_path = os.path.join("static", "uploads", "videos", filename)
+                    
+                    if os.path.exists(file_path):
+                        # Send video file directly
+                        url = f"{self.api_base_url}/sendVideo"
+                        
+                        with open(file_path, 'rb') as video_file:
+                            files = {'video': video_file}
+                            data = {'chat_id': chat_id}
+                            if caption:
+                                data['caption'] = caption
+                            
+                            response = requests.post(url, files=files, data=data, timeout=120)
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            if result.get("ok"):
+                                logger.info(f"Telegram video sent successfully to {chat_id}")
+                                return True
+                            else:
+                                logger.error(f"Failed to send Telegram video: {result.get('description', 'Unknown error')}")
+                                return False
+                        else:
+                            logger.error(f"Failed to send Telegram video: {response.text}")
+                            return False
+                    else:
+                        logger.error(f"Video file not found: {file_path}")
+                        return False
+                else:
+                    # Fallback to URL-based sending for external URLs
+                    url = f"{self.api_base_url}/sendVideo"
+                    payload = {
+                        "chat_id": chat_id,
+                        "video": video_url
+                    }
+                    
+                    if caption:
+                        payload["caption"] = caption
+                    
+                    response = requests.post(url, json=payload, timeout=60)
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if result.get("ok"):
+                            logger.info(f"Telegram video sent successfully to {chat_id}")
+                            return True
+                        else:
+                            logger.error(f"Failed to send Telegram video: {result.get('description', 'Unknown error')}")
+                            return False
+                    else:
+                        logger.error(f"Failed to send Telegram video: {response.text}")
+                        return False
+                
+        except Exception as e:
+            logger.error(f"Error sending Telegram video: {e}")
+            return False
+    
+    def send_audio(self, chat_id: str, audio_url: str, caption: str = "") -> bool:
+        """Send audio message via Telegram Bot API"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 TELEGRAM AUDIO MESSAGE TO {chat_id}:")
+                print(f"   Audio URL: {audio_url}")
+                if caption:
+                    print(f"   Caption: {caption}")
+                print("   ✅ Audio message simulated (development mode)")
+                return True
+            
+            # For uploaded audio files, send the file directly using multipart/form-data
+            import os
+            
+            # Extract filename from URL
+            if "/static/uploads/audio/" in audio_url:
+                filename = audio_url.split("/static/uploads/audio/")[-1]
+                file_path = os.path.join("static", "uploads", "audio", filename)
+                
+                if os.path.exists(file_path):
+                    # Send audio file directly
+                    url = f"{self.api_base_url}/sendAudio"
+                    
+                    with open(file_path, 'rb') as audio_file:
+                        files = {'audio': audio_file}
+                        data = {'chat_id': chat_id}
+                        if caption:
+                            data['caption'] = caption
+                        
+                        response = requests.post(url, files=files, data=data, timeout=120)
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if result.get("ok"):
+                            logger.info(f"Telegram audio sent successfully to {chat_id}")
+                            return True
+                        else:
+                            logger.error(f"Failed to send Telegram audio: {result.get('description', 'Unknown error')}")
+                            return False
+                    else:
+                        logger.error(f"Failed to send Telegram audio: {response.text}")
+                        return False
+                else:
+                    logger.error(f"Audio file not found: {file_path}")
+                    return False
+            else:
+                # Fallback to URL-based sending for external URLs
+                url = f"{self.api_base_url}/sendAudio"
                 payload = {
                     "chat_id": chat_id,
-                    "video": video_url
+                    "audio": audio_url
                 }
                 
                 if caption:
                     payload["caption"] = caption
                 
-                response = requests.post(url, json=payload, timeout=30)
+                response = requests.post(url, json=payload, timeout=60)
                 
                 if response.status_code == 200:
                     result = response.json()
                     if result.get("ok"):
-                        logger.info(f"Telegram video sent successfully to {chat_id}")
+                        logger.info(f"Telegram audio sent successfully to {chat_id}")
                         return True
                     else:
-                        logger.error(f"Telegram video send failed: {result.get('description', 'Unknown error')}")
+                        logger.error(f"Failed to send Telegram audio: {result.get('description', 'Unknown error')}")
                         return False
                 else:
-                    logger.error(f"Failed to send Telegram video: {response.text}")
+                    logger.error(f"Failed to send Telegram audio: {response.text}")
                     return False
                 
         except Exception as e:
-            logger.error(f"Error sending Telegram video: {e}")
+            logger.error(f"Error sending Telegram audio: {e}")
             return False
     
     def set_emoji_status(self, chat_id: str, emoji: str, duration: int = 3600) -> bool:
