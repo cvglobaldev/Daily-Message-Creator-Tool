@@ -121,7 +121,7 @@
                                         <i class="fas fa-image me-2"></i>Image Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="imageFile" accept="image/*">
+                                        <input type="file" class="form-control" id="imageFile" accept="image/*" onchange="updatePreview()">
                                         <div class="form-text">Supported: JPG, PNG, GIF (Max 16MB)</div>
                                         <div id="imagePreview" class="mt-2"></div>
                                     </div>
@@ -135,7 +135,7 @@
                                         <i class="fas fa-video me-2"></i>Video Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="videoFile" accept="video/*">
+                                        <input type="file" class="form-control" id="videoFile" accept="video/*" onchange="updatePreview()">
                                         <div class="form-text">Supported: MP4, MOV, AVI, MKV, WebM (Max 200MB)</div>
                                         <div id="videoPreview" class="mt-2"></div>
                                     </div>
@@ -149,7 +149,7 @@
                                         <i class="fas fa-volume-up me-2"></i>Audio Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="audioFile" accept="audio/*">
+                                        <input type="file" class="form-control" id="audioFile" accept="audio/*" onchange="updatePreview()">
                                         <div class="form-text">Supported: MP3, WAV, OGG, M4A (Max 16MB)</div>
                                         <div id="audioPreview" class="mt-2"></div>
                                     </div>
@@ -379,36 +379,39 @@
             if (dayContent) {
                 if (mediaType === 'video' && dayContent.video_filename) {
                     document.getElementById('videoPreview').innerHTML = `
-                        <div class="mt-2">
-                            <small class="text-success">✓ Current video: ${dayContent.video_filename}</small>
+                        <div class="alert alert-success mt-2">
+                            <strong>✓ Current video:</strong> ${dayContent.video_filename}
                             <div class="mt-2">
                                 <video controls style="max-width: 100%; max-height: 200px;" class="rounded">
                                     <source src="/static/uploads/videos/${dayContent.video_filename}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
                             </div>
+                            <small class="text-muted d-block mt-1">Upload a new video to replace this one</small>
                         </div>
                     `;
                 } else if (mediaType === 'image' && dayContent.image_filename) {
                     document.getElementById('imagePreview').innerHTML = `
-                        <div class="mt-2">
-                            <small class="text-success">✓ Current image: ${dayContent.image_filename}</small>
+                        <div class="alert alert-success mt-2">
+                            <strong>✓ Current image:</strong> ${dayContent.image_filename}
                             <div class="mt-2">
                                 <img src="/static/uploads/images/${dayContent.image_filename}" 
                                      class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
                             </div>
+                            <small class="text-muted d-block mt-1">Upload a new image to replace this one</small>
                         </div>
                     `;
                 } else if (mediaType === 'audio' && dayContent.audio_filename) {
                     document.getElementById('audioPreview').innerHTML = `
-                        <div class="mt-2">
-                            <small class="text-success">✓ Current audio: ${dayContent.audio_filename}</small>
+                        <div class="alert alert-success mt-2">
+                            <strong>✓ Current audio:</strong> ${dayContent.audio_filename}
                             <div class="mt-2">
                                 <audio controls class="w-100">
                                     <source src="/static/uploads/audio/${dayContent.audio_filename}" type="audio/mpeg">
                                     Your browser does not support the audio tag.
                                 </audio>
                             </div>
+                            <small class="text-muted d-block mt-1">Upload a new audio file to replace this one</small>
                         </div>
                     `;
                 }
@@ -451,7 +454,18 @@
             
             // Media preview
             if (mediaType === 'image') {
-                preview += `<div class="mb-2"><span class="badge bg-info">🖼️ Image Content</span></div>`;
+                const imageFile = document.getElementById('imageFile').files[0];
+                if (imageFile) {
+                    preview += `<div class="mb-3">
+                        <span class="badge bg-info">🖼️ Image Upload</span><br>
+                        <small class="text-muted">${imageFile.name} (${(imageFile.size / (1024*1024)).toFixed(1)}MB)</small>
+                        <div class="mt-2">
+                            <img src="${URL.createObjectURL(imageFile)}" class="img-thumbnail" style="max-width: 100%; max-height: 200px;">
+                        </div>
+                    </div>`;
+                } else {
+                    preview += `<div class="mb-2"><span class="badge bg-info">🖼️ Image Content</span></div>`;
+                }
             } else if (mediaType === 'video') {
                 const videoFile = document.getElementById('videoFile').files[0];
                 if (videoFile) {
@@ -469,7 +483,21 @@
                     preview += `<div class="mb-2"><span class="badge bg-danger">🎥 Video Content</span></div>`;
                 }
             } else if (mediaType === 'audio') {
-                preview += `<div class="mb-2"><span class="badge bg-warning text-dark">🎵 Audio Content</span></div>`;
+                const audioFile = document.getElementById('audioFile').files[0];
+                if (audioFile) {
+                    preview += `<div class="mb-3">
+                        <span class="badge bg-warning text-dark">🎵 Audio Upload</span><br>
+                        <small class="text-muted">${audioFile.name} (${(audioFile.size / (1024*1024)).toFixed(1)}MB)</small>
+                        <div class="mt-2">
+                            <audio controls class="w-100">
+                                <source src="${URL.createObjectURL(audioFile)}" type="${audioFile.type}">
+                                Your browser does not support the audio tag.
+                            </audio>
+                        </div>
+                    </div>`;
+                } else {
+                    preview += `<div class="mb-2"><span class="badge bg-warning text-dark">🎵 Audio Content</span></div>`;
+                }
             }
             
             if (title) preview += `<strong>📖 ${title}</strong><br><br>`;
@@ -619,6 +647,14 @@
             imageSection.style.display = 'none';
             videoSection.style.display = 'none';
             audioSection.style.display = 'none';
+            
+            // Clear all file inputs and previews when switching
+            document.getElementById('imageFile').value = '';
+            document.getElementById('videoFile').value = '';
+            document.getElementById('audioFile').value = '';
+            document.getElementById('imagePreview').innerHTML = '';
+            document.getElementById('videoPreview').innerHTML = '';
+            document.getElementById('audioPreview').innerHTML = '';
             
             // Show selected section
             if (mediaType === 'image') {
