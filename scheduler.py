@@ -59,8 +59,8 @@ class ContentScheduler:
             success = self._deliver_content(phone_number, content.to_dict())
             
             if success:
-                # Schedule reflection question after a short delay
-                self._schedule_reflection_question(phone_number, content.to_dict(), delay_minutes=2)
+                # Schedule reflection question after 10 minute delay (consistent with content delivery)
+                self._schedule_reflection_question(phone_number, content.to_dict(), delay_minutes=10)
                 
                 # Advance user to next day
                 next_day = current_day + 1

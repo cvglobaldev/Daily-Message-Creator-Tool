@@ -224,6 +224,10 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             handle_help_command(phone_number, platform)
             return
         
+        elif message_lower == 'human' or message_lower == '/human':
+            handle_human_command(phone_number, platform)
+            return
+        
         # Check for human handoff triggers
         if any(keyword in message_lower for keyword in HUMAN_HANDOFF_KEYWORDS):
             handle_human_handoff(phone_number, message_text, platform)
@@ -288,6 +292,10 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
                               "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
                               "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                              f"Commands: {'/start' if platform == 'telegram' else 'START'}, "
+                              f"{'/stop' if platform == 'telegram' else 'STOP'}, "
+                              f"{'/help' if platform == 'telegram' else 'HELP'}, "
+                              f"{'/human' if platform == 'telegram' else 'HUMAN'}\n\n"
                               "Day 1 content will arrive in 10 seconds!")
             send_message_to_platform(phone_number, platform, restart_message)
             
@@ -327,6 +335,10 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
                           "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
                           "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                          f"Commands: {'/start' if platform == 'telegram' else 'START'}, "
+                          f"{'/stop' if platform == 'telegram' else 'STOP'}, "
+                          f"{'/help' if platform == 'telegram' else 'HELP'}, "
+                          f"{'/human' if platform == 'telegram' else 'HUMAN'}\n\n"
                           "Day 1 content will arrive in 10 seconds!")
         
         send_message_to_platform(phone_number, platform, welcome_message)
@@ -385,12 +397,50 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp"):
                    "Commands:\n"
                    f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
                    f"• {commands_prefix}STOP - Unsubscribe from messages\n"
-                   f"• {commands_prefix}HELP - Show this help message\n\n"
+                   f"• {commands_prefix}HELP - Show this help message\n"
+                   f"• {commands_prefix}HUMAN - Chat directly with a human\n\n"
                    "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
                    "Feel free to share your thoughts - there are no wrong answers!\n\n"
                    "If you need to speak with someone, just let us know.")
     
     send_message_to_platform(phone_number, platform, help_message)
+
+def handle_human_command(phone_number: str, platform: str = "whatsapp"):
+    """Handle HUMAN command - direct human chat request"""
+    try:
+        # Get or create user
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number, status='active', current_day=1)
+        
+        # Log the human command for chat management visibility
+        db_manager.log_message(
+            user=user,
+            direction='incoming',
+            raw_text=f'/human' if platform == 'telegram' else 'HUMAN',
+            sentiment='neutral',
+            tags=['HUMAN_COMMAND', 'DIRECT_CHAT', 'PRIORITY'],
+            is_human_handoff=True,
+            confidence=1.0
+        )
+        
+        # Send response to user
+        response_message = ("🤝 Direct Human Chat Requested\n\n"
+                          "Thank you for reaching out! A member of our team will connect with you shortly. "
+                          "This conversation has been flagged for priority human response.\n\n"
+                          "In the meantime, know that you are valued and your journey matters. "
+                          "Feel free to share what's on your heart. 🙏")
+        
+        send_message_to_platform(phone_number, platform, response_message)
+        
+        logger.warning(f"HUMAN COMMAND - Direct chat requested by {phone_number} on {platform}")
+        
+    except Exception as e:
+        logger.error(f"Error handling HUMAN command for {phone_number}: {e}")
+        send_message_to_platform(
+            phone_number, platform,
+            "Sorry, there was an error connecting you with a human. Please try again or contact us directly."
+        )
 
 def handle_human_handoff(phone_number: str, message_text: str, platform: str = "whatsapp"):
     """Handle messages that require human intervention"""
@@ -612,6 +662,8 @@ def test_message():
                 handle_stop_command(phone_number)
             elif message_text == 'HELP':
                 handle_help_command(phone_number)
+            elif message_text == 'HUMAN':
+                handle_human_command(phone_number)
             else:
                 # Check for human handoff triggers
                 if gemini_service.should_trigger_human_handoff(message):

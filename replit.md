@@ -97,11 +97,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 21, 2025)
 
-### Scheduler Configuration Update (Latest Update)
-- **Content Delivery Frequency**: Changed scheduled content delivery from every 5 minutes to every 10 minutes for testing
-- **User Message Updates**: Updated all user-facing messages to reflect the new 10-minute delivery schedule
-- **Background Scheduler**: Modified both the sleep interval (600 seconds) and log messages for consistency
-- **Testing Optimization**: Provides more reasonable testing intervals while maintaining rapid development feedback
+### Enhanced Command System and Scheduler Fix (Latest Update)
+- **Scheduler Timing Fix**: Fixed inconsistent scheduling by changing reflection question delay from 2 minutes to 10 minutes for consistency
+- **New HUMAN Command**: Added direct human chat command (/human for Telegram, HUMAN for WhatsApp) for priority human intervention
+- **Enhanced Welcome Messages**: Added command information (start, stop, help, human) to all welcome and restart messages
+- **Command Processing**: Updated message processing logic to recognize and route the new HUMAN command
+- **User Experience**: Users now see available commands immediately upon joining, improving discoverability
+- **Human Chat Priority**: HUMAN command flags conversations with PRIORITY tag for immediate admin attention
 
 ### Enhanced Telegram Bot API 2025 Integration
 - **Modern Telegram Features**: Updated chatbot settings to leverage Telegram Bot API 8.0 (2025) capabilities
