@@ -101,10 +101,65 @@
                                 <input type="text" class="form-control" id="title" placeholder="e.g., The Light of Hope" required>
                             </div>
                             
+                            <!-- Multimedia Support -->
                             <div class="mb-3">
-                                <label for="content" class="form-label">Main Content</label>
-                                <textarea class="form-control" id="content" rows="8" placeholder="Enter the main teaching content for this day..." required></textarea>
-                                <div class="form-text">This is the main spiritual teaching content that will be sent to users.</div>
+                                <label for="mediaType" class="form-label">
+                                    <i class="fas fa-photo-video me-1"></i>Media Type
+                                </label>
+                                <select class="form-select" id="mediaType" onchange="toggleMediaSections()">
+                                    <option value="text">📄 Text Only</option>
+                                    <option value="image">🖼️ Image</option>
+                                    <option value="video">🎥 YouTube Video</option>
+                                    <option value="audio">🎵 Audio</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Image Upload Section -->
+                            <div id="imageSection" class="mb-3" style="display: none;">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-dark">
+                                        <i class="fas fa-image me-2"></i>Image Upload
+                                    </div>
+                                    <div class="card-body">
+                                        <input type="file" class="form-control" id="imageFile" accept="image/*">
+                                        <div class="form-text">Supported: JPG, PNG, GIF (Max 16MB)</div>
+                                        <div id="imagePreview" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- YouTube Video Section -->
+                            <div id="videoSection" class="mb-3" style="display: none;">
+                                <div class="card border-danger">
+                                    <div class="card-header bg-danger">
+                                        <i class="fab fa-youtube me-2"></i>YouTube Video
+                                    </div>
+                                    <div class="card-body">
+                                        <input type="url" class="form-control" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=...">
+                                        <div class="form-text">Enter the full YouTube URL</div>
+                                        <div id="videoPreview" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Audio Upload Section -->
+                            <div id="audioSection" class="mb-3" style="display: none;">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <i class="fas fa-volume-up me-2"></i>Audio Upload
+                                    </div>
+                                    <div class="card-body">
+                                        <input type="file" class="form-control" id="audioFile" accept="audio/*">
+                                        <div class="form-text">Supported: MP3, WAV, OGG, M4A (Max 16MB)</div>
+                                        <div id="audioPreview" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Main Content Text</label>
+                                <textarea class="form-control" id="content" rows="6" placeholder="Enter the main teaching content for this day..." required></textarea>
+                                <div class="form-text">This text will accompany any multimedia content selected above.</div>
                             </div>
                             
                             <div class="mb-3">
@@ -197,14 +252,20 @@
             loadAllContent();
             
             // Real-time preview
-            ['title', 'content', 'reflectionQuestion'].forEach(id => {
-                document.getElementById(id).addEventListener('input', updatePreview);
+            ['title', 'content', 'reflectionQuestion', 'youtubeUrl'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', updatePreview);
+                }
             });
             
             // Add event listeners for tag checkboxes
             document.querySelectorAll('input[type="checkbox"][id^="tag_"]').forEach(checkbox => {
                 checkbox.addEventListener('change', updatePreview);
             });
+            
+            // Media type change listener
+            document.getElementById('mediaType').addEventListener('change', updatePreview);
         });
 
         function loadAllContent() {
@@ -238,6 +299,13 @@
                 const hasContent = dayContent && dayContent.content;
                 const isActive = dayContent ? dayContent.is_active : false;
                 const tags = dayContent?.tags || [];
+                const mediaType = dayContent?.media_type || 'text';
+                
+                // Media type icon
+                let mediaIcon = '📄';
+                if (mediaType === 'image') mediaIcon = '🖼️';
+                else if (mediaType === 'video') mediaIcon = '🎥';
+                else if (mediaType === 'audio') mediaIcon = '🎵';
                 
                 const card = document.createElement('div');
                 card.className = 'col-md-3 col-sm-4 col-6 mb-3';
@@ -253,11 +321,13 @@
                             }
                         </div>
                         <div class="card-body d-flex flex-column">
-                            <h6 class="card-title">Day ${day}</h6>
+                            <h6 class="card-title">
+                                ${mediaIcon} Day ${day}
+                            </h6>
                             <p class="card-text flex-grow-1 small">
                                 ${hasContent ? 
                                     `<strong>${dayContent.title || 'Untitled'}</strong><br>
-                                     <span class="text-muted">${(dayContent.content || '').substring(0, 40)}...</span>
+                                     <span class="text-muted">${(dayContent.content || '').substring(0, 35)}...</span>
                                      ${tags.length > 0 ? `<br><small class="text-info">${tags.slice(0, 2).join(', ')}${tags.length > 2 ? '...' : ''}</small>` : ''}` : 
                                     '<span class="text-muted">Click to add content</span>'
                                 }
@@ -280,11 +350,21 @@
             document.getElementById('reflectionQuestion').value = dayContent ? dayContent.reflection_question || '' : '';
             document.getElementById('isActive').checked = dayContent ? dayContent.is_active : true;
             
+            // Set multimedia type
+            const mediaType = dayContent?.media_type || 'text';
+            document.getElementById('mediaType').value = mediaType;
+            
+            // Set multimedia fields
+            if (mediaType === 'video' && dayContent?.youtube_url) {
+                document.getElementById('youtubeUrl').value = dayContent.youtube_url;
+            }
+            
             // Set tags
             setSelectedTags(dayContent ? dayContent.tags : []);
             
             document.getElementById('deleteButton').style.display = dayContent ? 'block' : 'none';
             
+            toggleMediaSections();
             updatePreview();
             contentModal.show();
         }
@@ -310,8 +390,24 @@
             const content = document.getElementById('content').value;
             const question = document.getElementById('reflectionQuestion').value;
             const selectedTags = getSelectedTags();
+            const mediaType = document.getElementById('mediaType').value;
             
             let preview = '';
+            
+            // Media preview
+            if (mediaType === 'image') {
+                preview += `<div class="mb-2"><span class="badge bg-info">🖼️ Image Content</span></div>`;
+            } else if (mediaType === 'video') {
+                const youtubeUrl = document.getElementById('youtubeUrl').value;
+                if (youtubeUrl) {
+                    preview += `<div class="mb-2"><span class="badge bg-danger">🎥 YouTube Video</span><br><small class="text-muted">${youtubeUrl}</small></div>`;
+                } else {
+                    preview += `<div class="mb-2"><span class="badge bg-danger">🎥 Video Content</span></div>`;
+                }
+            } else if (mediaType === 'audio') {
+                preview += `<div class="mb-2"><span class="badge bg-warning text-dark">🎵 Audio Content</span></div>`;
+            }
+            
             if (title) preview += `<strong>📖 ${title}</strong><br><br>`;
             if (content) preview += `${content.replace(/\n/g, '<br>')}<br><br>`;
             if (question) preview += `<strong>🤔 Reflection:</strong><br>${question.replace(/\n/g, '<br>')}`;
@@ -352,42 +448,71 @@
         }
 
         function saveContent() {
-            const formData = {
-                id: document.getElementById('contentId').value || null,
-                day_number: parseInt(document.getElementById('dayNumber').value),
-                title: document.getElementById('title').value,
-                content: document.getElementById('content').value,
-                reflection_question: document.getElementById('reflectionQuestion').value,
-                tags: getSelectedTags(),
-                is_active: document.getElementById('isActive').checked
-            };
+            // Basic validation
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const reflectionQuestion = document.getElementById('reflectionQuestion').value;
+            const dayNumber = document.getElementById('dayNumber').value;
             
-            if (!formData.title || !formData.content || !formData.reflection_question) {
+            if (!title || !content || !reflectionQuestion || !dayNumber) {
                 showAlert('Please fill in all required fields', 'warning');
                 return;
             }
             
-            const method = formData.id ? 'PUT' : 'POST';
-            const url = formData.id ? `/api/content/${formData.id}` : '/api/content';
+            const formData = new FormData();
+            
+            // Basic content fields
+            const contentId = document.getElementById('contentId').value;
+            if (contentId) formData.append('id', contentId);
+            
+            formData.append('day_number', dayNumber);
+            formData.append('title', title);
+            formData.append('content', content);
+            formData.append('reflection_question', reflectionQuestion);
+            formData.append('tags', JSON.stringify(getSelectedTags()));
+            formData.append('is_active', document.getElementById('isActive').checked);
+            
+            // Multimedia fields
+            const mediaType = document.getElementById('mediaType').value;
+            formData.append('media_type', mediaType);
+            
+            if (mediaType === 'image') {
+                const imageFile = document.getElementById('imageFile').files[0];
+                if (imageFile) {
+                    formData.append('image_file', imageFile);
+                }
+            } else if (mediaType === 'video') {
+                const youtubeUrl = document.getElementById('youtubeUrl').value;
+                if (youtubeUrl) {
+                    formData.append('youtube_url', youtubeUrl);
+                }
+            } else if (mediaType === 'audio') {
+                const audioFile = document.getElementById('audioFile').files[0];
+                if (audioFile) {
+                    formData.append('audio_file', audioFile);
+                }
+            }
+            
+            // Use the multimedia content creation/editing endpoint
+            const url = contentId ? `/cms/content/edit/${contentId}` : '/cms/content/create';
             
             fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
+                method: 'POST',
+                body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showAlert(`Day ${formData.day_number} content saved successfully!`, 'success');
+            .then(response => {
+                if (response.ok) {
+                    showAlert(`Day ${dayNumber} content saved successfully!`, 'success');
                     contentModal.hide();
-                    loadAllContent();
+                    setTimeout(() => loadAllContent(), 500);
                 } else {
-                    showAlert('Error saving content: ' + data.message, 'danger');
+                    return response.text().then(text => {
+                        throw new Error(text || 'Failed to save content');
+                    });
                 }
             })
             .catch(error => {
+                console.error('Save error:', error);
                 showAlert('Error saving content: ' + error.message, 'danger');
             });
         }
@@ -418,6 +543,27 @@
             .catch(error => {
                 showAlert('Error deleting content: ' + error.message, 'danger');
             });
+        }
+
+        function toggleMediaSections() {
+            const mediaType = document.getElementById('mediaType').value;
+            const imageSection = document.getElementById('imageSection');
+            const videoSection = document.getElementById('videoSection');
+            const audioSection = document.getElementById('audioSection');
+            
+            // Hide all sections
+            imageSection.style.display = 'none';
+            videoSection.style.display = 'none';
+            audioSection.style.display = 'none';
+            
+            // Show selected section
+            if (mediaType === 'image') {
+                imageSection.style.display = 'block';
+            } else if (mediaType === 'video') {
+                videoSection.style.display = 'block';
+            } else if (mediaType === 'audio') {
+                audioSection.style.display = 'block';
+            }
         }
 
         function showAlert(message, type) {

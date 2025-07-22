@@ -714,9 +714,8 @@ def test_interface():
 @app.route('/cms')
 @login_required
 def cms():
-    """Enhanced Content Management System with multimedia support"""
-    all_content = db_manager.get_all_content()
-    return render_template('cms_multimedia.html', content=all_content, user=current_user)
+    """Content Management System for 30-day journey content with multimedia support"""
+    return render_template('cms.html', user=current_user)
 
 @app.route('/api/content', methods=['GET'])
 def get_all_content():
