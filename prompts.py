@@ -81,20 +81,17 @@ Provide a natural, contextual response that feels like a caring mentor respondin
 
 # Welcome messages and templates
 WELCOME_MESSAGE = """
-As-salamu alaykum and welcome to your Faith Journey! 🌟
+Welcome to your Faith Journey! 📱
 
-Over the next 30 days, you'll receive daily content exploring the life and teachings of Isa al-Masih (Jesus) in a way that respects your background and encourages thoughtful reflection.
+You'll receive daily content for the next 10 days (every 10 minutes for testing). After each piece of content, I'll ask you a simple reflection question.
 
-Each day, you'll receive:
-📖 A piece of content (text, image, or video)
-💭 A simple reflection question
-🕰️ Daily delivery at 8:00 AM
+Available Commands:
+• /start - Begin or restart journey
+• /stop - Unsubscribe from messages
+• /help - Show help message
+• /human - Chat directly with a human
 
-Commands you can use anytime:
-• HELP - Get help and see available commands
-• STOP - Unsubscribe from the journey
-
-Let's begin your journey with Day 1 content!
+Day 1 content will arrive in 10 seconds!
 """
 
 HELP_MESSAGE = """
