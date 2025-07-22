@@ -212,6 +212,44 @@ class TelegramService:
             logger.error(f"Error answering callback query: {e}")
             return False
     
+    def send_photo(self, chat_id: str, photo_url: str, caption: str = "") -> bool:
+        """Send photo message via Telegram Bot API"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 TELEGRAM PHOTO MESSAGE TO {chat_id}:")
+                print(f"   Photo URL: {photo_url}")
+                if caption:
+                    print(f"   Caption: {caption}")
+                print("   ✅ Photo message simulated (development mode)")
+                return True
+            
+            url = f"{self.api_base_url}/sendPhoto"
+            payload = {
+                "chat_id": chat_id,
+                "photo": photo_url
+            }
+            
+            if caption:
+                payload["caption"] = caption
+            
+            response = requests.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("ok"):
+                    logger.info(f"Telegram photo sent successfully to {chat_id}")
+                    return True
+                else:
+                    logger.error(f"Telegram photo send failed: {result.get('description', 'Unknown error')}")
+                    return False
+            else:
+                logger.error(f"Failed to send Telegram photo: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending Telegram photo: {e}")
+            return False
+    
     def set_emoji_status(self, chat_id: str, emoji: str, duration: int = 3600) -> bool:
         """Set emoji status for enhanced user engagement (2025 feature)"""
         try:

@@ -102,12 +102,18 @@ class ContentScheduler:
                 if media_type == 'text' or not media_url:
                     return self.telegram_service.send_message(chat_id, message)
                 elif media_type in ['image', 'video', 'audio']:
-                    # For Telegram, send text first, then media if supported
+                    # For Telegram, send text first, then media
                     text_sent = self.telegram_service.send_message(chat_id, message)
                     if text_sent and media_url:
                         time.sleep(1)
-                        # Note: Telegram media sending would need additional implementation
-                        logger.info(f"Media content delivery to Telegram user {chat_id} - text sent, media URL: {media_url}")
+                        if media_type == 'image':
+                            # Send photo via Telegram API
+                            media_sent = self.telegram_service.send_photo(chat_id, media_url)
+                            logger.info(f"🔴 TELEGRAM: Photo sent to {chat_id}, success: {media_sent}")
+                            return media_sent
+                        else:
+                            # For video/audio, log but don't implement yet
+                            logger.info(f"Media content delivery to Telegram user {chat_id} - {media_type} not yet implemented, media URL: {media_url}")
                     return text_sent
                 else:
                     return self.telegram_service.send_message(chat_id, message)
