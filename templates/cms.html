@@ -307,7 +307,7 @@
                 // Media type icon
                 let mediaIcon = '📄';
                 if (mediaType === 'image') mediaIcon = '🖼️';
-                else if (mediaType === 'video') mediaIcon = '🎥';
+                else if (mediaType === 'video' || (dayContent && dayContent.youtube_url)) mediaIcon = '🎥';
                 else if (mediaType === 'audio') mediaIcon = '🎵';
                 
                 const card = document.createElement('div');

@@ -1364,58 +1364,82 @@ def cms_content_create():
 def cms_content_edit(content_id):
     """Edit existing multimedia content"""
     content = Content.query.get_or_404(content_id)
+    
+    if request.method == 'POST':
+        # Handle form data from JavaScript FormData
+        try:
+            # Handle file uploads (keep existing files if no new upload)
+            image_filename = content.image_filename
+            audio_filename = content.audio_filename
+            youtube_url = content.youtube_url
+            
+            # Get form data
+            media_type = request.form.get('media_type', 'text')
+            title = request.form.get('title', '')
+            content_text = request.form.get('content', '')
+            reflection_question = request.form.get('reflection_question', '')
+            tags_json = request.form.get('tags', '[]')
+            is_active = request.form.get('is_active') == 'true'
+            
+            # Process tags
+            try:
+                import json
+                tags = json.loads(tags_json) if tags_json else []
+            except:
+                tags = []
+            
+            # Handle file uploads
+            if media_type == 'image' and 'image_file' in request.files:
+                file = request.files['image_file']
+                if file and file.filename:
+                    image_filename = save_uploaded_file(
+                        file, 'images', ['jpg', 'jpeg', 'png', 'gif']
+                    )
+            
+            if media_type == 'audio' and 'audio_file' in request.files:
+                file = request.files['audio_file']
+                if file and file.filename:
+                    audio_filename = save_uploaded_file(
+                        file, 'audio', ['mp3', 'wav', 'ogg', 'm4a']
+                    )
+            
+            if media_type == 'video':
+                youtube_url = request.form.get('youtube_url', '').strip() or None
+            
+            # Clear unused media fields based on media type
+            if media_type != 'image':
+                image_filename = None
+            if media_type != 'audio':
+                audio_filename = None
+            if media_type != 'video':
+                youtube_url = None
+            
+            logger.info(f"Updating content {content_id}: media_type={media_type}, youtube_url={youtube_url}")
+            
+            success = db_manager.update_content(
+                content_id=content_id,
+                title=title,
+                content=content_text,
+                reflection_question=reflection_question,
+                tags=tags,
+                media_type=media_type,
+                image_filename=image_filename,
+                youtube_url=youtube_url,
+                audio_filename=audio_filename,
+                is_active=is_active
+            )
+            
+            if success:
+                return '', 200  # Success response for JavaScript
+            else:
+                return 'Error updating content', 500
+                
+        except Exception as e:
+            logger.error(f"Error updating content {content_id}: {e}")
+            return f'Error updating content: {str(e)}', 500
+    
+    # GET request - show form for template-based editing (fallback)
     form = ContentForm(obj=content)
-    
-    if form.validate_on_submit():
-        # Handle file uploads (keep existing files if no new upload)
-        image_filename = content.image_filename
-        audio_filename = content.audio_filename
-        youtube_url = content.youtube_url
-        
-        if form.media_type.data == 'image' and form.image_file.data:
-            image_filename = save_uploaded_file(
-                form.image_file.data, 'images', ['jpg', 'jpeg', 'png', 'gif']
-            )
-        
-        if form.media_type.data == 'audio' and form.audio_file.data:
-            audio_filename = save_uploaded_file(
-                form.audio_file.data, 'audio', ['mp3', 'wav', 'ogg', 'm4a']
-            )
-        
-        if form.media_type.data == 'video':
-            youtube_url = form.youtube_url.data.strip() if form.youtube_url.data else None
-        
-        # Clear unused media fields based on media type
-        if form.media_type.data != 'image':
-            image_filename = None
-        if form.media_type.data != 'audio':
-            audio_filename = None
-        if form.media_type.data != 'video':
-            youtube_url = None
-        
-        # Process tags
-        tags = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()] if form.tags.data else []
-        
-        success = db_manager.update_content(
-            content_id=content_id,
-            title=form.title.data,
-            content=form.content.data,
-            reflection_question=form.reflection_question.data,
-            tags=tags,
-            media_type=form.media_type.data,
-            image_filename=image_filename,
-            youtube_url=youtube_url,
-            audio_filename=audio_filename,
-            is_active=form.is_active.data
-        )
-        
-        if success:
-            flash(f'Day {content.day_number} multimedia content updated successfully!', 'success')
-            return redirect(url_for('cms'))
-        else:
-            flash('Error updating content. Please try again.', 'danger')
-    
-    # Pre-populate form fields
     if request.method == 'GET':
         form.tags.data = ', '.join(content.tags) if content.tags else ''
         form.youtube_url.data = content.youtube_url
