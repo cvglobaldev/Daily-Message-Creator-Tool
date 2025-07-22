@@ -304,11 +304,19 @@
                 const tags = dayContent?.tags || [];
                 const mediaType = dayContent?.media_type || 'text';
                 
-                // Media type icon
+                // Media type icon with upload status
                 let mediaIcon = '📄';
-                if (mediaType === 'image') mediaIcon = '🖼️';
-                else if (mediaType === 'video' || (dayContent && dayContent.youtube_url)) mediaIcon = '🎥';
-                else if (mediaType === 'audio') mediaIcon = '🎵';
+                let uploadStatus = '';
+                if (mediaType === 'image') {
+                    mediaIcon = '🖼️';
+                    uploadStatus = dayContent?.image_filename ? ' ✓' : '';
+                } else if (mediaType === 'video') {
+                    mediaIcon = '🎥';
+                    uploadStatus = dayContent?.video_filename ? ' ✓' : (dayContent?.youtube_url ? ' (YT)' : '');
+                } else if (mediaType === 'audio') {
+                    mediaIcon = '🎵';
+                    uploadStatus = dayContent?.audio_filename ? ' ✓' : '';
+                }
                 
                 const card = document.createElement('div');
                 card.className = 'col-md-3 col-sm-4 col-6 mb-3';
@@ -325,7 +333,7 @@
                         </div>
                         <div class="card-body d-flex flex-column">
                             <h6 class="card-title">
-                                ${mediaIcon} Day ${day}
+                                ${mediaIcon}${uploadStatus} Day ${day}
                             </h6>
                             <p class="card-text flex-grow-1 small">
                                 ${hasContent ? 
@@ -361,6 +369,50 @@
             document.getElementById('videoFile').value = '';
             document.getElementById('imageFile').value = '';
             document.getElementById('audioFile').value = '';
+            
+            // Clear preview containers
+            document.getElementById('videoPreview').innerHTML = '';
+            document.getElementById('imagePreview').innerHTML = '';
+            document.getElementById('audioPreview').innerHTML = '';
+            
+            // Show existing uploaded files if available
+            if (dayContent) {
+                if (mediaType === 'video' && dayContent.video_filename) {
+                    document.getElementById('videoPreview').innerHTML = `
+                        <div class="mt-2">
+                            <small class="text-success">✓ Current video: ${dayContent.video_filename}</small>
+                            <div class="mt-2">
+                                <video controls style="max-width: 100%; max-height: 200px;" class="rounded">
+                                    <source src="/static/uploads/videos/${dayContent.video_filename}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                        </div>
+                    `;
+                } else if (mediaType === 'image' && dayContent.image_filename) {
+                    document.getElementById('imagePreview').innerHTML = `
+                        <div class="mt-2">
+                            <small class="text-success">✓ Current image: ${dayContent.image_filename}</small>
+                            <div class="mt-2">
+                                <img src="/static/uploads/images/${dayContent.image_filename}" 
+                                     class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                            </div>
+                        </div>
+                    `;
+                } else if (mediaType === 'audio' && dayContent.audio_filename) {
+                    document.getElementById('audioPreview').innerHTML = `
+                        <div class="mt-2">
+                            <small class="text-success">✓ Current audio: ${dayContent.audio_filename}</small>
+                            <div class="mt-2">
+                                <audio controls class="w-100">
+                                    <source src="/static/uploads/audio/${dayContent.audio_filename}" type="audio/mpeg">
+                                    Your browser does not support the audio tag.
+                                </audio>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
             
             // Set tags
             setSelectedTags(dayContent ? dayContent.tags : []);
@@ -403,7 +455,16 @@
             } else if (mediaType === 'video') {
                 const videoFile = document.getElementById('videoFile').files[0];
                 if (videoFile) {
-                    preview += `<div class="mb-2"><span class="badge bg-danger">🎥 Video Upload</span><br><small class="text-muted">${videoFile.name} (${(videoFile.size / (1024*1024)).toFixed(1)}MB)</small></div>`;
+                    preview += `<div class="mb-3">
+                        <span class="badge bg-danger">🎥 Video Upload</span><br>
+                        <small class="text-muted">${videoFile.name} (${(videoFile.size / (1024*1024)).toFixed(1)}MB)</small>
+                        <div class="mt-2">
+                            <video controls style="max-width: 100%; max-height: 200px;" class="rounded">
+                                <source src="${URL.createObjectURL(videoFile)}" type="${videoFile.type}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </div>`;
                 } else {
                     preview += `<div class="mb-2"><span class="badge bg-danger">🎥 Video Content</span></div>`;
                 }

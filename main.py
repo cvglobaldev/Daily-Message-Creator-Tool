@@ -1557,6 +1557,14 @@ def delete_user(user_id):
     flash(f'User {username} has been deleted successfully!', 'success')
     return redirect(url_for('user_management'))
 
+@app.route('/static/uploads/<subfolder>/<filename>')
+def serve_uploaded_file(subfolder, filename):
+    """Serve uploaded media files from subdirectories"""
+    safe_subfolder = secure_filename(subfolder)
+    safe_filename = secure_filename(filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_subfolder)
+    return send_from_directory(file_path, safe_filename)
+
 # File upload helper functions
 def allowed_file(filename, allowed_extensions):
     return '.' in filename and \
@@ -1747,10 +1755,7 @@ def cms_content_delete(content_id):
     
     return redirect(url_for('cms'))
 
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    """Serve uploaded multimedia files"""
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 
 if __name__ == '__main__':
     with app.app_context():
