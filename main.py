@@ -292,10 +292,11 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
                               "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
                               "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                              f"Commands: {'/start' if platform == 'telegram' else 'START'}, "
-                              f"{'/stop' if platform == 'telegram' else 'STOP'}, "
-                              f"{'/help' if platform == 'telegram' else 'HELP'}, "
-                              f"{'/human' if platform == 'telegram' else 'HUMAN'}\n\n"
+                              "Available Commands:\n"
+                              f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
+                              f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
+                              f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
+                              f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
                               "Day 1 content will arrive in 10 seconds!")
             send_message_to_platform(phone_number, platform, restart_message)
             
@@ -335,10 +336,11 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
                           "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
                           "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                          f"Commands: {'/start' if platform == 'telegram' else 'START'}, "
-                          f"{'/stop' if platform == 'telegram' else 'STOP'}, "
-                          f"{'/help' if platform == 'telegram' else 'HELP'}, "
-                          f"{'/human' if platform == 'telegram' else 'HUMAN'}\n\n"
+                          "Available Commands:\n"
+                          f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
+                          f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
+                          f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
+                          f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
                           "Day 1 content will arrive in 10 seconds!")
         
         send_message_to_platform(phone_number, platform, welcome_message)
