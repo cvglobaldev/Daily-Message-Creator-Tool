@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faith Journey - Enhanced Content Management System</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .content-preview {
+            background-color: var(--bs-gray-800);
+            border-left: 4px solid var(--bs-primary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.375rem;
+        }
+        .day-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .day-card:hover {
+            transform: translateY(-2px);
+        }
+        .content-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .media-type-icon {
+            font-size: 1.2em;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-photo-video me-2"></i>
+                Faith Journey - Enhanced CMS
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link me-3" href="/">
+                    <i class="fas fa-chart-line me-1"></i>Dashboard
+                </a>
+                <a class="nav-link" href="/test-interface">
+                    <i class="fas fa-vial me-1"></i>Test
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2><i class="fas fa-photo-video me-2"></i>Multimedia Content Management</h2>
+                    <a href="{{ url_for('cms_content_create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create New Content
+                    </a>
+                </div>
+                <p class="text-muted">Manage your faith journey content with multimedia support - images, videos, and audio files.</p>
+            </div>
+        </div>
+
+        {% if content %}
+            <div class="row">
+                {% for item in content %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card day-card h-100 {{ 'border-success' if item.is_active else 'border-secondary' }}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">Day {{ item.day_number }}</span>
+                            <div class="d-flex align-items-center">
+                                {% if item.media_type == 'image' %}
+                                    <i class="fas fa-image text-info media-type-icon" title="Image Content"></i>
+                                {% elif item.media_type == 'video' %}
+                                    <i class="fab fa-youtube text-danger media-type-icon" title="Video Content"></i>
+                                {% elif item.media_type == 'audio' %}
+                                    <i class="fas fa-volume-up text-warning media-type-icon" title="Audio Content"></i>
+                                {% else %}
+                                    <i class="fas fa-font text-secondary media-type-icon" title="Text Content"></i>
+                                {% endif %}
+                                <span class="badge {{ 'bg-success' if item.is_active else 'bg-secondary' }}">
+                                    {{ 'Active' if item.is_active else 'Inactive' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title">{{ item.title or 'Untitled Content' }}</h6>
+                            
+                            <!-- Media Preview -->
+                            {% if item.media_type == 'image' and item.image_filename %}
+                                <div class="mb-2">
+                                    <img src="{{ url_for('uploaded_file', filename='images/' + item.image_filename) }}" 
+                                         class="img-fluid rounded" style="max-height: 120px; width: 100%; object-fit: cover;">
+                                </div>
+                            {% elif item.media_type == 'video' and item.youtube_url %}
+                                <div class="mb-2">
+                                    {% set video_id = item.youtube_url.split('v=')[1].split('&')[0] if 'v=' in item.youtube_url %}
+                                    {% if video_id %}
+                                        <div class="ratio ratio-16x9" style="max-height: 120px;">
+                                            <iframe src="https://www.youtube.com/embed/{{ video_id }}" 
+                                                    allowfullscreen style="border-radius: 0.375rem;"></iframe>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% elif item.media_type == 'audio' and item.audio_filename %}
+                                <div class="mb-2">
+                                    <audio controls class="w-100" style="height: 40px;">
+                                        <source src="{{ url_for('uploaded_file', filename='audio/' + item.audio_filename) }}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                </div>
+                            {% endif %}
+                            
+                            <p class="card-text small">
+                                {{ item.content[:120] }}{% if item.content|length > 120 %}...{% endif %}
+                            </p>
+                            
+                            {% if item.tags %}
+                                <div class="mb-2">
+                                    {% for tag in item.tags %}
+                                        <span class="badge bg-secondary me-1 small">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            {% if item.reflection_question %}
+                                <div class="border-top pt-2 mt-2">
+                                    <small class="text-muted">
+                                        <strong>Reflection:</strong> 
+                                        {{ item.reflection_question[:80] }}{% if item.reflection_question|length > 80 %}...{% endif %}
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ item.created_at.strftime('%b %d, %Y') if item.created_at else 'No date' }}
+                                </small>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('cms_content_edit', content_id=item.id) }}" 
+                                       class="btn btn-outline-primary" title="Edit Content">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            onclick="confirmDelete({{ item.id }}, {{ item.day_number }})" title="Delete Content">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-photo-video fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Multimedia Content Found</h4>
+                        <p class="text-muted">Create your first multimedia content to enhance your faith journey experience.</p>
+                        <a href="{{ url_for('cms_content_create') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>Create Your First Content
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete content for <strong>Day <span id="deleteDay"></span></strong>?</p>
+                    <p class="text-danger"><small>This action cannot be undone and will delete any uploaded multimedia files.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function confirmDelete(contentId, dayNumber) {
+        document.getElementById('deleteDay').textContent = dayNumber;
+        document.getElementById('deleteForm').action = `/cms/content/delete/${contentId}`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+    </script>
+</body>
+</html>

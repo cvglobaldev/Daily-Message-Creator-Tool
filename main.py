@@ -714,8 +714,9 @@ def test_interface():
 @app.route('/cms')
 @login_required
 def cms():
-    """Content Management System for 30-day journey content"""
-    return render_template('cms.html', user=current_user)
+    """Enhanced Content Management System with multimedia support"""
+    all_content = db_manager.get_all_content()
+    return render_template('cms_multimedia.html', content=all_content, user=current_user)
 
 @app.route('/api/content', methods=['GET'])
 def get_all_content():
@@ -1304,17 +1305,11 @@ def save_uploaded_file(file, subfolder, allowed_extensions):
         return unique_filename
     return None
 
-# Multimedia Content Management System Routes
-@app.route('/content')
-@login_required
-def content_list():
-    """List all multimedia content"""
-    all_content = db_manager.get_all_content()
-    return render_template('content_list.html', content=all_content, user=current_user)
+# Enhanced CMS Routes with Multimedia Support
 
-@app.route('/content/create', methods=['GET', 'POST'])
+@app.route('/cms/content/create', methods=['GET', 'POST'])
 @login_required
-def content_create():
+def cms_content_create():
     """Create new multimedia content"""
     form = ContentForm()
     
@@ -1355,15 +1350,15 @@ def content_create():
         
         if content_id:
             flash(f'Day {form.day_number.data} multimedia content created successfully!', 'success')
-            return redirect(url_for('content_list'))
+            return redirect(url_for('cms'))
         else:
             flash('Error creating content. Please try again.', 'danger')
     
-    return render_template('content_form.html', form=form, title="Create Multimedia Content", user=current_user)
+    return render_template('cms_content_form.html', form=form, title="Create Multimedia Content", user=current_user)
 
-@app.route('/content/edit/<int:content_id>', methods=['GET', 'POST'])
+@app.route('/cms/content/edit/<int:content_id>', methods=['GET', 'POST'])
 @login_required
-def content_edit(content_id):
+def cms_content_edit(content_id):
     """Edit existing multimedia content"""
     content = Content.query.get_or_404(content_id)
     form = ContentForm(obj=content)
@@ -1413,7 +1408,7 @@ def content_edit(content_id):
         
         if success:
             flash(f'Day {content.day_number} multimedia content updated successfully!', 'success')
-            return redirect(url_for('content_list'))
+            return redirect(url_for('cms'))
         else:
             flash('Error updating content. Please try again.', 'danger')
     
@@ -1422,11 +1417,11 @@ def content_edit(content_id):
         form.tags.data = ', '.join(content.tags) if content.tags else ''
         form.youtube_url.data = content.youtube_url
     
-    return render_template('content_form.html', form=form, title="Edit Multimedia Content", content=content, user=current_user)
+    return render_template('cms_content_form.html', form=form, title="Edit Multimedia Content", content=content, user=current_user)
 
-@app.route('/content/delete/<int:content_id>', methods=['POST'])
+@app.route('/cms/content/delete/<int:content_id>', methods=['POST'])
 @login_required
-def content_delete(content_id):
+def cms_content_delete(content_id):
     """Delete multimedia content and associated files"""
     content = Content.query.get_or_404(content_id)
     day_number = content.day_number
@@ -1453,7 +1448,7 @@ def content_delete(content_id):
     else:
         flash('Error deleting content. Please try again.', 'danger')
     
-    return redirect(url_for('content_list'))
+    return redirect(url_for('cms'))
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
