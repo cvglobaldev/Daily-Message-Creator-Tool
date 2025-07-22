@@ -729,7 +729,7 @@ def get_all_content():
 
 @app.route('/api/content', methods=['POST'])
 def create_content():
-    """API endpoint to create new content"""
+    """API endpoint to create new content with multimedia support"""
     try:
         data = request.get_json()
         content_id = db_manager.create_content(
@@ -738,6 +738,10 @@ def create_content():
             content=data['content'],
             reflection_question=data['reflection_question'],
             tags=data.get('tags', []),
+            media_type=data.get('media_type', 'text'),
+            image_filename=data.get('image_filename'),
+            youtube_url=data.get('youtube_url'),
+            audio_filename=data.get('audio_filename'),
             is_active=data.get('is_active', True)
         )
         return jsonify({"status": "success", "id": content_id})
