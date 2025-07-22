@@ -455,12 +455,22 @@
             // Media preview
             if (mediaType === 'image') {
                 const imageFile = document.getElementById('imageFile').files[0];
+                const dayContent = allContent.find(c => c.day_number === parseInt(document.getElementById('dayNumber').value));
+                
                 if (imageFile) {
                     preview += `<div class="mb-3">
-                        <span class="badge bg-info">🖼️ Image Upload</span><br>
+                        <span class="badge bg-info">🖼️ New Image Upload</span><br>
                         <small class="text-muted">${imageFile.name} (${(imageFile.size / (1024*1024)).toFixed(1)}MB)</small>
                         <div class="mt-2">
                             <img src="${URL.createObjectURL(imageFile)}" class="img-thumbnail" style="max-width: 100%; max-height: 200px;">
+                        </div>
+                    </div>`;
+                } else if (dayContent && dayContent.image_filename) {
+                    preview += `<div class="mb-3">
+                        <span class="badge bg-success">🖼️ Current Image</span><br>
+                        <small class="text-muted">${dayContent.image_filename}</small>
+                        <div class="mt-2">
+                            <img src="/static/uploads/images/${dayContent.image_filename}" class="img-thumbnail" style="max-width: 100%; max-height: 200px;">
                         </div>
                     </div>`;
                 } else {
@@ -468,13 +478,26 @@
                 }
             } else if (mediaType === 'video') {
                 const videoFile = document.getElementById('videoFile').files[0];
+                const dayContent = allContent.find(c => c.day_number === parseInt(document.getElementById('dayNumber').value));
+                
                 if (videoFile) {
                     preview += `<div class="mb-3">
-                        <span class="badge bg-danger">🎥 Video Upload</span><br>
+                        <span class="badge bg-danger">🎥 New Video Upload</span><br>
                         <small class="text-muted">${videoFile.name} (${(videoFile.size / (1024*1024)).toFixed(1)}MB)</small>
                         <div class="mt-2">
                             <video controls style="max-width: 100%; max-height: 200px;" class="rounded">
                                 <source src="${URL.createObjectURL(videoFile)}" type="${videoFile.type}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </div>`;
+                } else if (dayContent && dayContent.video_filename) {
+                    preview += `<div class="mb-3">
+                        <span class="badge bg-success">🎥 Current Video</span><br>
+                        <small class="text-muted">${dayContent.video_filename}</small>
+                        <div class="mt-2">
+                            <video controls style="max-width: 100%; max-height: 200px;" class="rounded">
+                                <source src="/static/uploads/videos/${dayContent.video_filename}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
                         </div>
@@ -484,13 +507,26 @@
                 }
             } else if (mediaType === 'audio') {
                 const audioFile = document.getElementById('audioFile').files[0];
+                const dayContent = allContent.find(c => c.day_number === parseInt(document.getElementById('dayNumber').value));
+                
                 if (audioFile) {
                     preview += `<div class="mb-3">
-                        <span class="badge bg-warning text-dark">🎵 Audio Upload</span><br>
+                        <span class="badge bg-warning text-dark">🎵 New Audio Upload</span><br>
                         <small class="text-muted">${audioFile.name} (${(audioFile.size / (1024*1024)).toFixed(1)}MB)</small>
                         <div class="mt-2">
                             <audio controls class="w-100">
                                 <source src="${URL.createObjectURL(audioFile)}" type="${audioFile.type}">
+                                Your browser does not support the audio tag.
+                            </audio>
+                        </div>
+                    </div>`;
+                } else if (dayContent && dayContent.audio_filename) {
+                    preview += `<div class="mb-3">
+                        <span class="badge bg-success text-white">🎵 Current Audio</span><br>
+                        <small class="text-muted">${dayContent.audio_filename}</small>
+                        <div class="mt-2">
+                            <audio controls class="w-100">
+                                <source src="/static/uploads/audio/${dayContent.audio_filename}" type="audio/mpeg">
                                 Your browser does not support the audio tag.
                             </audio>
                         </div>
