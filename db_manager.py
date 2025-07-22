@@ -318,8 +318,10 @@ class DatabaseManager:
             logger.error(f"Error getting all content: {e}")
             return []
     
-    def create_content(self, day_number, title, content, reflection_question, tags=None, is_active=True):
-        """Create new content"""
+    def create_content(self, day_number, title, content, reflection_question, tags=None, 
+                      media_type='text', image_filename=None, youtube_url=None, 
+                      audio_filename=None, is_active=True):
+        """Create new multimedia content"""
         try:
             new_content = Content()
             new_content.day_number = day_number
@@ -327,18 +329,24 @@ class DatabaseManager:
             new_content.content = content
             new_content.reflection_question = reflection_question
             new_content.tags = tags or []
+            new_content.media_type = media_type
+            new_content.image_filename = image_filename
+            new_content.youtube_url = youtube_url
+            new_content.audio_filename = audio_filename
             new_content.is_active = is_active
             self.db.session.add(new_content)
             self.db.session.commit()
-            logger.info(f"Content for day {day_number} created successfully")
+            logger.info(f"Content for day {day_number} created successfully with media type: {media_type}")
             return new_content.id
         except SQLAlchemyError as e:
             self.db.session.rollback()
             logger.error(f"Error creating content: {e}")
             return None
     
-    def update_content(self, content_id, title, content, reflection_question, tags=None, is_active=True):
-        """Update existing content"""
+    def update_content(self, content_id, title, content, reflection_question, tags=None, 
+                      media_type='text', image_filename=None, youtube_url=None, 
+                      audio_filename=None, is_active=True):
+        """Update existing multimedia content"""
         try:
             content_obj = Content.query.get(content_id)
             if not content_obj:
@@ -349,11 +357,15 @@ class DatabaseManager:
             content_obj.content = content
             content_obj.reflection_question = reflection_question
             content_obj.tags = tags or []
+            content_obj.media_type = media_type
+            content_obj.image_filename = image_filename
+            content_obj.youtube_url = youtube_url
+            content_obj.audio_filename = audio_filename
             content_obj.is_active = is_active
             content_obj.updated_at = datetime.utcnow()
             
             self.db.session.commit()
-            logger.info(f"Content {content_id} updated successfully")
+            logger.info(f"Content {content_id} updated successfully with media type: {media_type}")
             return True
         except SQLAlchemyError as e:
             self.db.session.rollback()

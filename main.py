@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash
+from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash, send_from_directory
 from models import db, User, Content, MessageLog, AdminUser
 from db_manager import DatabaseManager
 from services import WhatsAppService, TelegramService, GeminiService
@@ -10,8 +10,10 @@ from scheduler import ContentScheduler
 import threading
 import time
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm
+from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm
 from urllib.parse import urlparse
+from werkzeug.utils import secure_filename
+import uuid
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +22,8 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -1278,6 +1282,183 @@ def delete_user(user_id):
     db.session.commit()
     flash(f'User {username} has been deleted successfully!', 'success')
     return redirect(url_for('user_management'))
+
+# File upload helper functions
+def allowed_file(filename, allowed_extensions):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def save_uploaded_file(file, subfolder, allowed_extensions):
+    """Save uploaded file and return filename"""
+    if file and allowed_file(file.filename, allowed_extensions):
+        # Generate unique filename
+        filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(filename)
+        unique_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+        
+        # Save file
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
+        os.makedirs(upload_path, exist_ok=True)
+        file_path = os.path.join(upload_path, unique_filename)
+        file.save(file_path)
+        return unique_filename
+    return None
+
+# Multimedia Content Management System Routes
+@app.route('/content')
+@login_required
+def content_list():
+    """List all multimedia content"""
+    all_content = db_manager.get_all_content()
+    return render_template('content_list.html', content=all_content, user=current_user)
+
+@app.route('/content/create', methods=['GET', 'POST'])
+@login_required
+def content_create():
+    """Create new multimedia content"""
+    form = ContentForm()
+    
+    if form.validate_on_submit():
+        # Handle file uploads
+        image_filename = None
+        audio_filename = None
+        youtube_url = None
+        
+        if form.media_type.data == 'image' and form.image_file.data:
+            image_filename = save_uploaded_file(
+                form.image_file.data, 'images', ['jpg', 'jpeg', 'png', 'gif']
+            )
+        
+        if form.media_type.data == 'audio' and form.audio_file.data:
+            audio_filename = save_uploaded_file(
+                form.audio_file.data, 'audio', ['mp3', 'wav', 'ogg', 'm4a']
+            )
+        
+        if form.media_type.data == 'video' and form.youtube_url.data:
+            youtube_url = form.youtube_url.data.strip()
+        
+        # Process tags
+        tags = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()] if form.tags.data else []
+        
+        content_id = db_manager.create_content(
+            day_number=form.day_number.data,
+            title=form.title.data,
+            content=form.content.data,
+            reflection_question=form.reflection_question.data,
+            tags=tags,
+            media_type=form.media_type.data,
+            image_filename=image_filename,
+            youtube_url=youtube_url,
+            audio_filename=audio_filename,
+            is_active=form.is_active.data
+        )
+        
+        if content_id:
+            flash(f'Day {form.day_number.data} multimedia content created successfully!', 'success')
+            return redirect(url_for('content_list'))
+        else:
+            flash('Error creating content. Please try again.', 'danger')
+    
+    return render_template('content_form.html', form=form, title="Create Multimedia Content", user=current_user)
+
+@app.route('/content/edit/<int:content_id>', methods=['GET', 'POST'])
+@login_required
+def content_edit(content_id):
+    """Edit existing multimedia content"""
+    content = Content.query.get_or_404(content_id)
+    form = ContentForm(obj=content)
+    
+    if form.validate_on_submit():
+        # Handle file uploads (keep existing files if no new upload)
+        image_filename = content.image_filename
+        audio_filename = content.audio_filename
+        youtube_url = content.youtube_url
+        
+        if form.media_type.data == 'image' and form.image_file.data:
+            image_filename = save_uploaded_file(
+                form.image_file.data, 'images', ['jpg', 'jpeg', 'png', 'gif']
+            )
+        
+        if form.media_type.data == 'audio' and form.audio_file.data:
+            audio_filename = save_uploaded_file(
+                form.audio_file.data, 'audio', ['mp3', 'wav', 'ogg', 'm4a']
+            )
+        
+        if form.media_type.data == 'video':
+            youtube_url = form.youtube_url.data.strip() if form.youtube_url.data else None
+        
+        # Clear unused media fields based on media type
+        if form.media_type.data != 'image':
+            image_filename = None
+        if form.media_type.data != 'audio':
+            audio_filename = None
+        if form.media_type.data != 'video':
+            youtube_url = None
+        
+        # Process tags
+        tags = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()] if form.tags.data else []
+        
+        success = db_manager.update_content(
+            content_id=content_id,
+            title=form.title.data,
+            content=form.content.data,
+            reflection_question=form.reflection_question.data,
+            tags=tags,
+            media_type=form.media_type.data,
+            image_filename=image_filename,
+            youtube_url=youtube_url,
+            audio_filename=audio_filename,
+            is_active=form.is_active.data
+        )
+        
+        if success:
+            flash(f'Day {content.day_number} multimedia content updated successfully!', 'success')
+            return redirect(url_for('content_list'))
+        else:
+            flash('Error updating content. Please try again.', 'danger')
+    
+    # Pre-populate form fields
+    if request.method == 'GET':
+        form.tags.data = ', '.join(content.tags) if content.tags else ''
+        form.youtube_url.data = content.youtube_url
+    
+    return render_template('content_form.html', form=form, title="Edit Multimedia Content", content=content, user=current_user)
+
+@app.route('/content/delete/<int:content_id>', methods=['POST'])
+@login_required
+def content_delete(content_id):
+    """Delete multimedia content and associated files"""
+    content = Content.query.get_or_404(content_id)
+    day_number = content.day_number
+    
+    # Delete associated files
+    if content.image_filename:
+        try:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], 'images', content.image_filename)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        except Exception as e:
+            logger.warning(f"Could not delete image file: {e}")
+    
+    if content.audio_filename:
+        try:
+            audio_path = os.path.join(app.config['UPLOAD_FOLDER'], 'audio', content.audio_filename)
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+        except Exception as e:
+            logger.warning(f"Could not delete audio file: {e}")
+    
+    if db_manager.delete_content(content_id):
+        flash(f'Day {day_number} multimedia content deleted successfully!', 'success')
+    else:
+        flash('Error deleting content. Please try again.', 'danger')
+    
+    return redirect(url_for('content_list'))
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded multimedia files"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     with app.app_context():

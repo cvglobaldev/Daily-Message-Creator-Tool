@@ -25,6 +25,9 @@
                 <a class="nav-link me-3" href="/settings">
                     <i class="fas fa-cogs me-1"></i>Settings
                 </a>
+                <a class="nav-link me-3" href="{{ url_for('content_list') }}">
+                    <i class="fas fa-photo-video me-1"></i>Content
+                </a>
                 {% if user.role == 'super_admin' %}
                 <a class="nav-link me-3" href="{{ url_for('user_management') }}">
                     <i class="fas fa-users me-1"></i>Users

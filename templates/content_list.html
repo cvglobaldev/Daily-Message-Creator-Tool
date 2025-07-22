@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Multimedia Content Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-photo-video me-2"></i>Multimedia Content Management</h2>
+                <a href="{{ url_for('content_create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create New Content
+                </a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Faith Journey Content ({{ content|length }} items)</h5>
+                </div>
+                <div class="card-body">
+                    {% if content %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Title</th>
+                                        <th>Media Type</th>
+                                        <th>Content Preview</th>
+                                        <th>Tags</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in content %}
+                                    <tr class="{{ 'table-success' if item.is_active else 'table-secondary' }}">
+                                        <td>
+                                            <span class="badge bg-primary">Day {{ item.day_number }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ item.title or 'Untitled' }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if item.media_type == 'text' %}
+                                                <i class="fas fa-font text-secondary"></i> Text
+                                            {% elif item.media_type == 'image' %}
+                                                <i class="fas fa-image text-info"></i> Image
+                                            {% elif item.media_type == 'video' %}
+                                                <i class="fab fa-youtube text-danger"></i> Video
+                                            {% elif item.media_type == 'audio' %}
+                                                <i class="fas fa-volume-up text-warning"></i> Audio
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div style="max-width: 300px;">
+                                                {{ item.content[:100] }}{% if item.content|length > 100 %}...{% endif %}
+                                                
+                                                {% if item.media_type == 'image' and item.image_filename %}
+                                                    <div class="mt-1">
+                                                        <img src="{{ url_for('uploaded_file', filename='images/' + item.image_filename) }}" 
+                                                             class="img-thumbnail" style="max-width: 80px; max-height: 60px;">
+                                                    </div>
+                                                {% elif item.media_type == 'video' and item.youtube_url %}
+                                                    <div class="mt-1">
+                                                        <small class="text-muted">
+                                                            <i class="fab fa-youtube"></i> YouTube Video
+                                                        </small>
+                                                    </div>
+                                                {% elif item.media_type == 'audio' and item.audio_filename %}
+                                                    <div class="mt-1">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-music"></i> Audio File
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% for tag in item.tags %}
+                                                <span class="badge bg-secondary me-1">{{ tag }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if item.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{{ url_for('content_edit', content_id=item.id) }}" 
+                                                   class="btn btn-outline-primary" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-danger" 
+                                                        onclick="confirmDelete({{ item.id }}, {{ item.day_number }})" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-photo-video fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No content found</h5>
+                            <p class="text-muted">Create your first multimedia content to get started!</p>
+                            <a href="{{ url_for('content_create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create First Content
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete content for <strong>Day <span id="deleteDay"></span></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone and will delete any uploaded files.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(contentId, dayNumber) {
+    document.getElementById('deleteDay').textContent = dayNumber;
+    document.getElementById('deleteForm').action = `/content/delete/${contentId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

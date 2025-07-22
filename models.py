@@ -52,6 +52,13 @@ class Content(db.Model):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     reflection_question: Mapped[str] = mapped_column(Text, nullable=False)
     tags: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=list)
+    
+    # Multimedia content fields
+    media_type: Mapped[str] = mapped_column(String(20), nullable=False, default='text')  # text, image, video, audio
+    image_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # uploaded image file
+    youtube_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # YouTube URL
+    audio_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # uploaded audio file
+    
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -67,6 +74,10 @@ class Content(db.Model):
             'content': self.content,
             'reflection_question': self.reflection_question,
             'tags': self.tags or [],
+            'media_type': self.media_type,
+            'image_filename': self.image_filename,
+            'youtube_url': self.youtube_url,
+            'audio_filename': self.audio_filename,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
