@@ -251,7 +251,7 @@ class TelegramService:
             return False
     
     def send_video(self, chat_id: str, video_url: str, caption: str = "") -> bool:
-        """Send video message via Telegram Bot API"""
+        """Send video message via Telegram Bot API - for YouTube, send as formatted text message"""
         try:
             if self.simulate_mode:
                 print(f"\n📱 TELEGRAM VIDEO MESSAGE TO {chat_id}:")
@@ -261,28 +261,59 @@ class TelegramService:
                 print("   ✅ Video message simulated (development mode)")
                 return True
             
-            url = f"{self.api_base_url}/sendVideo"
-            payload = {
-                "chat_id": chat_id,
-                "video": video_url
-            }
-            
-            if caption:
-                payload["caption"] = caption
-            
-            response = requests.post(url, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    logger.info(f"Telegram video sent successfully to {chat_id}")
-                    return True
+            # Check if it's a YouTube URL - send as formatted text message instead
+            if "youtube.com" in video_url or "youtu.be" in video_url:
+                # Create a formatted message with the YouTube link
+                video_message = f"🎥 **Watch Video:**\n{video_url}"
+                if caption:
+                    video_message = f"{caption}\n\n{video_message}"
+                
+                # Send as a regular text message with parse_mode for formatting
+                url = f"{self.api_base_url}/sendMessage"
+                payload = {
+                    "chat_id": chat_id,
+                    "text": video_message,
+                    "parse_mode": "Markdown",
+                    "disable_web_page_preview": False  # Enable preview for YouTube links
+                }
+                
+                response = requests.post(url, json=payload, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("ok"):
+                        logger.info(f"Telegram YouTube video link sent successfully to {chat_id}")
+                        return True
+                    else:
+                        logger.error(f"Telegram YouTube video send failed: {result.get('description', 'Unknown error')}")
+                        return False
                 else:
-                    logger.error(f"Telegram video send failed: {result.get('description', 'Unknown error')}")
+                    logger.error(f"Failed to send Telegram YouTube video: {response.text}")
                     return False
             else:
-                logger.error(f"Failed to send Telegram video: {response.text}")
-                return False
+                # For direct video files, use the video API
+                url = f"{self.api_base_url}/sendVideo"
+                payload = {
+                    "chat_id": chat_id,
+                    "video": video_url
+                }
+                
+                if caption:
+                    payload["caption"] = caption
+                
+                response = requests.post(url, json=payload, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("ok"):
+                        logger.info(f"Telegram video sent successfully to {chat_id}")
+                        return True
+                    else:
+                        logger.error(f"Telegram video send failed: {result.get('description', 'Unknown error')}")
+                        return False
+                else:
+                    logger.error(f"Failed to send Telegram video: {response.text}")
+                    return False
                 
         except Exception as e:
             logger.error(f"Error sending Telegram video: {e}")
