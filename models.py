@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import String, Integer, DateTime, Text, JSON, Boolean, ForeignKey
+from sqlalchemy import String, Integer, DateTime, Text, JSON, Boolean, ForeignKey, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional, Dict, Any
 from flask_login import UserMixin
@@ -51,7 +51,7 @@ class Content(db.Model):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     reflection_question: Mapped[str] = mapped_column(Text, nullable=False)
-    tags: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=list)
+    tags: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String), nullable=True, default=list)
     
     # Multimedia content fields
     media_type: Mapped[str] = mapped_column(String(20), nullable=False, default='text')  # text, image, video, audio
