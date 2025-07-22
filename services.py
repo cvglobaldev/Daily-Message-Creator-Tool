@@ -263,17 +263,16 @@ class TelegramService:
             
             # Check if it's a YouTube URL - send as formatted text message instead
             if "youtube.com" in video_url or "youtu.be" in video_url:
-                # Create a formatted message with the YouTube link
-                video_message = f"🎥 **Watch Video:**\n{video_url}"
+                # Create a formatted message with the YouTube link (avoid Markdown issues)
+                video_message = f"🎥 Watch Video:\n{video_url}"
                 if caption:
                     video_message = f"{caption}\n\n{video_message}"
                 
-                # Send as a regular text message with parse_mode for formatting
+                # Send as a regular text message without parse_mode to avoid entity parsing errors
                 url = f"{self.api_base_url}/sendMessage"
                 payload = {
                     "chat_id": chat_id,
                     "text": video_message,
-                    "parse_mode": "Markdown",
                     "disable_web_page_preview": False  # Enable preview for YouTube links
                 }
                 

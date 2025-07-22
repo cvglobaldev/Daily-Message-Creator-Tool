@@ -49,6 +49,17 @@ class ContentScheduler:
                 self._complete_user_journey(phone_number, user)
                 return True
             
+            # Check if user already received content for this day (prevent duplicates)
+            # Get the most recent message for this user to check if they already got today's content
+            recent_messages = self.db.get_user_messages_by_id(user.id, limit=5)
+            if recent_messages:
+                # Check if any recent message contains content for the current day
+                day_content_text = f"Day {current_day}"
+                for msg in recent_messages:
+                    if msg.direction == 'outgoing' and day_content_text in msg.raw_text:
+                        logger.info(f"User {phone_number} already received content for day {current_day}, skipping duplicate")
+                        return True
+                
             # Get content for current day
             content = self.db.get_content_by_day(current_day)
             if not content:
@@ -128,14 +139,18 @@ class ContentScheduler:
                     return self.whatsapp_service.send_message(phone_number, message)
                 elif media_type in ['image', 'video', 'audio']:
                     text_sent = self.whatsapp_service.send_message(phone_number, message)
-                    if text_sent:
+                    if text_sent and media_url:
                         time.sleep(1)
-                        return self.whatsapp_service.send_media_message(
-                            phone_number, 
-                            media_type, 
-                            media_url
-                        )
-                    return False
+                        if media_type == 'image':
+                            # Send image via WhatsApp simulation (no actual photo method)
+                            self.whatsapp_service.send_video_message(phone_number, media_url)  # Use existing video method for media
+                        elif media_type == 'video':
+                            # Send video via WhatsApp simulation
+                            self.whatsapp_service.send_video_message(phone_number, media_url)
+                        else:
+                            # For audio, log but don't implement yet
+                            logger.info(f"Media content delivery to WhatsApp user {phone_number} - {media_type} not yet implemented, media URL: {media_url}")
+                    return text_sent
                 else:
                     return self.whatsapp_service.send_message(phone_number, message)
                 

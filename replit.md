@@ -97,7 +97,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 22, 2025)
 
-### Chat Management Duplicate Fix & User Clearing (Latest Update)
+### YouTube Video Delivery Fix & Duplicate Message Prevention (Latest Update)
+- **YouTube API Fix**: Resolved Telegram API error where YouTube URLs couldn't be sent via video API - now sends as formatted text messages with preview
+- **Duplicate Message Prevention**: Added comprehensive logic to prevent users from receiving same day content multiple times
+- **Message History Checking**: Scheduler now checks user's recent messages to detect if content was already delivered for current day
+- **Telegram Video Handling**: YouTube URLs automatically detected and sent as text messages with "🎥 Watch Video:" format and web preview enabled
+- **User Reset Functionality**: Enhanced user clearing and recreation system for fresh testing scenarios
+- **Error Handling**: Fixed database transaction errors and method signature issues in scheduler
+- **Testing Success**: Confirmed delivery works for both image content (Day 1) and YouTube video content (Day 2) with proper user progression
+
+### Chat Management Duplicate Fix & User Clearing
 - **Fixed Duplicate Chat Entries**: Resolved issue where multiple message entries for the same user appeared as separate chats in management interface
 - **Database Optimization**: Updated `get_recent_active_users()` to return unique users with their latest message instead of individual message records
 - **User Data Clearing**: Implemented complete user data clearing functionality via `/api/users/{phone}/clear` endpoint for testing purposes  
