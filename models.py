@@ -56,7 +56,8 @@ class Content(db.Model):
     # Multimedia content fields
     media_type: Mapped[str] = mapped_column(String(20), nullable=False, default='text')  # text, image, video, audio
     image_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # uploaded image file
-    youtube_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # YouTube URL
+    video_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # uploaded video file
+    youtube_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # YouTube URL (deprecated)
     audio_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # uploaded audio file
     
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -79,8 +80,19 @@ class Content(db.Model):
                 media_url = f"https://{domain}/static/uploads/images/{self.image_filename}"
             else:
                 media_url = f"http://localhost:5000/static/uploads/images/{self.image_filename}"
-        elif self.media_type == 'video' and self.youtube_url:
-            media_url = self.youtube_url
+        elif self.media_type == 'video':
+            if self.video_filename:
+                # Use proper Replit domain for video URLs
+                import os
+                replit_domains = os.environ.get('REPLIT_DOMAINS', '')
+                if replit_domains:
+                    domain = replit_domains.split(',')[0]
+                    media_url = f"https://{domain}/static/uploads/videos/{self.video_filename}"
+                else:
+                    media_url = f"http://localhost:5000/static/uploads/videos/{self.video_filename}"
+            elif self.youtube_url:
+                # Fallback to YouTube URL for backwards compatibility
+                media_url = self.youtube_url
         elif self.media_type == 'audio' and self.audio_filename:
             # Use proper Replit domain for audio URLs
             import os
@@ -102,6 +114,7 @@ class Content(db.Model):
             'media_type': self.media_type,
             'media_url': media_url,  # Add this field for scheduler
             'image_filename': self.image_filename,
+            'video_filename': self.video_filename,
             'youtube_url': self.youtube_url,
             'audio_filename': self.audio_filename,
             'is_active': self.is_active,

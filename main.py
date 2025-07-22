@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max file size for videos
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -740,6 +740,7 @@ def create_content():
             tags=data.get('tags', []),
             media_type=data.get('media_type', 'text'),
             image_filename=data.get('image_filename'),
+            video_filename=data.get('video_filename'),
             youtube_url=data.get('youtube_url'),
             audio_filename=data.get('audio_filename'),
             is_active=data.get('is_active', True)
@@ -919,6 +920,111 @@ def send_admin_message():
         return jsonify({'success': success, 'platform': platform})
     except Exception as e:
         logger.error(f"Error sending admin message: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/upload-video', methods=['POST'])
+def upload_video():
+    """Handle video file uploads for content"""
+    try:
+        if 'video' not in request.files:
+            return jsonify({'success': False, 'error': 'No video file provided'}), 400
+        
+        file = request.files['video']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        # Check file extension
+        allowed_extensions = {'mp4', 'mov', 'avi', 'mkv', 'webm'}
+        if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+            return jsonify({'success': False, 'error': 'Invalid file type. Allowed: mp4, mov, avi, mkv, webm'}), 400
+        
+        # Generate secure filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # Ensure upload directory exists
+        video_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
+        os.makedirs(video_dir, exist_ok=True)
+        
+        # Save file
+        file_path = os.path.join(video_dir, unique_filename)
+        file.save(file_path)
+        
+        logger.info(f"Video uploaded successfully: {unique_filename}")
+        return jsonify({'success': True, 'filename': unique_filename})
+        
+    except Exception as e:
+        logger.error(f"Error uploading video: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/upload-image', methods=['POST'])
+def upload_image():
+    """Handle image file uploads for content"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        # Check file extension
+        allowed_extensions = {'jpg', 'jpeg', 'png', 'gif'}
+        if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+            return jsonify({'success': False, 'error': 'Invalid file type. Allowed: jpg, jpeg, png, gif'}), 400
+        
+        # Generate secure filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # Ensure upload directory exists
+        image_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'images')
+        os.makedirs(image_dir, exist_ok=True)
+        
+        # Save file
+        file_path = os.path.join(image_dir, unique_filename)
+        file.save(file_path)
+        
+        logger.info(f"Image uploaded successfully: {unique_filename}")
+        return jsonify({'success': True, 'filename': unique_filename})
+        
+    except Exception as e:
+        logger.error(f"Error uploading image: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/upload-audio', methods=['POST'])
+def upload_audio():
+    """Handle audio file uploads for content"""
+    try:
+        if 'audio' not in request.files:
+            return jsonify({'success': False, 'error': 'No audio file provided'}), 400
+        
+        file = request.files['audio']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        # Check file extension
+        allowed_extensions = {'mp3', 'wav', 'ogg', 'm4a'}
+        if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+            return jsonify({'success': False, 'error': 'Invalid file type. Allowed: mp3, wav, ogg, m4a'}), 400
+        
+        # Generate secure filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # Ensure upload directory exists
+        audio_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'audio')
+        os.makedirs(audio_dir, exist_ok=True)
+        
+        # Save file
+        file_path = os.path.join(audio_dir, unique_filename)
+        file.save(file_path)
+        
+        logger.info(f"Audio uploaded successfully: {unique_filename}")
+        return jsonify({'success': True, 'filename': unique_filename})
+        
+    except Exception as e:
+        logger.error(f"Error uploading audio: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/update-message-tags', methods=['POST'])
@@ -1245,6 +1351,177 @@ def edit_user(user_id):
         return redirect(url_for('user_management'))
     
     return render_template('auth/edit_user.html', form=form, user=user)
+
+@app.route('/cms/content/create', methods=['POST'])
+@login_required
+def cms_create_content():
+    """Handle CMS content creation with file uploads"""
+    try:
+        # Handle file uploads first
+        image_filename = None
+        video_filename = None
+        audio_filename = None
+        
+        # Process image upload
+        if 'image_file' in request.files:
+            image_file = request.files['image_file']
+            if image_file and image_file.filename:
+                filename = secure_filename(image_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                image_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'images')
+                os.makedirs(image_dir, exist_ok=True)
+                image_file.save(os.path.join(image_dir, unique_filename))
+                image_filename = unique_filename
+                logger.info(f"Image uploaded for content: {unique_filename}")
+        
+        # Process video upload
+        if 'video_file' in request.files:
+            video_file = request.files['video_file']
+            if video_file and video_file.filename:
+                filename = secure_filename(video_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                video_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
+                os.makedirs(video_dir, exist_ok=True)
+                video_file.save(os.path.join(video_dir, unique_filename))
+                video_filename = unique_filename
+                logger.info(f"Video uploaded for content: {unique_filename}")
+        
+        # Process audio upload
+        if 'audio_file' in request.files:
+            audio_file = request.files['audio_file']
+            if audio_file and audio_file.filename:
+                filename = secure_filename(audio_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                audio_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'audio')
+                os.makedirs(audio_dir, exist_ok=True)
+                audio_file.save(os.path.join(audio_dir, unique_filename))
+                audio_filename = unique_filename
+                logger.info(f"Audio uploaded for content: {unique_filename}")
+        
+        # Parse form data
+        day_number = int(request.form.get('day_number'))
+        title = request.form.get('title')
+        content = request.form.get('content')
+        reflection_question = request.form.get('reflection_question')
+        media_type = request.form.get('media_type', 'text')
+        is_active = request.form.get('is_active') == 'true'
+        
+        # Parse tags from JSON string
+        tags_json = request.form.get('tags', '[]')
+        try:
+            tags = json.loads(tags_json) if tags_json else []
+        except json.JSONDecodeError:
+            tags = []
+        
+        # Create content
+        content_id = db_manager.create_content(
+            day_number=day_number,
+            title=title,
+            content=content,
+            reflection_question=reflection_question,
+            tags=tags,
+            media_type=media_type,
+            image_filename=image_filename,
+            video_filename=video_filename,
+            youtube_url=request.form.get('youtube_url'),  # Keep for backwards compatibility
+            audio_filename=audio_filename,
+            is_active=is_active
+        )
+        
+        if content_id:
+            logger.info(f"Content created successfully: Day {day_number} with media type {media_type}")
+            return jsonify({'success': True, 'id': content_id})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to create content'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error creating CMS content: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/cms/content/edit/<int:content_id>', methods=['POST'])
+@login_required
+def cms_edit_content(content_id):
+    """Handle CMS content editing with file uploads"""
+    try:
+        # Handle file uploads first
+        image_filename = None
+        video_filename = None
+        audio_filename = None
+        
+        # Process image upload
+        if 'image_file' in request.files:
+            image_file = request.files['image_file']
+            if image_file and image_file.filename:
+                filename = secure_filename(image_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                image_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'images')
+                os.makedirs(image_dir, exist_ok=True)
+                image_file.save(os.path.join(image_dir, unique_filename))
+                image_filename = unique_filename
+                logger.info(f"Image uploaded for content update: {unique_filename}")
+        
+        # Process video upload
+        if 'video_file' in request.files:
+            video_file = request.files['video_file']
+            if video_file and video_file.filename:
+                filename = secure_filename(video_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                video_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
+                os.makedirs(video_dir, exist_ok=True)
+                video_file.save(os.path.join(video_dir, unique_filename))
+                video_filename = unique_filename
+                logger.info(f"Video uploaded for content update: {unique_filename}")
+        
+        # Process audio upload
+        if 'audio_file' in request.files:
+            audio_file = request.files['audio_file']
+            if audio_file and audio_file.filename:
+                filename = secure_filename(audio_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                audio_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'audio')
+                os.makedirs(audio_dir, exist_ok=True)
+                audio_file.save(os.path.join(audio_dir, unique_filename))
+                audio_filename = unique_filename
+                logger.info(f"Audio uploaded for content update: {unique_filename}")
+        
+        # Parse form data
+        title = request.form.get('title')
+        content = request.form.get('content')
+        reflection_question = request.form.get('reflection_question')
+        media_type = request.form.get('media_type', 'text')
+        is_active = request.form.get('is_active') == 'true'
+        
+        # Parse tags from JSON string
+        tags_json = request.form.get('tags', '[]')
+        try:
+            tags = json.loads(tags_json) if tags_json else []
+        except json.JSONDecodeError:
+            tags = []
+        
+        # Update content
+        success = db_manager.update_content(
+            content_id=content_id,
+            title=title,
+            content=content,
+            reflection_question=reflection_question,
+            tags=tags,
+            media_type=media_type,
+            image_filename=image_filename,
+            video_filename=video_filename,
+            youtube_url=request.form.get('youtube_url'),  # Keep for backwards compatibility
+            audio_filename=audio_filename,
+            is_active=is_active
+        )
+        
+        if success:
+            logger.info(f"Content updated successfully: ID {content_id} with media type {media_type}")
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update content'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error updating CMS content: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required

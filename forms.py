@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
+from flask_wtf.file import FileField, FileAllowed, FileSize
 from wtforms import StringField, PasswordField, SubmitField, SelectField, BooleanField, TextAreaField, URLField, ValidationError
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
 from models import AdminUser, db
@@ -54,7 +54,7 @@ class ContentForm(FlaskForm):
     media_type = SelectField('Media Type', 
                            choices=[('text', 'Text Only'), 
                                    ('image', 'Text + Image'), 
-                                   ('video', 'Text + YouTube Video'), 
+                                   ('video', 'Text + Video Upload'), 
                                    ('audio', 'Text + Audio File')], 
                            validators=[DataRequired()], default='text')
     
@@ -63,11 +63,17 @@ class ContentForm(FlaskForm):
                           validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 
                                     'Only image files (jpg, jpeg, png, gif) are allowed!')])
     
+    video_file = FileField('Upload Video', 
+                          validators=[Optional(), 
+                                    FileAllowed(['mp4', 'mov', 'avi', 'mkv', 'webm'], 
+                                              'Only video files (mp4, mov, avi, mkv, webm) are allowed!'),
+                                    FileSize(max_size=200*1024*1024, message='Video file size must be less than 200MB')])
+    
     audio_file = FileField('Upload Audio File', 
                           validators=[Optional(), FileAllowed(['mp3', 'wav', 'ogg', 'm4a'], 
                                     'Only audio files (mp3, wav, ogg, m4a) are allowed!')])
     
-    # YouTube URL
+    # YouTube URL (deprecated but kept for backwards compatibility)
     youtube_url = URLField('YouTube URL', validators=[Optional()])
     
     # Faith journey tags (multi-select will be handled in template)

@@ -109,7 +109,7 @@
                                 <select class="form-select" id="mediaType" onchange="toggleMediaSections()">
                                     <option value="text">📄 Text Only</option>
                                     <option value="image">🖼️ Image</option>
-                                    <option value="video">🎥 YouTube Video</option>
+                                    <option value="video">🎥 Video Upload</option>
                                     <option value="audio">🎵 Audio</option>
                                 </select>
                             </div>
@@ -128,15 +128,15 @@
                                 </div>
                             </div>
                             
-                            <!-- YouTube Video Section -->
+                            <!-- Video Upload Section -->
                             <div id="videoSection" class="mb-3" style="display: none;">
                                 <div class="card border-danger">
                                     <div class="card-header bg-danger">
-                                        <i class="fab fa-youtube me-2"></i>YouTube Video
+                                        <i class="fas fa-video me-2"></i>Video Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="url" class="form-control" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=...">
-                                        <div class="form-text">Enter the full YouTube URL</div>
+                                        <input type="file" class="form-control" id="videoFile" accept="video/*">
+                                        <div class="form-text">Supported: MP4, MOV, AVI, MKV, WebM (Max 200MB)</div>
                                         <div id="videoPreview" class="mt-2"></div>
                                     </div>
                                 </div>
@@ -357,15 +357,10 @@
             const mediaType = dayContent?.media_type || 'text';
             document.getElementById('mediaType').value = mediaType;
             
-            // Set multimedia fields
-            if (mediaType === 'video' && dayContent?.youtube_url) {
-                document.getElementById('youtubeUrl').value = dayContent.youtube_url;
-            }
-            
             // Clear multimedia fields when switching media types
-            if (mediaType !== 'video') {
-                document.getElementById('youtubeUrl').value = '';
-            }
+            document.getElementById('videoFile').value = '';
+            document.getElementById('imageFile').value = '';
+            document.getElementById('audioFile').value = '';
             
             // Set tags
             setSelectedTags(dayContent ? dayContent.tags : []);
@@ -406,9 +401,9 @@
             if (mediaType === 'image') {
                 preview += `<div class="mb-2"><span class="badge bg-info">🖼️ Image Content</span></div>`;
             } else if (mediaType === 'video') {
-                const youtubeUrl = document.getElementById('youtubeUrl').value;
-                if (youtubeUrl) {
-                    preview += `<div class="mb-2"><span class="badge bg-danger">🎥 YouTube Video</span><br><small class="text-muted">${youtubeUrl}</small></div>`;
+                const videoFile = document.getElementById('videoFile').files[0];
+                if (videoFile) {
+                    preview += `<div class="mb-2"><span class="badge bg-danger">🎥 Video Upload</span><br><small class="text-muted">${videoFile.name} (${(videoFile.size / (1024*1024)).toFixed(1)}MB)</small></div>`;
                 } else {
                     preview += `<div class="mb-2"><span class="badge bg-danger">🎥 Video Content</span></div>`;
                 }
@@ -490,9 +485,9 @@
                     formData.append('image_file', imageFile);
                 }
             } else if (mediaType === 'video') {
-                const youtubeUrl = document.getElementById('youtubeUrl').value;
-                if (youtubeUrl) {
-                    formData.append('youtube_url', youtubeUrl);
+                const videoFile = document.getElementById('videoFile').files[0];
+                if (videoFile) {
+                    formData.append('video_file', videoFile);
                 }
             } else if (mediaType === 'audio') {
                 const audioFile = document.getElementById('audioFile').files[0];

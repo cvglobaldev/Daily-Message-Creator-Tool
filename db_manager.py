@@ -319,8 +319,8 @@ class DatabaseManager:
             return []
     
     def create_content(self, day_number, title, content, reflection_question, tags=None, 
-                      media_type='text', image_filename=None, youtube_url=None, 
-                      audio_filename=None, is_active=True):
+                      media_type='text', image_filename=None, video_filename=None, 
+                      youtube_url=None, audio_filename=None, is_active=True):
         """Create new multimedia content"""
         try:
             new_content = Content()
@@ -331,6 +331,7 @@ class DatabaseManager:
             new_content.tags = tags or []
             new_content.media_type = media_type
             new_content.image_filename = image_filename
+            new_content.video_filename = video_filename
             new_content.youtube_url = youtube_url
             new_content.audio_filename = audio_filename
             new_content.is_active = is_active
@@ -344,8 +345,8 @@ class DatabaseManager:
             return None
     
     def update_content(self, content_id, title, content, reflection_question, tags=None, 
-                      media_type='text', image_filename=None, youtube_url=None, 
-                      audio_filename=None, is_active=True):
+                      media_type='text', image_filename=None, video_filename=None, 
+                      youtube_url=None, audio_filename=None, is_active=True):
         """Update existing multimedia content"""
         try:
             content_obj = Content.query.get(content_id)
@@ -359,6 +360,7 @@ class DatabaseManager:
             content_obj.tags = tags or []
             content_obj.media_type = media_type
             content_obj.image_filename = image_filename
+            content_obj.video_filename = video_filename
             content_obj.youtube_url = youtube_url
             content_obj.audio_filename = audio_filename
             content_obj.is_active = is_active

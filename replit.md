@@ -97,7 +97,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 22, 2025)
 
-### YouTube Video Delivery Fix & Duplicate Message Prevention (Latest Update)
+### Video Upload System Implementation (Latest Update)
+- **YouTube URL Replaced with Video Upload**: Completely replaced YouTube URL functionality with direct video file upload capability
+- **200MB File Size Limit**: Configured video upload system to support files up to 200MB for comprehensive content delivery
+- **Video File Support**: Added support for MP4, MOV, AVI, MKV, and WebM video formats with secure file handling
+- **Database Schema Update**: Added `video_filename` column to content table with proper model relationships and URL generation
+- **CMS Video Interface**: Updated Content Management System with video upload interface replacing YouTube URL input
+- **Video Delivery Infrastructure**: Enhanced Telegram service to handle uploaded video files via sendVideo API
+- **File Management**: Implemented secure filename generation, upload directory creation, and file validation
+- **Complete Integration**: Video uploads work end-to-end from CMS upload to Telegram user delivery
+- **Backwards Compatibility**: Maintained YouTube URL support in database for existing content while prioritizing uploaded videos
+
+### YouTube Video Delivery Fix & Duplicate Message Prevention
 - **YouTube API Fix**: Resolved Telegram API error where YouTube URLs couldn't be sent via video API - now sends as formatted text messages with preview
 - **Duplicate Message Prevention**: Added comprehensive logic to prevent users from receiving same day content multiple times
 - **Message History Checking**: Scheduler now checks user's recent messages to detect if content was already delivered for current day
