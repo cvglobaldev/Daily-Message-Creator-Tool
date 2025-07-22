@@ -97,7 +97,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 22, 2025)
 
-### Image Delivery Bug Fix - Telegram Integration (Latest Update)
+### Chat Management Duplicate Fix & User Clearing (Latest Update)
+- **Fixed Duplicate Chat Entries**: Resolved issue where multiple message entries for the same user appeared as separate chats in management interface
+- **Database Optimization**: Updated `get_recent_active_users()` to return unique users with their latest message instead of individual message records
+- **User Data Clearing**: Implemented complete user data clearing functionality via `/api/users/{phone}/clear` endpoint for testing purposes  
+- **Chat Interface Enhancement**: Chat management now displays each user only once with their most recent activity
+- **Testing Support**: Added comprehensive user cleanup for testing YouTube video delivery and other features
+- **Backend Efficiency**: Reduced API response size and improved chat management performance by eliminating duplicates
+
+### Image Delivery Bug Fix - Telegram Integration
 - **Critical Fix**: Resolved image delivery issue where Day 1 content images weren't appearing for users
 - **Content Model Enhancement**: Updated Content model's `to_dict()` method to properly construct `media_url` field
 - **Telegram Photo API**: Implemented full `send_photo` method in TelegramService for actual image delivery

@@ -1123,18 +1123,11 @@ def clear_user_data(user_phone):
 
 @app.route('/api/recent-messages')
 def get_recent_messages():
-    """Get recent messages for dashboard display"""
+    """Get recent unique users with their latest messages for dashboard display"""
     try:
-        # Get the 10 most recent messages
-        messages = db_manager.get_filtered_messages(
-            page=1,
-            limit=10,
-            sort_field='timestamp',
-            sort_order='desc',
-            filters={}
-        )
-        
-        return jsonify(messages['messages'])
+        # Get recent unique users instead of individual messages to avoid duplicates
+        recent_users = db_manager.get_recent_active_users(limit=10)
+        return jsonify(recent_users)
     except Exception as e:
         logger.error(f"Error getting recent messages: {e}")
         return jsonify({'error': str(e)}), 500

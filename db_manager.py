@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import func, desc, or_
+from sqlalchemy import func, desc, or_, and_
 from models import db, User, Content, MessageLog, SystemSettings
 
 logger = logging.getLogger(__name__)
@@ -404,6 +404,62 @@ class DatabaseManager:
             return MessageLog.query.filter_by(user_id=user_id).order_by(MessageLog.timestamp.asc()).all()
         except SQLAlchemyError as e:
             logger.error(f"Error getting user messages: {e}")
+            return []
+    
+    def get_recent_active_users(self, limit: int = 10) -> List[Dict]:
+        """Get recent unique users with their latest message for chat management"""
+        try:
+            # Subquery to get the latest message timestamp for each user
+            latest_message_subquery = self.db.session.query(
+                MessageLog.user_id,
+                func.max(MessageLog.timestamp).label('latest_timestamp')
+            ).group_by(MessageLog.user_id).subquery()
+            
+            # Main query to get user info with their latest message
+            query = self.db.session.query(
+                User.id,
+                User.phone_number,
+                User.status,
+                User.current_day,
+                User.join_date,
+                MessageLog.timestamp.label('last_message_time'),
+                MessageLog.raw_text.label('last_message_text'),
+                MessageLog.direction.label('last_message_direction'),
+                MessageLog.llm_sentiment.label('last_sentiment'),
+                MessageLog.is_human_handoff
+            ).join(
+                latest_message_subquery,
+                User.id == latest_message_subquery.c.user_id
+            ).join(
+                MessageLog,
+                and_(
+                    MessageLog.user_id == User.id,
+                    MessageLog.timestamp == latest_message_subquery.c.latest_timestamp
+                )
+            ).order_by(desc(latest_message_subquery.c.latest_timestamp)).limit(limit)
+            
+            results = query.all()
+            
+            user_list = []
+            for row in results:
+                user_list.append({
+                    'id': row.id,
+                    'user_phone': row.phone_number,
+                    'user_id': row.id,
+                    'status': row.status,
+                    'current_day': row.current_day,
+                    'join_date': row.join_date.isoformat() if row.join_date else None,
+                    'timestamp': row.last_message_time.isoformat(),
+                    'raw_text': row.last_message_text[:100] + ('...' if len(row.last_message_text) > 100 else ''),
+                    'direction': row.last_message_direction,
+                    'llm_sentiment': row.last_sentiment,
+                    'is_human_handoff': row.is_human_handoff
+                })
+            
+            return user_list
+            
+        except Exception as e:
+            logger.error(f"Error getting recent active users: {e}")
             return []
     
     def update_message_tags(self, message_id: int, tags: List[str]) -> bool:
