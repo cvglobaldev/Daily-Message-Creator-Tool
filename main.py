@@ -118,6 +118,7 @@ def telegram_webhook():
     """Handle incoming Telegram messages"""
     try:
         data = request.get_json()
+        logger.info(f"TELEGRAM WEBHOOK RECEIVED: {data}")
         logger.debug(f"Received Telegram webhook data: {data}")
         
         # Handle Telegram update
