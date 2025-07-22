@@ -265,7 +265,10 @@
             });
             
             // Media type change listener
-            document.getElementById('mediaType').addEventListener('change', updatePreview);
+            document.getElementById('mediaType').addEventListener('change', function() {
+                toggleMediaSections();
+                updatePreview();
+            });
         });
 
         function loadAllContent() {
@@ -357,6 +360,11 @@
             // Set multimedia fields
             if (mediaType === 'video' && dayContent?.youtube_url) {
                 document.getElementById('youtubeUrl').value = dayContent.youtube_url;
+            }
+            
+            // Clear multimedia fields when switching media types
+            if (mediaType !== 'video') {
+                document.getElementById('youtubeUrl').value = '';
             }
             
             // Set tags

@@ -414,6 +414,52 @@ class WhatsAppService:
         except Exception as e:
             logger.error(f"Error sending media message to {to}: {e}")
             return False
+    
+    def send_video(self, to: str, video_url: str, caption: str = "") -> bool:
+        """Send video message via WhatsApp Business API"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 WHATSAPP VIDEO MESSAGE TO {to}:")
+                print(f"   Video URL: {video_url}")
+                if caption:
+                    print(f"   Caption: {caption}")
+                print("   ✅ Video message simulated (development mode)")
+                return True
+                
+            if not self.access_token or not self.phone_number_id:
+                logger.error("WhatsApp credentials not configured")
+                return False
+                
+            url = f"https://graph.facebook.com/v17.0/{self.phone_number_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": to.replace('+', ''),
+                "type": "video",
+                "video": {
+                    "link": video_url
+                }
+            }
+            
+            if caption:
+                payload["video"]["caption"] = caption
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                logger.info(f"WhatsApp video sent successfully to {to}")
+                return True
+            else:
+                logger.error(f"Failed to send WhatsApp video to {to}: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending WhatsApp video to {to}: {e}")
+            return False
 
 
 class ResponseAnalysis(BaseModel):
