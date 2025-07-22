@@ -67,6 +67,31 @@ class Content(db.Model):
         return f'<Content Day {self.day_number} - {self.title}>'
     
     def to_dict(self):
+        # Construct media_url based on media type for scheduler compatibility
+        media_url = None
+        if self.media_type == 'image' and self.image_filename:
+            # Use proper Replit domain for image URLs
+            import os
+            replit_domains = os.environ.get('REPLIT_DOMAINS', '')
+            if replit_domains:
+                # Use the first domain from REPLIT_DOMAINS
+                domain = replit_domains.split(',')[0]
+                media_url = f"https://{domain}/static/uploads/images/{self.image_filename}"
+            else:
+                media_url = f"http://localhost:5000/static/uploads/images/{self.image_filename}"
+        elif self.media_type == 'video' and self.youtube_url:
+            media_url = self.youtube_url
+        elif self.media_type == 'audio' and self.audio_filename:
+            # Use proper Replit domain for audio URLs
+            import os
+            replit_domains = os.environ.get('REPLIT_DOMAINS', '')
+            if replit_domains:
+                # Use the first domain from REPLIT_DOMAINS
+                domain = replit_domains.split(',')[0]
+                media_url = f"https://{domain}/static/uploads/audio/{self.audio_filename}"
+            else:
+                media_url = f"http://localhost:5000/static/uploads/audio/{self.audio_filename}"
+        
         return {
             'id': self.id,
             'day_number': self.day_number,
@@ -75,6 +100,7 @@ class Content(db.Model):
             'reflection_question': self.reflection_question,
             'tags': self.tags or [],
             'media_type': self.media_type,
+            'media_url': media_url,  # Add this field for scheduler
             'image_filename': self.image_filename,
             'youtube_url': self.youtube_url,
             'audio_filename': self.audio_filename,

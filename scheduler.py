@@ -56,7 +56,9 @@ class ContentScheduler:
                 return False
             
             # Send the main content
-            success = self._deliver_content(phone_number, content.to_dict())
+            content_dict = content.to_dict()
+            logger.info(f"🔴 Content for day {current_day}: media_type={content_dict.get('media_type')}, media_url={content_dict.get('media_url')}")
+            success = self._deliver_content(phone_number, content_dict)
             
             if success:
                 # Schedule reflection question after 10 minute delay (consistent with content delivery)
