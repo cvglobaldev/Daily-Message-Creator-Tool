@@ -126,7 +126,61 @@
                     </div>
                 </div>
                 <div id="userDetails" class="mt-3" style="display: none;">
-                    <!-- User details will be shown here -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>User Profile
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Name</label>
+                                        <div id="userDetailName" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Phone Number</label>
+                                        <div id="userDetailPhone" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Username</label>
+                                        <div id="userDetailUsername" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Journey Status</label>
+                                        <div id="userDetailStatus" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Current Day</label>
+                                        <div id="userDetailDay" class="fw-bold">-</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Location</label>
+                                        <div id="userDetailLocation" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">IP Address</label>
+                                        <div id="userDetailIP" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Language</label>
+                                        <div id="userDetailLanguage" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Join Date</label>
+                                        <div id="userDetailJoinDate" class="fw-bold">-</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small">Premium Status</label>
+                                        <div id="userDetailPremium" class="fw-bold">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -382,6 +436,8 @@
                             </td>
                             <td>
                                 <strong>${conversation.user_phone}</strong>
+                                ${conversation.user_name ? `<br><small class="text-info">${conversation.user_name}</small>` : ''}
+                                ${conversation.user_location ? `<br><small class="text-muted"><i class="fas fa-map-marker-alt"></i> ${conversation.user_location}</small>` : ''}
                                 <br><small class="text-muted">Day ${conversation.current_day || 'N/A'}</small>
                             </td>
                             <td>
@@ -631,16 +687,7 @@
                     
                     if (user) {
                         currentUser = user;
-                        userDetailsDiv.style.display = 'block';
-                        userDetailsDiv.innerHTML = `
-                            <div class="alert alert-info">
-                                <h6><i class="fas fa-user me-2"></i>User Found: ${user.phone_number}</h6>
-                                <p class="mb-1"><strong>Status:</strong> ${user.status}</p>
-                                <p class="mb-1"><strong>Current Day:</strong> ${user.current_day}</p>
-                                <p class="mb-1"><strong>Join Date:</strong> ${new Date(user.join_date).toLocaleString()}</p>
-                                <p class="mb-0"><strong>Platform:</strong> ${user.phone_number.startsWith('tg_') ? 'Telegram' : 'WhatsApp'}</p>
-                            </div>
-                        `;
+                        displayUserDetails(user);
                         clearUserBtn.disabled = false;
                     } else {
                         userDetailsDiv.style.display = 'block';
@@ -653,6 +700,39 @@
                     alert('Error searching for user');
                 }
             });
+            
+            function displayUserDetails(user) {
+                // Populate enhanced user details
+                document.getElementById('userDetailName').textContent = user.name || (user.first_name + ' ' + (user.last_name || '')).trim() || 'Not provided';
+                document.getElementById('userDetailPhone').textContent = user.phone_number || '-';
+                document.getElementById('userDetailUsername').textContent = user.username ? `@${user.username}` : '-';
+                
+                // Status with badge styling
+                const statusElement = document.getElementById('userDetailStatus');
+                statusElement.innerHTML = `<span class="badge bg-${user.status === 'active' ? 'success' : 'secondary'}">${user.status}</span>`;
+                
+                document.getElementById('userDetailDay').textContent = `Day ${user.current_day || 1}`;
+                
+                // Location information
+                const locationParts = [user.city, user.region, user.country].filter(Boolean);
+                document.getElementById('userDetailLocation').textContent = locationParts.length > 0 ? locationParts.join(', ') : '-';
+                
+                document.getElementById('userDetailIP').textContent = user.ip_address || '-';
+                document.getElementById('userDetailLanguage').textContent = user.language_code ? user.language_code.toUpperCase() : '-';
+                document.getElementById('userDetailJoinDate').textContent = user.join_date ? new Date(user.join_date).toLocaleDateString() : '-';
+                
+                // Premium status with icon
+                const premiumElement = document.getElementById('userDetailPremium');
+                if (user.is_premium === true) {
+                    premiumElement.innerHTML = '<span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>Premium</span>';
+                } else if (user.is_premium === false) {
+                    premiumElement.innerHTML = '<span class="badge bg-secondary">Regular</span>';
+                } else {
+                    premiumElement.textContent = '-';
+                }
+                
+                userDetailsDiv.style.display = 'block';
+            }
             
             clearUserBtn.addEventListener('click', async () => {
                 if (!currentUser || !confirm(`Are you sure you want to clear all data for user ${currentUser.phone_number}? This action cannot be undone.`)) {

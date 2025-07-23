@@ -24,18 +24,35 @@ class DatabaseManager:
             return None
     
     def create_user(self, phone_number: str, **kwargs) -> Optional[User]:
-        """Create a new user"""
+        """Create a new user with enhanced fields"""
         try:
             user = User()
             user.phone_number = phone_number
-            user.name = kwargs.get('name')  # Add name field support
+            
+            # Basic fields
+            user.name = kwargs.get('name')
             user.status = kwargs.get('status', 'active')
             user.current_day = kwargs.get('current_day', 1)
             user.join_date = kwargs.get('join_date', datetime.utcnow())
             user.tags = kwargs.get('tags', [])
+            
+            # Enhanced Telegram fields
+            user.username = kwargs.get('username')
+            user.first_name = kwargs.get('first_name')
+            user.last_name = kwargs.get('last_name')
+            user.language_code = kwargs.get('language_code')
+            user.is_premium = kwargs.get('is_premium')
+            
+            # Location fields
+            user.country = kwargs.get('country')
+            user.region = kwargs.get('region')
+            user.city = kwargs.get('city')
+            user.timezone = kwargs.get('timezone')
+            user.ip_address = kwargs.get('ip_address')
+            
             self.db.session.add(user)
             self.db.session.commit()
-            logger.info(f"User {phone_number} created successfully with name: {user.name}")
+            logger.info(f"User {phone_number} created successfully with enhanced data: {user.name}")
             return user
         except SQLAlchemyError as e:
             self.db.session.rollback()
@@ -479,13 +496,23 @@ class DatabaseManager:
     def get_consolidated_user_conversations(self, page: int = 1, limit: int = 20, sort_field: str = 'timestamp', sort_order: str = 'desc', filters: Dict = None) -> Dict:
         """Get consolidated user conversations for chat management (unique users only)"""
         try:
-            # Build base query for users with their conversation stats
+            # Build base query for users with their conversation stats and enhanced fields
             query = self.db.session.query(
                 User.id,
                 User.phone_number,
+                User.name,
+                User.username,
+                User.first_name,
+                User.last_name,
                 User.status,
                 User.current_day,
                 User.join_date,
+                User.country,
+                User.region,
+                User.city,
+                User.language_code,
+                User.is_premium,
+                User.ip_address,
                 func.max(MessageLog.timestamp).label('latest_message_time'),
                 func.count(MessageLog.id).label('total_messages'),
                 func.sum(case(
@@ -500,9 +527,10 @@ class DatabaseManager:
                     (MessageLog.is_human_handoff == True, 1),
                     else_=0
                 )).label('handoff_requests'),
-# Remove the problematic string_agg function call for now
             ).outerjoin(MessageLog, User.id == MessageLog.user_id)\
-            .group_by(User.id, User.phone_number, User.status, User.current_day, User.join_date)\
+            .group_by(User.id, User.phone_number, User.name, User.username, User.first_name, User.last_name,
+                     User.status, User.current_day, User.join_date, User.country, User.region, User.city,
+                     User.language_code, User.is_premium, User.ip_address)\
             .having(func.count(MessageLog.id) > 0)
             
             # Apply filters if provided
@@ -594,10 +622,28 @@ class DatabaseManager:
                 # Get unique tags
                 unique_tags = list(set(all_tags)) if all_tags else []
                 
+                # Create user location string
+                location_parts = [row.city, row.region, row.country]
+                user_location = ', '.join(filter(None, location_parts)) if any(location_parts) else None
+                
+                # Create user display name
+                user_name = row.name or row.first_name or None
+                
                 conversations.append({
                     'id': row.id,
                     'user_phone': row.phone_number,
                     'user_id': row.id,
+                    'user_name': user_name,
+                    'user_location': user_location,
+                    'username': row.username,
+                    'first_name': row.first_name,
+                    'last_name': row.last_name,
+                    'language_code': row.language_code,
+                    'is_premium': row.is_premium,
+                    'ip_address': row.ip_address,
+                    'country': row.country,
+                    'region': row.region,
+                    'city': row.city,
                     'status': row.status,
                     'current_day': row.current_day,
                     'join_date': row.join_date.isoformat() if row.join_date else None,

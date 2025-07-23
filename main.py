@@ -14,6 +14,7 @@ from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm,
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 import uuid
+from location_utils import extract_telegram_user_data
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -143,9 +144,14 @@ def telegram_webhook():
                 
                 logger.info(f"Telegram message from {chat_id} ({username}): {message_text}")
                 
-                # Process the message
+                # Get client IP address for location data
+                client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+                if client_ip and ',' in client_ip:
+                    client_ip = client_ip.split(',')[0].strip()
+                
+                # Process the message with enhanced user data
                 process_incoming_message(phone_number, message_text, platform="telegram", 
-                                       user_data={"username": username, "first_name": first_name, "chat_id": chat_id})
+                                       user_data=user_info, request_ip=client_ip)
         
         # Handle callback queries from inline keyboards (2025 feature)
         elif 'callback_query' in data:
@@ -163,11 +169,14 @@ def telegram_webhook():
                     reply_text = callback_data.replace('quick_reply:', '')
                     logger.info(f"Quick reply from {chat_id}: {reply_text}")
                     
+                    # Get client IP for location data
+                    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+                    if client_ip and ',' in client_ip:
+                        client_ip = client_ip.split(',')[0].strip()
+                    
                     # Process as regular message
                     process_incoming_message(phone_number, reply_text, platform="telegram", 
-                                           user_data={"username": user_info.get('username', ''), 
-                                                     "first_name": user_info.get('first_name', ''), 
-                                                     "chat_id": chat_id})
+                                           user_data=user_info, request_ip=client_ip)
                     
                     # Answer the callback query
                     telegram_service.answer_callback_query(callback_query_id, "Thank you for your response!")
@@ -205,7 +214,7 @@ def whatsapp_webhook():
         logger.error(f"Error processing WhatsApp webhook: {e}")
         return jsonify({"error": str(e)}), 500
 
-def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None):
+def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None):
     """Process incoming message from user"""
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
@@ -221,7 +230,7 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         # Handle commands
         if message_lower == 'start' or message_lower == '/start':
-            handle_start_command(phone_number, platform, user_data)
+            handle_start_command(phone_number, platform, user_data, request_ip)
             return
         
         elif message_lower == 'stop' or message_lower == '/stop':
@@ -285,7 +294,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
         logger.error(f"Error sending message to {platform}: {e}")
         return False
 
-def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None):
+def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None):
     """Handle START command - onboard new user"""
     try:
         logger.info(f"Processing START command for {phone_number} on {platform}")
@@ -293,9 +302,12 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         existing_user = db_manager.get_user_by_phone(phone_number)
         
         if existing_user and existing_user.status == 'active':
-            # Allow restart - reset to Day 1 and update name if provided
+            # Allow restart - reset to Day 1 and update with enhanced user data
             update_kwargs = {'current_day': 1, 'join_date': datetime.now()}
-            if user_data:
+            if user_data and platform == "telegram":
+                enhanced_data = extract_telegram_user_data(user_data, request_ip)
+                update_kwargs.update(enhanced_data)
+            elif user_data:
                 user_name = user_data.get('first_name') or user_data.get('username')
                 if user_name:
                     update_kwargs['name'] = user_name
@@ -334,14 +346,20 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         # Create or reactivate user
         if existing_user:
             update_kwargs = {'status': 'active', 'current_day': 1, 'join_date': datetime.now()}
-            if user_data:
+            if user_data and platform == "telegram":
+                enhanced_data = extract_telegram_user_data(user_data, request_ip)
+                update_kwargs.update(enhanced_data)
+            elif user_data:
                 user_name = user_data.get('first_name') or user_data.get('username')
                 if user_name:
                     update_kwargs['name'] = user_name
             db_manager.update_user(phone_number, **update_kwargs)
         else:
             create_kwargs = {'status': 'active', 'current_day': 1, 'tags': []}
-            if user_data:
+            if user_data and platform == "telegram":
+                enhanced_data = extract_telegram_user_data(user_data, request_ip)
+                create_kwargs.update(enhanced_data)
+            elif user_data:
                 user_name = user_data.get('first_name') or user_data.get('username')
                 if user_name:
                     create_kwargs['name'] = user_name

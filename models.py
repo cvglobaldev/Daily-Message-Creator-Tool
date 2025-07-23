@@ -20,6 +20,19 @@ class User(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Store first_name or username from Telegram
+    username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Telegram username (@username)
+    first_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Telegram first name
+    last_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Telegram last name
+    language_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)  # Telegram language code
+    is_premium: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)  # Telegram premium status
+    
+    # Location data
+    country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # IP-based country
+    region: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # IP-based region/state
+    city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # IP-based city
+    timezone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # IP-based timezone
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)  # User's IP address
+    
     status: Mapped[str] = mapped_column(String(20), nullable=False, default='active')  # active, inactive, completed
     current_day: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     join_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
@@ -37,6 +50,16 @@ class User(db.Model):
             'id': self.id,
             'phone_number': self.phone_number,
             'name': self.name,
+            'username': self.username,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'language_code': self.language_code,
+            'is_premium': self.is_premium,
+            'country': self.country,
+            'region': self.region,
+            'city': self.city,
+            'timezone': self.timezone,
+            'ip_address': self.ip_address,
             'status': self.status,
             'current_day': self.current_day,
             'join_date': self.join_date.isoformat() if self.join_date else None,
