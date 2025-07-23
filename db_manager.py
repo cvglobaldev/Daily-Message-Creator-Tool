@@ -28,13 +28,14 @@ class DatabaseManager:
         try:
             user = User()
             user.phone_number = phone_number
+            user.name = kwargs.get('name')  # Add name field support
             user.status = kwargs.get('status', 'active')
             user.current_day = kwargs.get('current_day', 1)
             user.join_date = kwargs.get('join_date', datetime.utcnow())
             user.tags = kwargs.get('tags', [])
             self.db.session.add(user)
             self.db.session.commit()
-            logger.info(f"User {phone_number} created successfully")
+            logger.info(f"User {phone_number} created successfully with name: {user.name}")
             return user
         except SQLAlchemyError as e:
             self.db.session.rollback()

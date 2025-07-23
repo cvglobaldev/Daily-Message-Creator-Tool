@@ -66,17 +66,14 @@ class ContentScheduler:
                 logger.error(f"No content found for day {current_day}")
                 return False
             
-            # Send the main content
+            # Send the main content with reflection question combined
             content_dict = content.to_dict()
             logger.info(f"🔴 Content for day {current_day}: media_type={content_dict.get('media_type')}, media_url={content_dict.get('media_url')}")
-            success = self._deliver_content(phone_number, content_dict)
+            success = self._deliver_content_with_reflection(phone_number, content_dict)
             
             if success:
                 # Log the delivered daily content to message history
                 self._log_delivered_content(user, content_dict)
-                
-                # Schedule reflection question after 10 minute delay (consistent with content delivery)
-                self._schedule_reflection_question(phone_number, content.to_dict(), delay_minutes=10)
                 
                 # Advance user to next day
                 next_day = current_day + 1
@@ -95,7 +92,7 @@ class ContentScheduler:
             logger.error(f"Error sending content to user {phone_number}: {e}")
             return False
     
-    def _deliver_content(self, phone_number: str, content: dict) -> bool:
+    def _deliver_content_with_reflection(self, phone_number: str, content: dict) -> bool:
         """Deliver the actual content based on media type"""
         try:
             media_type = content.get('media_type', 'text')
@@ -104,8 +101,13 @@ class ContentScheduler:
             day = content.get('day_number', 0)  # Updated to match our Content model
             title = content.get('title', 'Faith Journey')  # Add title
             
-            # Add day header with title
+            # Add day header with title and reflection question
+            reflection_question = content.get('reflection_question', '')
             message = f"📖 Day {day} - {title}\n\n{content_text}"
+            
+            # Add reflection question to the same message
+            if reflection_question:
+                message += f"\n\n💭 Reflection Question:\n{reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
             
             # Determine platform and service based on phone_number
             if phone_number.startswith('tg_'):
@@ -166,53 +168,7 @@ class ContentScheduler:
             logger.error(f"Error delivering content: {e}")
             return False
     
-    def _schedule_reflection_question(self, phone_number: str, content: dict, delay_minutes: int = 2):
-        """Schedule reflection question to be sent after delay"""
-        try:
-            import threading
-            import time
-            
-            def send_reflection():
-                try:
-                    time.sleep(delay_minutes * 60)  # Convert to seconds
-                    reflection_question = content.get('reflection_question', '')
-                    if reflection_question:
-                        message = f"💭 Reflection Question:\n\n{reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
-                        
-                        # Determine platform and send accordingly
-                        success = False
-                        if phone_number.startswith('tg_'):
-                            # Telegram user
-                            chat_id = phone_number[3:]  # Remove 'tg_' prefix
-                            success = self.telegram_service.send_message(chat_id, message)
-                        else:
-                            # WhatsApp user (default)
-                            success = self.whatsapp_service.send_message(phone_number, message)
-                        
-                        # Log the reflection question to message history
-                        if success:
-                            user = self.db.get_user_by_phone(phone_number)
-                            if user:
-                                self.db.log_message(
-                                    user=user,
-                                    direction='outgoing',
-                                    raw_text=message,
-                                    sentiment='neutral',
-                                    tags=['DAILY_CONTENT', 'REFLECTION_QUESTION', f'Day_{content.get("day_number", "0")}'],
-                                    confidence=1.0
-                                )
-                        
-                        logger.info(f"Reflection question sent to {phone_number}")
-                except Exception as e:
-                    logger.error(f"Error sending reflection question to {phone_number}: {e}")
-            
-            # Start thread to send reflection question after delay
-            reflection_thread = threading.Thread(target=send_reflection, daemon=True)
-            reflection_thread.start()
-            
-        except Exception as e:
-            logger.error(f"Error scheduling reflection question for {phone_number}: {e}")
-    
+
     def _log_delivered_content(self, user, content: dict):
         """Log the delivered daily content to message history"""
         try:

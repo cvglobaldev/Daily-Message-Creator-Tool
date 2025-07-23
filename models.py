@@ -19,6 +19,7 @@ class User(db.Model):
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Store first_name or username from Telegram
     status: Mapped[str] = mapped_column(String(20), nullable=False, default='active')  # active, inactive, completed
     current_day: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     join_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
@@ -35,6 +36,7 @@ class User(db.Model):
         return {
             'id': self.id,
             'phone_number': self.phone_number,
+            'name': self.name,
             'status': self.status,
             'current_day': self.current_day,
             'join_date': self.join_date.isoformat() if self.join_date else None,

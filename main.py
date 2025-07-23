@@ -293,10 +293,13 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         existing_user = db_manager.get_user_by_phone(phone_number)
         
         if existing_user and existing_user.status == 'active':
-            # Allow restart - reset to Day 1
-            db_manager.update_user(phone_number, 
-                                 current_day=1, 
-                                 join_date=datetime.now())
+            # Allow restart - reset to Day 1 and update name if provided
+            update_kwargs = {'current_day': 1, 'join_date': datetime.now()}
+            if user_data:
+                user_name = user_data.get('first_name') or user_data.get('username')
+                if user_name:
+                    update_kwargs['name'] = user_name
+            db_manager.update_user(phone_number, **update_kwargs)
             platform_emoji = "📱" if platform == "telegram" else "📱"
             restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
                               "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
@@ -330,15 +333,19 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         
         # Create or reactivate user
         if existing_user:
-            db_manager.update_user(phone_number, 
-                                 status='active', 
-                                 current_day=1, 
-                                 join_date=datetime.now())
+            update_kwargs = {'status': 'active', 'current_day': 1, 'join_date': datetime.now()}
+            if user_data:
+                user_name = user_data.get('first_name') or user_data.get('username')
+                if user_name:
+                    update_kwargs['name'] = user_name
+            db_manager.update_user(phone_number, **update_kwargs)
         else:
-            db_manager.create_user(phone_number, 
-                                 status='active', 
-                                 current_day=1, 
-                                 tags=[])
+            create_kwargs = {'status': 'active', 'current_day': 1, 'tags': []}
+            if user_data:
+                user_name = user_data.get('first_name') or user_data.get('username')
+                if user_name:
+                    create_kwargs['name'] = user_name
+            db_manager.create_user(phone_number, **create_kwargs)
         
         # Send welcome message
         platform_emoji = "📱" if platform == "telegram" else "📱"
