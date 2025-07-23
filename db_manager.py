@@ -475,6 +475,170 @@ class DatabaseManager:
             logger.error(f"Error getting recent active users: {e}")
             return []
     
+    def get_consolidated_user_conversations(self, page: int = 1, limit: int = 20, sort_field: str = 'timestamp', sort_order: str = 'desc', filters: Dict = None) -> Dict:
+        """Get consolidated user conversations for chat management (unique users only)"""
+        try:
+            # Build base query for users with their conversation stats
+            query = self.db.session.query(
+                User.id,
+                User.phone_number,
+                User.status,
+                User.current_day,
+                User.join_date,
+                func.max(MessageLog.timestamp).label('latest_message_time'),
+                func.count(MessageLog.id).label('total_messages'),
+                func.sum(case(
+                    (MessageLog.direction == 'incoming', 1),
+                    else_=0
+                )).label('incoming_messages'),
+                func.sum(case(
+                    (MessageLog.direction == 'outgoing', 1),
+                    else_=0
+                )).label('outgoing_messages'),
+                func.sum(case(
+                    (MessageLog.is_human_handoff == True, 1),
+                    else_=0
+                )).label('handoff_requests'),
+# Remove the problematic string_agg function call for now
+            ).outerjoin(MessageLog, User.id == MessageLog.user_id)\
+            .group_by(User.id, User.phone_number, User.status, User.current_day, User.join_date)\
+            .having(func.count(MessageLog.id) > 0)
+            
+            # Apply filters if provided
+            if filters:
+                if filters.get('user_search'):
+                    query = query.filter(User.phone_number.ilike(f"%{filters['user_search']}%"))
+                
+                if filters.get('date_from'):
+                    try:
+                        date_from = datetime.fromisoformat(filters['date_from'].replace('Z', '+00:00'))
+                        query = query.having(func.max(MessageLog.timestamp) >= date_from)
+                    except:
+                        pass
+                        
+                if filters.get('date_to'):
+                    try:
+                        date_to = datetime.fromisoformat(filters['date_to'].replace('Z', '+00:00'))
+                        query = query.having(func.max(MessageLog.timestamp) <= date_to)
+                    except:
+                        pass
+                        
+                if filters.get('human_handoff'):
+                    query = query.having(func.sum(case((MessageLog.is_human_handoff == True, 1), else_=0)) > 0)
+            
+            # Apply sorting
+            if sort_field == 'timestamp':
+                if sort_order == 'desc':
+                    query = query.order_by(desc('latest_message_time'))
+                else:
+                    query = query.order_by('latest_message_time')
+            elif sort_field == 'phone_number':
+                if sort_order == 'desc':
+                    query = query.order_by(desc(User.phone_number))
+                else:
+                    query = query.order_by(User.phone_number)
+            else:
+                query = query.order_by(desc('latest_message_time'))
+            
+            # Get total count for pagination
+            total_count = query.count()
+            
+            # Apply pagination
+            offset = (page - 1) * limit
+            results = query.offset(offset).limit(limit).all()
+            
+            # Convert to list of dictionaries
+            conversations = []
+            for row in results:
+                # Get the most recent message for preview
+                recent_message = self.db.session.query(MessageLog)\
+                    .filter_by(user_id=row.id)\
+                    .order_by(desc(MessageLog.timestamp))\
+                    .first()
+                
+                # Create conversation summary
+                conversation_summary = f"{int(row.incoming_messages or 0)} messages from user, {int(row.outgoing_messages or 0)} from bot"
+                if row.handoff_requests and row.handoff_requests > 0:
+                    conversation_summary += f", {int(row.handoff_requests)} handoff requests"
+                
+                # Get predominant sentiment from recent messages
+                recent_sentiments = self.db.session.query(MessageLog.llm_sentiment)\
+                    .filter_by(user_id=row.id)\
+                    .filter(MessageLog.llm_sentiment.isnot(None))\
+                    .order_by(desc(MessageLog.timestamp))\
+                    .limit(5).all()
+                
+                sentiment_counts = {}
+                for s in recent_sentiments:
+                    if s[0]:
+                        sentiment_counts[s[0]] = sentiment_counts.get(s[0], 0) + 1
+                
+                if sentiment_counts:
+                    predominant_sentiment = max(sentiment_counts.keys(), key=lambda x: sentiment_counts[x])
+                else:
+                    predominant_sentiment = 'neutral'
+                
+                # Aggregate tags from recent messages
+                recent_tags = self.db.session.query(MessageLog.llm_tags)\
+                    .filter_by(user_id=row.id)\
+                    .filter(MessageLog.llm_tags.isnot(None))\
+                    .order_by(desc(MessageLog.timestamp))\
+                    .limit(10).all()
+                
+                all_tags = []
+                for tag_list in recent_tags:
+                    if tag_list[0]:
+                        all_tags.extend(tag_list[0])
+                
+                # Get unique tags
+                unique_tags = list(set(all_tags)) if all_tags else []
+                
+                conversations.append({
+                    'id': row.id,
+                    'user_phone': row.phone_number,
+                    'user_id': row.id,
+                    'status': row.status,
+                    'current_day': row.current_day,
+                    'join_date': row.join_date.isoformat() if row.join_date else None,
+                    'timestamp': row.latest_message_time.isoformat() if row.latest_message_time else None,
+                    'total_messages': int(row.total_messages or 0),
+                    'conversation_summary': conversation_summary,
+                    'raw_text': recent_message.raw_text[:100] + ('...' if len(recent_message.raw_text) > 100 else '') if recent_message else 'No messages',
+                    'direction': 'Conversation',  # Change to indicate this is consolidated
+                    'llm_sentiment': predominant_sentiment,
+                    'llm_tags': unique_tags,
+                    'is_human_handoff': bool(row.handoff_requests and row.handoff_requests > 0)
+                })
+            
+            # Calculate pagination info
+            total_pages = (total_count + limit - 1) // limit
+            
+            return {
+                'conversations': conversations,
+                'pagination': {
+                    'page': page,
+                    'limit': limit,
+                    'total': total_count,
+                    'pages': total_pages,
+                    'has_next': page < total_pages,
+                    'has_prev': page > 1
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting consolidated user conversations: {e}")
+            return {
+                'conversations': [],
+                'pagination': {
+                    'page': 1,
+                    'limit': limit,
+                    'total': 0,
+                    'pages': 0,
+                    'has_next': False,
+                    'has_prev': False
+                }
+            }
+    
     def update_message_tags(self, message_id: int, tags: List[str]) -> bool:
         """Update tags for a specific message"""
         try:

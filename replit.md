@@ -95,9 +95,19 @@ Preferred communication style: Simple, everyday language.
 - **Production Mode**: Requires actual API credentials, sends real messages
 - Environment-based configuration switches between modes automatically
 
-## Recent Changes (July 22, 2025)
+## Recent Changes (July 23, 2025)
 
-### Video/Audio File Upload Delivery Fix (Latest Update)
+### Chat Management Duplicates Fix - Consolidated User Conversations (Latest Update)
+- **Eliminated Duplicate Entries**: Fixed chat management interface showing 4 separate entries for single user (e.g., tg_960173404)
+- **Consolidated User View**: Replaced individual message entries with unified conversation summaries per user
+- **Enhanced API Endpoint**: Updated `/api/chat-management/messages` to use new `get_consolidated_user_conversations()` method
+- **Conversation Statistics**: Each user now shows total message count breakdown (e.g., "3 messages from user, 1 from bot")
+- **Single Entry Per User**: Direction field changed to "Conversation" to indicate consolidated view instead of separate "Bot"/"User" entries
+- **Preserved All Data**: Maintains sentiment analysis, tags aggregation, and handoff detection while eliminating duplicates
+- **Database Optimization**: Uses GROUP BY queries with comprehensive conversation statistics for better performance
+- **Unified User Experience**: Chat management now displays clean, unique user list with complete conversation context
+
+### Video/Audio File Upload Delivery Fix
 - **File Upload API**: Fixed video and audio delivery by switching from URL-based to direct file upload method in Telegram API
 - **Multipart Form Data**: Implemented proper multipart/form-data requests for sendVideo and sendAudio endpoints
 - **File Path Resolution**: Added logic to extract filenames from media URLs and locate files in static/uploads directories  

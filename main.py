@@ -1091,7 +1091,7 @@ def chat_management_page():
 
 @app.route('/api/chat-management/messages')
 def get_filtered_messages():
-    """API endpoint to get filtered messages"""
+    """API endpoint to get consolidated user conversations (no duplicates)"""
     try:
         # Get filter parameters
         page = int(request.args.get('page', 1))
@@ -1112,8 +1112,8 @@ def get_filtered_messages():
         # Remove empty filters
         filters = {k: v for k, v in filters.items() if v is not None and v != ''}
         
-        # Get filtered messages
-        result = db_manager.get_filtered_messages(
+        # Get consolidated user conversations instead of individual messages
+        result = db_manager.get_consolidated_user_conversations(
             page=page,
             limit=limit,
             sort_field=sort_field,
@@ -1126,7 +1126,7 @@ def get_filtered_messages():
         
         return jsonify({
             'success': True,
-            'messages': result['messages'],
+            'messages': result['conversations'],  # Change 'messages' to 'conversations' for clarity
             'pagination': result['pagination'],
             'stats': stats
         })
