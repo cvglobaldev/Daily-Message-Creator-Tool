@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import func, desc, or_, and_
+from sqlalchemy import func, desc, or_, and_, case
 from models import db, User, Content, MessageLog, SystemSettings
 
 logger = logging.getLogger(__name__)
@@ -409,53 +409,64 @@ class DatabaseManager:
             return []
     
     def get_recent_active_users(self, limit: int = 10) -> List[Dict]:
-        """Get recent unique users with their latest message for chat management"""
+        """Get recent unique users with their conversation summary (no duplicates)"""
         try:
-            # Subquery to get the latest message timestamp for each user
-            latest_message_subquery = self.db.session.query(
-                MessageLog.user_id,
-                func.max(MessageLog.timestamp).label('latest_timestamp')
-            ).group_by(MessageLog.user_id).subquery()
-            
-            # Main query to get user info with their latest message
+            # Get unique users with comprehensive conversation stats
             query = self.db.session.query(
                 User.id,
                 User.phone_number,
                 User.status,
                 User.current_day,
                 User.join_date,
-                MessageLog.timestamp.label('last_message_time'),
-                MessageLog.raw_text.label('last_message_text'),
-                MessageLog.direction.label('last_message_direction'),
-                MessageLog.llm_sentiment.label('last_sentiment'),
-                MessageLog.is_human_handoff
-            ).join(
-                latest_message_subquery,
-                User.id == latest_message_subquery.c.user_id
-            ).join(
-                MessageLog,
-                and_(
-                    MessageLog.user_id == User.id,
-                    MessageLog.timestamp == latest_message_subquery.c.latest_timestamp
-                )
-            ).order_by(desc(latest_message_subquery.c.latest_timestamp)).limit(limit)
+                func.max(MessageLog.timestamp).label('latest_message_time'),
+                func.count(MessageLog.id).label('total_messages'),
+                func.sum(case(
+                    (MessageLog.direction == 'incoming', 1),
+                    else_=0
+                )).label('incoming_messages'),
+                func.sum(case(
+                    (MessageLog.direction == 'outgoing', 1),
+                    else_=0
+                )).label('outgoing_messages'),
+                func.sum(case(
+                    (MessageLog.is_human_handoff == True, 1),
+                    else_=0
+                )).label('handoff_requests')
+            ).outerjoin(MessageLog, User.id == MessageLog.user_id)\
+            .group_by(User.id, User.phone_number, User.status, User.current_day, User.join_date)\
+            .having(func.count(MessageLog.id) > 0)\
+            .order_by(desc('latest_message_time'))\
+            .limit(limit)
             
             results = query.all()
             
             user_list = []
             for row in results:
+                # Get the most recent message for preview
+                recent_message = self.db.session.query(MessageLog)\
+                    .filter_by(user_id=row.id)\
+                    .order_by(desc(MessageLog.timestamp))\
+                    .first()
+                
+                # Create conversation summary
+                conversation_summary = f"{int(row.incoming_messages or 0)} incoming, {int(row.outgoing_messages or 0)} outgoing"
+                if row.handoff_requests and row.handoff_requests > 0:
+                    conversation_summary += f", {int(row.handoff_requests)} handoffs"
+                
                 user_list.append({
                     'id': row.id,
                     'user_phone': row.phone_number,
-                    'user_id': row.id,
+                    'user_id': row.id,  
                     'status': row.status,
                     'current_day': row.current_day,
                     'join_date': row.join_date.isoformat() if row.join_date else None,
-                    'timestamp': row.last_message_time.isoformat(),
-                    'raw_text': row.last_message_text[:100] + ('...' if len(row.last_message_text) > 100 else ''),
-                    'direction': row.last_message_direction,
-                    'llm_sentiment': row.last_sentiment,
-                    'is_human_handoff': row.is_human_handoff
+                    'timestamp': row.latest_message_time.isoformat() if row.latest_message_time else None,
+                    'total_messages': int(row.total_messages or 0),
+                    'conversation_summary': conversation_summary,
+                    'raw_text': recent_message.raw_text[:100] + ('...' if len(recent_message.raw_text) > 100 else '') if recent_message else '',
+                    'direction': recent_message.direction if recent_message else 'none',
+                    'llm_sentiment': recent_message.llm_sentiment if recent_message else None,
+                    'is_human_handoff': recent_message.is_human_handoff if recent_message else False
                 })
             
             return user_list
