@@ -72,6 +72,9 @@ class ContentScheduler:
             success = self._deliver_content(phone_number, content_dict)
             
             if success:
+                # Log the delivered daily content to message history
+                self._log_delivered_content(user, content_dict)
+                
                 # Schedule reflection question after 10 minute delay (consistent with content delivery)
                 self._schedule_reflection_question(phone_number, content.to_dict(), delay_minutes=10)
                 
@@ -147,11 +150,11 @@ class ContentScheduler:
                     if text_sent and media_url:
                         time.sleep(1)
                         if media_type == 'image':
-                            # Send image via WhatsApp simulation (no actual photo method)
-                            self.whatsapp_service.send_video_message(phone_number, media_url)  # Use existing video method for media
+                            # Send image via WhatsApp simulation (media delivery is simulated)
+                            logger.info(f"WhatsApp image delivery simulated for {phone_number}: {media_url}")
                         elif media_type == 'video':
                             # Send video via WhatsApp simulation
-                            self.whatsapp_service.send_video_message(phone_number, media_url)
+                            logger.info(f"WhatsApp video delivery simulated for {phone_number}: {media_url}")
                         else:
                             # For audio, log but don't implement yet
                             logger.info(f"Media content delivery to WhatsApp user {phone_number} - {media_type} not yet implemented, media URL: {media_url}")
@@ -177,13 +180,27 @@ class ContentScheduler:
                         message = f"💭 Reflection Question:\n\n{reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
                         
                         # Determine platform and send accordingly
+                        success = False
                         if phone_number.startswith('tg_'):
                             # Telegram user
                             chat_id = phone_number[3:]  # Remove 'tg_' prefix
-                            self.telegram_service.send_message(chat_id, message)
+                            success = self.telegram_service.send_message(chat_id, message)
                         else:
                             # WhatsApp user (default)
-                            self.whatsapp_service.send_message(phone_number, message)
+                            success = self.whatsapp_service.send_message(phone_number, message)
+                        
+                        # Log the reflection question to message history
+                        if success:
+                            user = self.db.get_user_by_phone(phone_number)
+                            if user:
+                                self.db.log_message(
+                                    user=user,
+                                    direction='outgoing',
+                                    raw_text=message,
+                                    sentiment='neutral',
+                                    tags=['DAILY_CONTENT', 'REFLECTION_QUESTION', f'Day_{content.get("day_number", "0")}'],
+                                    confidence=1.0
+                                )
                         
                         logger.info(f"Reflection question sent to {phone_number}")
                 except Exception as e:
@@ -195,6 +212,45 @@ class ContentScheduler:
             
         except Exception as e:
             logger.error(f"Error scheduling reflection question for {phone_number}: {e}")
+    
+    def _log_delivered_content(self, user, content: dict):
+        """Log the delivered daily content to message history"""
+        try:
+            # Create the content message that was sent
+            day = content.get('day_number', 0)
+            title = content.get('title', 'Faith Journey')
+            content_text = content.get('content', '')
+            media_type = content.get('media_type', 'text')
+            
+            message = f"📖 Day {day} - {title}\n\n{content_text}"
+            
+            # Create appropriate tags
+            tags = [
+                'DAILY_CONTENT',
+                'SCHEDULER_DELIVERY',
+                f'Day_{day}',
+                media_type.upper() if media_type else 'TEXT'
+            ]
+            
+            # Add content-specific tags if available
+            content_tags = content.get('tags')
+            if content_tags and isinstance(content_tags, list):
+                tags.extend(content_tags)
+            
+            # Log the message
+            self.db.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=message,
+                sentiment='positive',
+                tags=tags,
+                confidence=1.0
+            )
+            
+            logger.info(f"Daily content logged to message history for user {user.phone_number} (Day {day})")
+            
+        except Exception as e:
+            logger.error(f"Error logging delivered content: {e}")
     
     def _complete_user_journey(self, phone_number: str, user):
         """Complete user's 30-day journey"""
