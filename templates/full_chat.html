@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Full Chat - {% if user.name %}{{ user.name }}{% elif user.first_name %}{{ user.first_name }}{% else %}{{ user.phone_number }}{% endif %} - Faith Journey</title>
+    <title>ENHANCED Chat - {% if user.name %}{{ user.name }}{% elif user.first_name %}{{ user.first_name }}{% else %}{{ user.phone_number }}{% endif %} - Faith Journey</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -80,6 +80,11 @@
     </nav>
 
     <div class="container">
+        <!-- VISIBLE DEBUG: Enhanced Template Loaded -->
+        <div class="alert alert-warning text-center mb-3" style="border: 3px solid #ffc107; font-weight: bold; font-size: 18px;">
+            🚀 ENHANCED TEMPLATE ACTIVE - USER: {{ user.name or 'No Name' }} - LOCATION: {{ user.city or 'No City' }}
+        </div>
+        
         <!-- Comprehensive User Information -->
         <div class="user-info-card">
             <div class="row">
