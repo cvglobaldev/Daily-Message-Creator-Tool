@@ -77,71 +77,160 @@
     </nav>
 
     <div class="container">
-        <!-- Enhanced User Information -->
+        <!-- Comprehensive User Information -->
         <div class="user-info-card">
             <div class="row">
-                <div class="col-md-6">
-                    <h4><i class="fas fa-user me-2"></i>
-                        {% if user.name %}
-                            {{ user.name }}
-                        {% elif user.first_name %}
-                            {{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}
-                        {% else %}
-                            {{ user.phone_number }}
-                        {% endif %}
-                    </h4>
-                    <div class="mb-2">
-                        <strong>Phone:</strong> {{ user.phone_number }}<br>
-                        {% if user.username %}
-                            <strong>Username:</strong> @{{ user.username }}<br>
-                        {% endif %}
-                        <small class="text-muted">User ID: {{ user.id }}</small>
+                <!-- Left Column: User Identity -->
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary" style="width: 60px; height: 60px;">
+                            {% if user.phone_number.startswith('tg_') %}
+                                <i class="fab fa-telegram fa-2x text-white"></i>
+                            {% else %}
+                                <i class="fab fa-whatsapp fa-2x text-white"></i>
+                            {% endif %}
+                        </div>
                     </div>
                     
-                    <div class="mb-2">
-                        <strong>Journey Progress:</strong><br>
-                        Day {{ user.current_day or 'N/A' }} of 30<br>
-                        <span class="badge bg-{{ 'success' if user.status == 'active' else 'secondary' }}">
+                    <div class="text-center">
+                        <h4 class="mb-1">
+                            {% if user.name %}
+                                {{ user.name }}
+                            {% elif user.first_name %}
+                                {{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}
+                            {% else %}
+                                <span class="text-muted">No Name Provided</span>
+                            {% endif %}
+                        </h4>
+                        
+                        {% if user.username %}
+                            <div class="mb-2">
+                                <span class="badge bg-info">@{{ user.username }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="mb-2">
+                            <i class="fas fa-id-card text-secondary me-2"></i>
+                            <strong>User ID:</strong> {{ user.id }}
+                        </div>
+                        
+                        <div class="mb-2">
+                            {% if user.phone_number.startswith('tg_') %}
+                                <i class="fab fa-telegram text-info me-2"></i>
+                                <strong>Telegram ID:</strong><br>
+                                <small class="text-muted">{{ user.phone_number }}</small>
+                            {% else %}
+                                <i class="fas fa-phone text-success me-2"></i>
+                                <strong>Phone Number:</strong><br>
+                                <small class="text-muted">{{ user.phone_number }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Column: Journey & Status -->
+                <div class="col-md-4">
+                    <h5 class="mb-3"><i class="fas fa-route me-2"></i>Faith Journey</h5>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><strong>Progress:</strong></span>
+                            <span class="badge bg-primary">Day {{ user.current_day or 1 }} / 30</span>
+                        </div>
+                        
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ ((user.current_day or 1) / 30 * 100) | round(1) }}%"></div>
+                        </div>
+                        
+                        <small class="text-muted">{{ ((user.current_day or 1) / 30 * 100) | round(1) }}% Complete</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Status:</strong><br>
+                        <span class="badge bg-{{ 'success' if user.status == 'active' else 'secondary' }} fs-6">
+                            <i class="fas fa-{{ 'play' if user.status == 'active' else 'pause' }} me-1"></i>
                             {{ user.status.title() }}
                         </span>
                     </div>
+
+                    <div class="mb-3">
+                        <strong>Started:</strong><br>
+                        <i class="fas fa-calendar-alt text-info me-1"></i>
+                        {{ user.join_date.strftime('%B %d, %Y') if user.join_date else 'Unknown' }}<br>
+                        {% if user.join_date %}
+                            <small class="text-muted">{{ user.join_date.strftime('%I:%M %p') }}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Total Messages:</strong><br>
+                        <i class="fas fa-comments text-primary me-1"></i>
+                        {{ messages|length }} messages
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="mb-2">
+
+                <!-- Right Column: Location & Account Details -->
+                <div class="col-md-4">
+                    <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Account Details</h5>
+                    
+                    <div class="mb-3">
                         <strong>Location:</strong><br>
                         {% set location_parts = [user.city, user.region, user.country] | select | list %}
                         {% if location_parts %}
-                            <i class="fas fa-map-marker-alt text-info me-1"></i>{{ location_parts | join(', ') }}<br>
+                            <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                            {{ location_parts | join(', ') }}<br>
+                            {% if user.ip_address and user.ip_address != '127.0.0.1' %}
+                                <small class="text-muted">IP: {{ user.ip_address }}</small>
+                            {% endif %}
                         {% else %}
-                            <span class="text-muted">Location not available</span><br>
-                        {% endif %}
-                        {% if user.ip_address %}
-                            <small class="text-muted">IP: {{ user.ip_address }}</small>
+                            <span class="text-muted">
+                                <i class="fas fa-map-marker-slash me-1"></i>
+                                Location not detected
+                            </span><br>
+                            {% if user.ip_address %}
+                                <small class="text-muted">IP: {{ user.ip_address }}</small>
+                            {% endif %}
                         {% endif %}
                     </div>
                     
-                    <div class="mb-2">
-                        <strong>Account Details:</strong><br>
-                        {% if user.language_code %}
-                            <i class="fas fa-language text-primary me-1"></i>{{ user.language_code.upper() }}<br>
+                    {% if user.language_code %}
+                    <div class="mb-3">
+                        <strong>Language:</strong><br>
+                        <i class="fas fa-language text-primary me-1"></i>
+                        {{ user.language_code.upper() }}
+                        {% if user.language_code == 'en' %}(English)
+                        {% elif user.language_code == 'ar' %}(Arabic)
+                        {% elif user.language_code == 'es' %}(Spanish)
+                        {% elif user.language_code == 'fr' %}(French)
                         {% endif %}
-                        {% if user.is_premium == true %}
-                            <i class="fas fa-crown text-warning me-1"></i><span class="badge bg-warning text-dark">Premium</span><br>
-                        {% elif user.is_premium == false %}
-                            <span class="badge bg-secondary">Regular</span><br>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.is_premium is not none %}
+                    <div class="mb-3">
+                        <strong>Account Type:</strong><br>
+                        {% if user.is_premium %}
+                            <i class="fas fa-crown text-warning me-1"></i>
+                            <span class="badge bg-warning text-dark">Premium User</span>
+                        {% else %}
+                            <i class="fas fa-user text-secondary me-1"></i>
+                            <span class="badge bg-secondary">Regular User</span>
                         {% endif %}
-                        <strong>Platform:</strong> 
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <strong>Platform:</strong><br>
                         {% if user.phone_number.startswith('tg_') %}
-                            <i class="fab fa-telegram text-info me-1"></i>Telegram
+                            <i class="fab fa-telegram text-info me-2"></i>
+                            <span class="badge bg-info">Telegram Bot</span>
                         {% else %}
-                            <i class="fab fa-whatsapp text-success me-1"></i>WhatsApp
+                            <i class="fab fa-whatsapp text-success me-2"></i>
+                            <span class="badge bg-success">WhatsApp</span>
                         {% endif %}
-                    </div>
-                    
-                    <div class="mb-2">
-                        <strong>Joined:</strong><br>
-                        {{ user.join_date.strftime('%B %d, %Y at %I:%M %p') if user.join_date else 'N/A' }}<br>
-                        <small class="text-muted">{{ messages|length }} total messages</small>
                     </div>
                 </div>
             </div>

@@ -97,7 +97,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 23, 2025)
 
-### Fresh User Experience Multimedia Delivery Fix (Latest Update - July 23, 2025)
+### Enhanced Chat History User Information Display (Latest Update - July 23, 2025)
+- **Comprehensive User Profile Layout**: Redesigned chat history page with three-column layout showing detailed user information
+- **Enhanced Name Display**: Intelligent name prioritization (name → first_name+last_name → "No Name Provided" fallback) with platform avatar icon
+- **Detailed Phone/ID Information**: Clear distinction between Telegram ID and phone number with appropriate platform icons
+- **Progress Visualization**: Added visual progress bar showing faith journey completion percentage (Day X/30 with progress bar)
+- **Enhanced Location Display**: Improved location information with map marker icons and IP address display when available
+- **Account Details Section**: Comprehensive account information including language detection, premium status, and platform identification
+- **User Data Integration**: Updated main.py to pass all enhanced user fields (name, username, first_name, last_name, location, language, premium status) to chat history template
+- **Professional UI Design**: Clean three-column layout with icons, badges, and visual hierarchy for better user information presentation
+
+### Fresh User Experience Multimedia Delivery Fix (July 23, 2025)
 - **Fixed Duplicate Detection Issue**: Resolved problem where old message logs prevented fresh Day 1 content delivery with multimedia
 - **Confirmed Multimedia-First Delivery**: Successfully tested and verified that fresh users receive media files (images/videos/audio) BEFORE text content
 - **10-Second Delay Working**: Welcome message displays immediately, followed by exactly 10-second delay before Day 1 multimedia + text delivery
