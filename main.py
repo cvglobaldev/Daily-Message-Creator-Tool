@@ -844,19 +844,6 @@ Use this context to provide relevant, personalized responses to the user's messa
         return "Thank you for your message. I'm here to support you on your faith journey. Please feel free to share your thoughts or questions."
 
 # Chat Management Routes
-@app.route('/chat/<int:user_id>')
-def chat_history(user_id):
-    """Display chat history for a specific user"""
-    try:
-        user = db_manager.get_user_by_id(user_id)
-        if not user:
-            return "User not found", 404
-            
-        messages = db_manager.get_user_messages(user_id)
-        return render_template('chat_history.html', user=user, messages=messages)
-    except Exception as e:
-        logger.error(f"Error loading chat history: {e}")
-        return f"Error loading chat history: {e}", 500
 
 @app.route('/settings')
 @login_required
