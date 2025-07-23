@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Full Chat - {{ user.phone_number }} - Faith Journey</title>
+    <title>Full Chat - {% if user.name %}{{ user.name }}{% elif user.first_name %}{{ user.first_name }}{% else %}{{ user.phone_number }}{% endif %} - Faith Journey</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -77,22 +77,72 @@
     </nav>
 
     <div class="container">
-        <!-- User Information -->
+        <!-- Enhanced User Information -->
         <div class="user-info-card">
             <div class="row">
-                <div class="col-md-4">
-                    <h4><i class="fas fa-user me-2"></i>{{ user.phone_number }}</h4>
-                    <p class="text-muted mb-0">User ID: {{ user.id }}</p>
+                <div class="col-md-6">
+                    <h4><i class="fas fa-user me-2"></i>
+                        {% if user.name %}
+                            {{ user.name }}
+                        {% elif user.first_name %}
+                            {{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}
+                        {% else %}
+                            {{ user.phone_number }}
+                        {% endif %}
+                    </h4>
+                    <div class="mb-2">
+                        <strong>Phone:</strong> {{ user.phone_number }}<br>
+                        {% if user.username %}
+                            <strong>Username:</strong> @{{ user.username }}<br>
+                        {% endif %}
+                        <small class="text-muted">User ID: {{ user.id }}</small>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Journey Progress:</strong><br>
+                        Day {{ user.current_day or 'N/A' }} of 30<br>
+                        <span class="badge bg-{{ 'success' if user.status == 'active' else 'secondary' }}">
+                            {{ user.status.title() }}
+                        </span>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <strong>Journey Progress:</strong><br>
-                    Day {{ user.current_day or 'N/A' }} of 30<br>
-                    <small class="text-muted">Status: {{ user.status.title() }}</small>
-                </div>
-                <div class="col-md-4">
-                    <strong>Joined:</strong><br>
-                    {{ user.join_date.strftime('%B %d, %Y') if user.join_date else 'N/A' }}<br>
-                    <small class="text-muted">{{ messages|length }} total messages</small>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Location:</strong><br>
+                        {% set location_parts = [user.city, user.region, user.country] | select | list %}
+                        {% if location_parts %}
+                            <i class="fas fa-map-marker-alt text-info me-1"></i>{{ location_parts | join(', ') }}<br>
+                        {% else %}
+                            <span class="text-muted">Location not available</span><br>
+                        {% endif %}
+                        {% if user.ip_address %}
+                            <small class="text-muted">IP: {{ user.ip_address }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Account Details:</strong><br>
+                        {% if user.language_code %}
+                            <i class="fas fa-language text-primary me-1"></i>{{ user.language_code.upper() }}<br>
+                        {% endif %}
+                        {% if user.is_premium == true %}
+                            <i class="fas fa-crown text-warning me-1"></i><span class="badge bg-warning text-dark">Premium</span><br>
+                        {% elif user.is_premium == false %}
+                            <span class="badge bg-secondary">Regular</span><br>
+                        {% endif %}
+                        <strong>Platform:</strong> 
+                        {% if user.phone_number.startswith('tg_') %}
+                            <i class="fab fa-telegram text-info me-1"></i>Telegram
+                        {% else %}
+                            <i class="fab fa-whatsapp text-success me-1"></i>WhatsApp
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Joined:</strong><br>
+                        {{ user.join_date.strftime('%B %d, %Y at %I:%M %p') if user.join_date else 'N/A' }}<br>
+                        <small class="text-muted">{{ messages|length }} total messages</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -176,7 +226,7 @@
                     <div class="row">
                         <div class="col-md-8">
                             <textarea class="form-control" id="messageText" rows="3" 
-                                    placeholder="Type your message to {{ user.phone_number }}..."></textarea>
+                                    placeholder="Type your message to {% if user.name %}{{ user.name }}{% elif user.first_name %}{{ user.first_name }}{% else %}{{ user.phone_number }}{% endif %}..."></textarea>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Add Tags:</label>

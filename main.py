@@ -1276,13 +1276,23 @@ def view_full_chat(user_id):
         # Get all messages for this user
         messages = db_manager.get_user_messages_by_id(user_id, limit=1000)
         
-        # Create a user dict to ensure template compatibility
+        # Create a comprehensive user dict with enhanced information
         user_dict = {
             'id': user.id,
             'phone_number': user.phone_number,
+            'name': user.name,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
             'status': user.status,
             'current_day': user.current_day,
-            'join_date': user.join_date
+            'join_date': user.join_date,
+            'language_code': user.language_code,
+            'is_premium': user.is_premium,
+            'country': user.country,
+            'region': user.region,
+            'city': user.city,
+            'ip_address': user.ip_address
         }
         
         return render_template('full_chat.html', user=user_dict, messages=messages, current_user=current_user)
