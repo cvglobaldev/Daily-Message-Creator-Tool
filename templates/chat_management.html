@@ -251,10 +251,10 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th>Time</th>
+                                <th>Latest Activity</th>
                                 <th>User</th>
-                                <th>Direction</th>
-                                <th>Message Preview</th>
+                                <th>Conversation</th>
+                                <th>Recent Message & Summary</th>
                                 <th>Sentiment</th>
                                 <th>Tags</th>
                                 <th>Actions</th>
@@ -352,7 +352,7 @@
                         this.renderChatTable(data.messages);
                         this.renderPagination(data.pagination);
                         this.updateStats(data.stats);
-                        document.getElementById('resultCount').textContent = `${data.pagination.total} messages`;
+                        document.getElementById('resultCount').textContent = `${data.pagination.total} conversations`;
                     } else {
                         console.error('Failed to load chats:', data.error);
                     }
@@ -363,53 +363,52 @@
                 }
             }
 
-            renderChatTable(messages) {
+            renderChatTable(conversations) {
                 const tbody = document.getElementById('chatTableBody');
-                if (!messages || messages.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No messages found</td></tr>';
+                if (!conversations || conversations.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No conversations found</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = messages.map(message => {
-                    const sentimentClass = message.llm_sentiment ? `sentiment-${message.llm_sentiment}` : '';
-                    const handoffClass = message.is_human_handoff ? 'human-handoff-indicator' : '';
+                tbody.innerHTML = conversations.map(conversation => {
+                    const sentimentClass = conversation.llm_sentiment ? `sentiment-${conversation.llm_sentiment}` : '';
+                    const handoffClass = conversation.is_human_handoff ? 'human-handoff-indicator' : '';
                     
                     return `
-                        <tr class="chat-row ${handoffClass}" data-message-id="${message.id}">
+                        <tr class="chat-row ${handoffClass}" data-user-id="${conversation.user_id}" onclick="window.chatManager.viewFullChat(${conversation.user_id})" style="cursor: pointer;">
                             <td>
-                                <div>${new Date(message.timestamp).toLocaleDateString()}</div>
-                                <small class="text-muted">${new Date(message.timestamp).toLocaleTimeString()}</small>
+                                <div>${new Date(conversation.timestamp).toLocaleDateString()}</div>
+                                <small class="text-muted">${new Date(conversation.timestamp).toLocaleTimeString()}</small>
                             </td>
                             <td>
-                                <strong>${message.user_phone}</strong>
-                                <br><small class="text-muted">Day ${message.user_day || 'N/A'}</small>
+                                <strong>${conversation.user_phone}</strong>
+                                <br><small class="text-muted">Day ${conversation.current_day || 'N/A'}</small>
                             </td>
                             <td>
-                                <span class="badge bg-${message.direction === 'incoming' ? 'info' : 'success'}">
-                                    ${message.direction === 'incoming' ? 'User' : 'Bot'}
+                                <span class="badge bg-primary">
+                                    Conversation
                                 </span>
+                                <br><small class="text-muted">${conversation.total_messages} messages</small>
                             </td>
                             <td>
-                                <div class="message-preview">${message.raw_text}</div>
-                                ${message.is_human_handoff ? '<small class="badge bg-warning mt-1">Human Required</small>' : ''}
+                                <div class="message-preview">${conversation.raw_text}</div>
+                                <small class="text-info">${conversation.conversation_summary}</small>
+                                ${conversation.is_human_handoff ? '<br><small class="badge bg-warning mt-1">Human Required</small>' : ''}
                             </td>
                             <td>
-                                ${message.llm_sentiment ? `<span class="${sentimentClass}"><i class="fas fa-circle"></i> ${message.llm_sentiment}</span>` : '-'}
+                                ${conversation.llm_sentiment ? `<span class="${sentimentClass}"><i class="fas fa-circle"></i> ${conversation.llm_sentiment}</span>` : '-'}
                             </td>
                             <td>
                                 <div class="d-flex flex-wrap">
-                                    ${(message.llm_tags || []).map(tag => 
+                                    ${(conversation.llm_tags || []).map(tag => 
                                         `<span class="badge bg-secondary tag-badge">${tag}</span>`
                                     ).join('')}
                                 </div>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="event.stopPropagation(); window.chatManager.viewMessage(${message.id})" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="event.stopPropagation(); window.chatManager.viewFullChat(${message.user_id})" title="Full Chat">
-                                        <i class="fas fa-comments"></i>
+                                    <button class="btn btn-outline-info" onclick="event.stopPropagation(); window.chatManager.viewFullChat(${conversation.user_id})" title="View Full Conversation">
+                                        <i class="fas fa-comments"></i> View Chat
                                     </button>
                                 </div>
                             </td>
