@@ -97,7 +97,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 23, 2025)
 
-### Chat Management Duplicates Fix - Consolidated User Conversations (Latest Update)
+### Combined Daily Content + Reflection Questions Implementation (Latest Update - July 23, 2025)
+- **Single Message Delivery**: Successfully combined daily content with reflection questions into one message, eliminating duplicate separate deliveries
+- **Enhanced User Database**: Added `name` column to User model to capture Telegram user information (first_name/username) automatically from webhook data
+- **Improved Message Processing**: Updated user creation/update functions to store Telegram names during /start command processing
+- **Removed Flask Context Errors**: Eliminated separate reflection question scheduling that caused application context issues
+- **Database Schema Update**: Added `name VARCHAR(100)` column to users table for storing Telegram user information
+- **Combined Message Format**: Messages now delivered as "📖 Day X - Title + Content + 💭 Reflection Question + Instructions" in single delivery
+- **User Testing Ready**: System tested with fresh user accounts showing proper combined message delivery and name storage
+
+### Chat Management Duplicates Fix - Consolidated User Conversations
 - **Eliminated Duplicate Entries**: Fixed chat management interface showing 4 separate entries for single user (e.g., tg_960173404)
 - **Consolidated User View**: Replaced individual message entries with unified conversation summaries per user
 - **Enhanced API Endpoint**: Updated `/api/chat-management/messages` to use new `get_consolidated_user_conversations()` method

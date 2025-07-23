@@ -118,29 +118,33 @@ class ContentScheduler:
                 if media_type == 'text' or not media_url:
                     return self.telegram_service.send_message(chat_id, message)
                 elif media_type in ['image', 'video', 'audio']:
-                    # For Telegram, send text first, then media
-                    text_sent = self.telegram_service.send_message(chat_id, message)
-                    if text_sent and media_url:
-                        time.sleep(1)
+                    # For Telegram, send media first, then text content
+                    media_sent = False
+                    if media_url:
                         if media_type == 'image':
-                            # Send photo via Telegram API
+                            # Send photo via Telegram API first
                             media_sent = self.telegram_service.send_photo(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Photo sent to {chat_id}, success: {media_sent}")
-                            return media_sent
                         elif media_type == 'video':
-                            # Send video via Telegram API
+                            # Send video via Telegram API first
                             media_sent = self.telegram_service.send_video(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Video sent to {chat_id}, success: {media_sent}")
-                            return media_sent
                         elif media_type == 'audio':
-                            # Send audio via Telegram API
+                            # Send audio via Telegram API first
                             media_sent = self.telegram_service.send_audio(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Audio sent to {chat_id}, success: {media_sent}")
-                            return media_sent
                         else:
                             # For other media types, log but don't implement yet
                             logger.info(f"Media content delivery to Telegram user {chat_id} - {media_type} not yet implemented, media URL: {media_url}")
-                    return text_sent
+                    
+                    # Now send text content after media
+                    if media_sent:
+                        time.sleep(1)
+                        text_sent = self.telegram_service.send_message(chat_id, message)
+                        return text_sent
+                    else:
+                        # If media failed, still send text
+                        return self.telegram_service.send_message(chat_id, message)
                 else:
                     return self.telegram_service.send_message(chat_id, message)
             else:
@@ -148,19 +152,33 @@ class ContentScheduler:
                 if media_type == 'text' or not media_url:
                     return self.whatsapp_service.send_message(phone_number, message)
                 elif media_type in ['image', 'video', 'audio']:
-                    text_sent = self.whatsapp_service.send_message(phone_number, message)
-                    if text_sent and media_url:
-                        time.sleep(1)
+                    # For WhatsApp, send media first (simulated), then text content
+                    media_sent = False
+                    if media_url:
                         if media_type == 'image':
                             # Send image via WhatsApp simulation (media delivery is simulated)
                             logger.info(f"WhatsApp image delivery simulated for {phone_number}: {media_url}")
+                            media_sent = True
                         elif media_type == 'video':
                             # Send video via WhatsApp simulation
                             logger.info(f"WhatsApp video delivery simulated for {phone_number}: {media_url}")
+                            media_sent = True
+                        elif media_type == 'audio':
+                            # Send audio via WhatsApp simulation
+                            logger.info(f"WhatsApp audio delivery simulated for {phone_number}: {media_url}")
+                            media_sent = True
                         else:
-                            # For audio, log but don't implement yet
+                            # For other media types, log but don't implement yet
                             logger.info(f"Media content delivery to WhatsApp user {phone_number} - {media_type} not yet implemented, media URL: {media_url}")
-                    return text_sent
+                    
+                    # Now send text content after media
+                    if media_sent:
+                        time.sleep(1)
+                        text_sent = self.whatsapp_service.send_message(phone_number, message)
+                        return text_sent
+                    else:
+                        # If media failed, still send text
+                        return self.whatsapp_service.send_message(phone_number, message)
                 else:
                     return self.whatsapp_service.send_message(phone_number, message)
                 
