@@ -1282,7 +1282,7 @@ def view_full_chat(user_id):
             'ip_address': user.ip_address
         }
         
-        return render_template('full_chat.html', user=user_dict, messages=messages, current_user=current_user)
+        return render_template('full_chat.html', user=user_dict, messages=messages, current_user=current_user, timestamp=int(datetime.utcnow().timestamp()))
     except Exception as e:
         logger.error(f"Error loading chat history: {e}")
         return f"Error loading chat history: {e}", 500
