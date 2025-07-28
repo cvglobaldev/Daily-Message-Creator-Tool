@@ -223,28 +223,64 @@ class TelegramService:
                 print("   ✅ Photo message simulated (development mode)")
                 return True
             
-            url = f"{self.api_base_url}/sendPhoto"
-            payload = {
-                "chat_id": chat_id,
-                "photo": photo_url
-            }
+            # For uploaded image files, send the file directly using multipart/form-data
+            import os
             
-            if caption:
-                payload["caption"] = caption
-            
-            response = requests.post(url, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    logger.info(f"Telegram photo sent successfully to {chat_id}")
-                    return True
+            # Extract filename from URL
+            if "/static/uploads/images/" in photo_url:
+                filename = photo_url.split("/static/uploads/images/")[-1]
+                file_path = os.path.join("static", "uploads", "images", filename)
+                
+                if os.path.exists(file_path):
+                    # Send image file directly
+                    url = f"{self.api_base_url}/sendPhoto"
+                    
+                    with open(file_path, 'rb') as photo_file:
+                        files = {'photo': photo_file}
+                        data = {'chat_id': chat_id}
+                        if caption:
+                            data['caption'] = caption
+                        
+                        response = requests.post(url, files=files, data=data, timeout=60)
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if result.get("ok"):
+                            logger.info(f"Telegram photo sent successfully to {chat_id}")
+                            return True
+                        else:
+                            logger.error(f"Failed to send Telegram photo: {result.get('description', 'Unknown error')}")
+                            return False
+                    else:
+                        logger.error(f"Failed to send Telegram photo: {response.text}")
+                        return False
                 else:
-                    logger.error(f"Telegram photo send failed: {result.get('description', 'Unknown error')}")
+                    logger.error(f"Photo file not found: {file_path}")
                     return False
             else:
-                logger.error(f"Failed to send Telegram photo: {response.text}")
-                return False
+                # Fallback to URL-based sending for external URLs
+                url = f"{self.api_base_url}/sendPhoto"
+                payload = {
+                    "chat_id": chat_id,
+                    "photo": photo_url
+                }
+                
+                if caption:
+                    payload["caption"] = caption
+                
+                response = requests.post(url, json=payload, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("ok"):
+                        logger.info(f"Telegram photo sent successfully to {chat_id}")
+                        return True
+                    else:
+                        logger.error(f"Failed to send Telegram photo: {result.get('description', 'Unknown error')}")
+                        return False
+                else:
+                    logger.error(f"Failed to send Telegram photo: {response.text}")
+                    return False
                 
         except Exception as e:
             logger.error(f"Error sending Telegram photo: {e}")

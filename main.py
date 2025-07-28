@@ -1250,6 +1250,40 @@ def get_recent_messages():
         logger.error(f"Error getting recent messages: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/test-image-delivery', methods=['POST'])
+def test_image_delivery():
+    """Test image delivery functionality"""
+    try:
+        # Get Day 1 content with image
+        content = db_manager.get_content_by_day(1)
+        if not content:
+            return jsonify({'error': 'No Day 1 content found'}), 404
+            
+        content_dict = content.to_dict()
+        
+        # Test with simulation mode
+        telegram_service.simulate_mode = True
+        
+        # Test image delivery
+        media_url = content_dict.get('media_url')
+        if media_url and content_dict.get('media_type') == 'image':
+            # Test photo sending
+            result = telegram_service.send_photo('test123', media_url)
+            
+            return jsonify({
+                'success': True,
+                'media_url': media_url,
+                'media_type': content_dict.get('media_type'),
+                'file_exists': 'eedc82fc-a7f5-4f0a-8f92-995d8532aca4_jc-ups2-psd2.jpeg' in media_url,
+                'simulation_result': result
+            })
+        else:
+            return jsonify({'error': 'No image content found for Day 1'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error testing image delivery: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/chat/<int:user_id>')
 @login_required
 def view_full_chat(user_id):

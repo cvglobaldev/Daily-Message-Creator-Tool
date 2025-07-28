@@ -95,6 +95,17 @@ Preferred communication style: Simple, everyday language.
 - **Production Mode**: Requires actual API credentials, sends real messages
 - Environment-based configuration switches between modes automatically
 
+## Recent Changes (July 28, 2025)
+
+### ✅ COMPLETED: Day 1 Image Content Delivery Fix (July 28, 2025)
+- **Root Cause Identified**: Scheduler attempting to send content to inactive Telegram chat IDs causing "Bad Request: chat not found" errors
+- **Image Delivery Enhancement**: Fixed send_photo method to properly handle uploaded images using multipart/form-data instead of URL-based delivery
+- **Database Cleanup**: Marked inactive users (tg_960173405, tg_960173404, etc.) as inactive to prevent failed delivery attempts
+- **Error Handling**: Added automatic user deactivation when Telegram API returns chat not found errors
+- **Content Delivery Verification**: Confirmed Day 1 image content (eedc82fc-a7f5-4f0a-8f92-995d8532aca4_jc-ups2-psd2.jpeg) delivers correctly to active users
+- **File System Integration**: Verified uploaded image files exist and are properly accessible from static/uploads/images/ directory
+- **API Testing**: Created test endpoint confirming image delivery functionality works in both simulation and live modes
+
 ## Recent Changes (July 23, 2025)
 
 ### ✅ COMPLETED: Enhanced Chat History User Information Display (July 23, 2025)

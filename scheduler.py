@@ -125,6 +125,13 @@ class ContentScheduler:
                             # Send photo via Telegram API first
                             media_sent = self.telegram_service.send_photo(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Photo sent to {chat_id}, success: {media_sent}")
+                            if not media_sent:
+                                # If photo failed (likely chat not found), mark user as inactive
+                                logger.warning(f"Failed to send photo to Telegram chat {chat_id} - marking user as inactive")
+                                user = self.db.get_user_by_phone(phone_number)
+                                if user:
+                                    user.status = 'inactive'
+                                    self.db.db.session.commit()
                         elif media_type == 'video':
                             # Send video via Telegram API first
                             media_sent = self.telegram_service.send_video(chat_id, media_url)
