@@ -1097,16 +1097,19 @@ def bot_management():
     """Bot management dashboard"""
     try:
         bots = Bot.query.all()
+        logger.info(f"Found {len(bots)} bots")
         # Add user and content counts for each bot
         for bot in bots:
             bot.user_count = User.query.filter_by(bot_id=bot.id).count()
             bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
         
-        return render_template('bot_management.html', bots=bots)
+        return render_template('bot_management.html', bots=bots, user=current_user)
     except Exception as e:
         logger.error(f"Bot management error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         flash(f'Error loading bots: {str(e)}', 'error')
-        return redirect(url_for('dashboard'))
+        return redirect('/dashboard')
 
 @app.route('/bots/create', methods=['GET', 'POST'])
 @login_required
@@ -1132,7 +1135,7 @@ def create_bot():
             db.session.commit()
             
             flash(f'Bot "{bot.name}" created successfully!', 'success')
-            return redirect(url_for('bot_management'))
+            return redirect('/bots')
             
         except Exception as e:
             logger.error(f"Error creating bot: {e}")
@@ -1164,7 +1167,7 @@ def edit_bot(bot_id):
             
             db.session.commit()
             flash(f'Bot "{bot.name}" updated successfully!', 'success')
-            return redirect(url_for('bot_management'))
+            return redirect('/bots')
             
         except Exception as e:
             logger.error(f"Error updating bot: {e}")
