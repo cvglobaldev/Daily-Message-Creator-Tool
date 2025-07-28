@@ -28,6 +28,7 @@ class DatabaseManager:
         try:
             user = User()
             user.phone_number = phone_number
+            user.bot_id = kwargs.get('bot_id', 1)  # Default to bot 1
             
             # Basic fields
             user.name = kwargs.get('name')
@@ -338,7 +339,7 @@ class DatabaseManager:
     
     def create_content(self, day_number, title, content, reflection_question, tags=None, 
                       media_type='text', image_filename=None, video_filename=None, 
-                      youtube_url=None, audio_filename=None, is_active=True):
+                      youtube_url=None, audio_filename=None, is_active=True, bot_id=1):
         """Create new multimedia content"""
         try:
             new_content = Content()
@@ -353,6 +354,7 @@ class DatabaseManager:
             new_content.youtube_url = youtube_url
             new_content.audio_filename = audio_filename
             new_content.is_active = is_active
+            new_content.bot_id = bot_id
             self.db.session.add(new_content)
             self.db.session.commit()
             logger.info(f"Content for day {day_number} created successfully with media type: {media_type}")
@@ -426,7 +428,7 @@ class DatabaseManager:
             logger.error(f"Error getting user messages: {e}")
             return []
     
-    def get_recent_active_users(self, limit: int = 10) -> List[Dict]:
+    def get_recent_active_users(self, limit: int = 10, bot_id: int = None) -> List[Dict]:
         """Get recent unique users with their conversation summary (no duplicates)"""
         try:
             # Get unique users with comprehensive conversation stats
@@ -450,11 +452,16 @@ class DatabaseManager:
                     (MessageLog.is_human_handoff == True, 1),
                     else_=0
                 )).label('handoff_requests')
-            ).outerjoin(MessageLog, User.id == MessageLog.user_id)\
-            .group_by(User.id, User.phone_number, User.status, User.current_day, User.join_date)\
-            .having(func.count(MessageLog.id) > 0)\
-            .order_by(desc('latest_message_time'))\
-            .limit(limit)
+            ).outerjoin(MessageLog, User.id == MessageLog.user_id)
+            
+            # Add bot filtering if specified
+            if bot_id is not None:
+                query = query.filter(User.bot_id == bot_id)
+            
+            query = query.group_by(User.id, User.phone_number, User.status, User.current_day, User.join_date)\
+                    .having(func.count(MessageLog.id) > 0)\
+                    .order_by(desc('latest_message_time'))\
+                    .limit(limit)
             
             results = query.all()
             
@@ -740,10 +747,14 @@ class DatabaseManager:
             logger.error(f"Error resetting chatbot settings: {e}")
             return False
     
-    def get_chat_management_stats(self, filters: Dict = None) -> Dict:
+    def get_chat_management_stats(self, filters: Dict = None, bot_id: int = None) -> Dict:
         """Get statistics for chat management dashboard"""
         try:
             base_query = self.db.session.query(MessageLog).join(User)
+            
+            # Add bot filtering if specified
+            if bot_id is not None:
+                base_query = base_query.filter(User.bot_id == bot_id)
             
             if filters:
                 base_query = self._apply_message_filters(base_query, filters)

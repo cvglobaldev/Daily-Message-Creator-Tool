@@ -1116,18 +1116,17 @@ def create_bot():
     
     if form.validate_on_submit():
         try:
-            bot = Bot(
-                name=form.name.data,
-                description=form.description.data,
-                platforms=form.platforms.data,
-                whatsapp_access_token=form.whatsapp_access_token.data if 'whatsapp' in form.platforms.data else None,
-                whatsapp_phone_number_id=form.whatsapp_phone_number_id.data if 'whatsapp' in form.platforms.data else None,
-                whatsapp_webhook_url=form.whatsapp_webhook_url.data if 'whatsapp' in form.platforms.data else None,
-                telegram_bot_token=form.telegram_bot_token.data if 'telegram' in form.platforms.data else None,
-                telegram_webhook_url=form.telegram_webhook_url.data if 'telegram' in form.platforms.data else None,
-                ai_prompt=form.ai_prompt.data,
-                journey_duration_days=form.journey_duration_days.data
-            )
+            bot = Bot()
+            bot.name = form.name.data
+            bot.description = form.description.data
+            bot.platforms = form.platforms.data or []
+            bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
+            bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in (form.platforms.data or []) else None
+            bot.ai_prompt = form.ai_prompt.data
+            bot.journey_duration_days = form.journey_duration_days.data
             
             db.session.add(bot)
             db.session.commit()
@@ -1153,12 +1152,12 @@ def edit_bot(bot_id):
         try:
             bot.name = form.name.data
             bot.description = form.description.data
-            bot.platforms = form.platforms.data
-            bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in form.platforms.data else None
-            bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in form.platforms.data else None
-            bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in form.platforms.data else None
-            bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in form.platforms.data else None
-            bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in form.platforms.data else None
+            bot.platforms = form.platforms.data or []
+            bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
+            bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
             bot.status = 'active' if form.status.data else 'inactive'
@@ -1197,6 +1196,44 @@ def toggle_bot_status(bot_id):
         
     except Exception as e:
         logger.error(f"Error toggling bot status: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/bots/<int:bot_id>/content')
+@login_required
+def bot_content_management(bot_id):
+    """Bot-specific content management"""
+    bot = Bot.query.get_or_404(bot_id)
+    content_items = Content.query.filter_by(bot_id=bot_id).order_by(Content.day_number).all()
+    return render_template('cms.html', bot=bot, content_items=content_items, bot_specific=True)
+
+@app.route('/bots/<int:bot_id>/chats')
+@login_required  
+def bot_chat_management(bot_id):
+    """Bot-specific chat management"""
+    bot = Bot.query.get_or_404(bot_id)
+    # Get recent users for this specific bot
+    recent_users = db_manager.get_recent_active_users(bot_id=bot_id)
+    stats = db_manager.get_chat_management_stats(bot_id=bot_id)
+    return render_template('chat_management.html', bot=bot, recent_users=recent_users, stats=stats, bot_specific=True)
+
+@app.route('/bots/<int:bot_id>/delete', methods=['POST'])
+@login_required
+def delete_bot(bot_id):
+    """Delete a bot and all associated data"""
+    try:
+        bot = Bot.query.get_or_404(bot_id)
+        bot_name = bot.name
+        
+        # Delete the bot (cascade will handle users and content)
+        db.session.delete(bot)
+        db.session.commit()
+        
+        flash(f'Bot "{bot_name}" and all associated data deleted successfully.', 'success')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting bot: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 

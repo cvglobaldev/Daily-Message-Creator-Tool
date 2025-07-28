@@ -54,7 +54,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="fas fa-robot me-2"></i>Bot Management</h2>
-                <a href="{{ url_for('create_bot') }}" class="btn btn-primary">
+                <a href="/bots/create" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>Create New Bot
                 </a>
             </div>
@@ -121,13 +121,13 @@
                         </div>
                         <div class="card-footer">
                             <div class="btn-group w-100" role="group">
-                                <a href="{{ url_for('edit_bot', bot_id=bot.id) }}" class="btn btn-outline-primary btn-sm">
+                                <a href="/bots/{{ bot.id }}/edit" class="btn btn-outline-primary btn-sm">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <a href="{{ url_for('bot_content_management', bot_id=bot.id) }}" class="btn btn-outline-success btn-sm">
+                                <a href="/bots/{{ bot.id }}/content" class="btn btn-outline-success btn-sm">
                                     <i class="fas fa-file-alt"></i> Content
                                 </a>
-                                <a href="{{ url_for('bot_chat_management', bot_id=bot.id) }}" class="btn btn-outline-info btn-sm">
+                                <a href="/bots/{{ bot.id }}/chats" class="btn btn-outline-info btn-sm">
                                     <i class="fas fa-comments"></i> Chats
                                 </a>
                             </div>
@@ -154,7 +154,7 @@
                             <i class="fas fa-robot fa-3x text-muted mb-3"></i>
                             <h4>No Bots Created Yet</h4>
                             <p class="text-muted">Create your first bot to start managing faith journey conversations across platforms.</p>
-                            <a href="{{ url_for('create_bot') }}" class="btn btn-primary">
+                            <a href="/bots/create" class="btn btn-primary">
                                 <i class="fas fa-plus me-2"></i>Create Your First Bot
                             </a>
                         </div>
