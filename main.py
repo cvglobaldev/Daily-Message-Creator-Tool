@@ -1105,8 +1105,8 @@ def bot_management():
         return render_template('bot_management.html', bots=bots)
     except Exception as e:
         logger.error(f"Bot management error: {e}")
-        flash('Error loading bots', 'error')
-        return render_template('bot_management.html', bots=[])
+        flash(f'Error loading bots: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/bots/create', methods=['GET', 'POST'])
 @login_required
