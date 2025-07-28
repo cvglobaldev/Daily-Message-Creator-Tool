@@ -37,6 +37,11 @@ login_manager.login_message = 'Please log in to access this page.'
 def load_user(user_id):
     return AdminUser.query.get(int(user_id))
 
+# Make current_user available in all templates
+@app.context_processor
+def inject_user():
+    return dict(current_user=current_user)
+
 # Configure PostgreSQL database
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
@@ -1103,7 +1108,7 @@ def bot_management():
             bot.user_count = User.query.filter_by(bot_id=bot.id).count()
             bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
         
-        return render_template('bot_management.html', bots=bots, user=current_user)
+        return render_template('bot_management.html', bots=bots)
     except Exception as e:
         logger.error(f"Bot management error: {e}")
         import traceback
