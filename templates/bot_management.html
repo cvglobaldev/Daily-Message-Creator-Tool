@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Bot Management - Faith Journey{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-robot me-2"></i>Bot Management</h2>
+                <a href="{{ url_for('create_bot') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create New Bot
+                </a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Bot List -->
+            <div class="row">
+                {% for bot in bots %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{{ bot.name }}</h5>
+                            <span class="badge bg-{{ 'success' if bot.status == 'active' else 'secondary' }}">
+                                {{ bot.status.title() }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            {% if bot.description %}
+                                <p class="card-text text-muted small">{{ bot.description[:100] }}{% if bot.description|length > 100 %}...{% endif %}</p>
+                            {% endif %}
+                            
+                            <!-- Platforms -->
+                            <div class="mb-3">
+                                <strong>Platforms:</strong>
+                                <div class="mt-1">
+                                    {% for platform in bot.platforms %}
+                                        <span class="badge bg-info me-1">
+                                            <i class="fab fa-{{ 'whatsapp' if platform == 'whatsapp' else 'telegram-plane' }}"></i>
+                                            {{ platform.title() }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Stats -->
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h6 class="mb-0">{{ bot.user_count|default(0) }}</h6>
+                                        <small class="text-muted">Users</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h6 class="mb-0">{{ bot.content_count|default(0) }}</h6>
+                                    <small class="text-muted">Content</small>
+                                </div>
+                            </div>
+
+                            <!-- Journey Duration -->
+                            <p class="small text-muted mb-3">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                {{ bot.journey_duration_days }} day journey
+                            </p>
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('edit_bot', bot_id=bot.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{{ url_for('bot_content_management', bot_id=bot.id) }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-file-alt"></i> Content
+                                </a>
+                                <a href="{{ url_for('bot_chat_management', bot_id=bot.id) }}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-comments"></i> Chats
+                                </a>
+                            </div>
+                            <div class="mt-2">
+                                {% if bot.status == 'active' %}
+                                    <button onclick="toggleBotStatus({{ bot.id }}, 'inactive')" class="btn btn-outline-warning btn-sm w-100">
+                                        <i class="fas fa-pause"></i> Deactivate
+                                    </button>
+                                {% else %}
+                                    <button onclick="toggleBotStatus({{ bot.id }}, 'active')" class="btn btn-outline-success btn-sm w-100">
+                                        <i class="fas fa-play"></i> Activate
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if not bots %}
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                            <h4>No Bots Created Yet</h4>
+                            <p class="text-muted">Create your first bot to start managing faith journey conversations across platforms.</p>
+                            <a href="{{ url_for('create_bot') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Your First Bot
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleBotStatus(botId, newStatus) {
+    if (confirm(`Are you sure you want to ${newStatus === 'active' ? 'activate' : 'deactivate'} this bot?`)) {
+        fetch(`/api/bots/${botId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({status: newStatus})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating bot status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error updating bot status: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

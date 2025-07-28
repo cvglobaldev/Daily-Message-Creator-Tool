@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash, send_from_directory
-from models import db, User, Content, MessageLog, AdminUser
+from models import db, User, Content, MessageLog, AdminUser, Bot
 from db_manager import DatabaseManager
 from services import WhatsAppService, TelegramService, GeminiService
 from scheduler import ContentScheduler
@@ -11,6 +11,7 @@ import threading
 import time
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm
+from bot_forms import CreateBotForm, EditBotForm, BotContentForm
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 import uuid
@@ -1087,6 +1088,116 @@ def test_chatbot_response():
         return jsonify({'success': True, 'response': response})
     except Exception as e:
         logger.error(f"Error testing response: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Bot Management Routes
+@app.route('/bots')
+@login_required
+def bot_management():
+    """Bot management dashboard"""
+    try:
+        bots = Bot.query.all()
+        # Add user and content counts for each bot
+        for bot in bots:
+            bot.user_count = User.query.filter_by(bot_id=bot.id).count()
+            bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
+        
+        return render_template('bot_management.html', bots=bots)
+    except Exception as e:
+        logger.error(f"Bot management error: {e}")
+        flash('Error loading bots', 'error')
+        return render_template('bot_management.html', bots=[])
+
+@app.route('/bots/create', methods=['GET', 'POST'])
+@login_required
+def create_bot():
+    """Create a new bot"""
+    form = CreateBotForm()
+    
+    if form.validate_on_submit():
+        try:
+            bot = Bot(
+                name=form.name.data,
+                description=form.description.data,
+                platforms=form.platforms.data,
+                whatsapp_access_token=form.whatsapp_access_token.data if 'whatsapp' in form.platforms.data else None,
+                whatsapp_phone_number_id=form.whatsapp_phone_number_id.data if 'whatsapp' in form.platforms.data else None,
+                whatsapp_webhook_url=form.whatsapp_webhook_url.data if 'whatsapp' in form.platforms.data else None,
+                telegram_bot_token=form.telegram_bot_token.data if 'telegram' in form.platforms.data else None,
+                telegram_webhook_url=form.telegram_webhook_url.data if 'telegram' in form.platforms.data else None,
+                ai_prompt=form.ai_prompt.data,
+                journey_duration_days=form.journey_duration_days.data
+            )
+            
+            db.session.add(bot)
+            db.session.commit()
+            
+            flash(f'Bot "{bot.name}" created successfully!', 'success')
+            return redirect(url_for('bot_management'))
+            
+        except Exception as e:
+            logger.error(f"Error creating bot: {e}")
+            db.session.rollback()
+            flash('Error creating bot. Please try again.', 'error')
+    
+    return render_template('create_bot.html', form=form)
+
+@app.route('/bots/<int:bot_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_bot(bot_id):
+    """Edit an existing bot"""
+    bot = Bot.query.get_or_404(bot_id)
+    form = EditBotForm(obj=bot)
+    
+    if form.validate_on_submit():
+        try:
+            bot.name = form.name.data
+            bot.description = form.description.data
+            bot.platforms = form.platforms.data
+            bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in form.platforms.data else None
+            bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in form.platforms.data else None
+            bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in form.platforms.data else None
+            bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in form.platforms.data else None
+            bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in form.platforms.data else None
+            bot.ai_prompt = form.ai_prompt.data
+            bot.journey_duration_days = form.journey_duration_days.data
+            bot.status = 'active' if form.status.data else 'inactive'
+            
+            db.session.commit()
+            flash(f'Bot "{bot.name}" updated successfully!', 'success')
+            return redirect(url_for('bot_management'))
+            
+        except Exception as e:
+            logger.error(f"Error updating bot: {e}")
+            db.session.rollback()
+            flash('Error updating bot. Please try again.', 'error')
+    
+    # Pre-populate form with current values
+    if request.method == 'GET':
+        form.status.data = bot.status == 'active'
+    
+    return render_template('edit_bot.html', form=form, bot=bot)
+
+@app.route('/api/bots/<int:bot_id>/status', methods=['POST'])
+@login_required
+def toggle_bot_status(bot_id):
+    """Toggle bot status via API"""
+    try:
+        bot = Bot.query.get_or_404(bot_id)
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        if new_status not in ['active', 'inactive']:
+            return jsonify({'success': False, 'error': 'Invalid status'}), 400
+        
+        bot.status = new_status
+        db.session.commit()
+        
+        return jsonify({'success': True, 'status': bot.status})
+        
+    except Exception as e:
+        logger.error(f"Error toggling bot status: {e}")
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Chat Management Routes

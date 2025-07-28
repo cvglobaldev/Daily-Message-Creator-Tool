@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Bot - Faith Journey{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-robot me-2"></i>Create New Bot</h3>
+                    <p class="text-muted mb-0">Set up a new faith journey chatbot with platform-specific configurations</p>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+
+                        <!-- Basic Information -->
+                        <div class="section-header">
+                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.journey_duration_days.label(class="form-label") }}
+                                {{ form.journey_duration_days(class="form-control" + (" is-invalid" if form.journey_duration_days.errors else "")) }}
+                                {% if form.journey_duration_days.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.journey_duration_days.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Number of days for the complete faith journey</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                            <div class="form-text">Optional description of your bot's purpose</div>
+                        </div>
+
+                        <!-- Platform Selection -->
+                        <div class="section-header">
+                            <h5><i class="fas fa-mobile-alt me-2"></i>Platform Selection</h5>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.platforms.label(class="form-label") }}
+                            <div class="platform-checkboxes">
+                                {% for value, label in form.platforms.choices %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input platform-checkbox" type="checkbox" name="platforms" value="{{ value }}" id="platform_{{ value }}">
+                                    <label class="form-check-label" for="platform_{{ value }}">
+                                        <i class="fab fa-{{ 'whatsapp' if value == 'whatsapp' else 'telegram-plane' }} me-2"></i>{{ label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.platforms.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.platforms.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- WhatsApp Configuration -->
+                        <div id="whatsapp-config" class="platform-config" style="display: none;">
+                            <div class="section-header">
+                                <h5><i class="fab fa-whatsapp me-2"></i>WhatsApp Configuration</h5>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.whatsapp_access_token.label(class="form-label") }}
+                                    {{ form.whatsapp_access_token(class="form-control", placeholder="Enter WhatsApp Access Token") }}
+                                    <div class="form-text">From Meta for Developers</div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.whatsapp_phone_number_id.label(class="form-label") }}
+                                    {{ form.whatsapp_phone_number_id(class="form-control", placeholder="Enter Phone Number ID") }}
+                                    <div class="form-text">WhatsApp Business Phone Number ID</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                {{ form.whatsapp_webhook_url.label(class="form-label") }}
+                                {{ form.whatsapp_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/whatsapp") }}
+                                <div class="form-text">URL where WhatsApp will send webhook notifications</div>
+                            </div>
+                        </div>
+
+                        <!-- Telegram Configuration -->
+                        <div id="telegram-config" class="platform-config" style="display: none;">
+                            <div class="section-header">
+                                <h5><i class="fab fa-telegram-plane me-2"></i>Telegram Configuration</h5>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.telegram_bot_token.label(class="form-label") }}
+                                    {{ form.telegram_bot_token(class="form-control", placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz") }}
+                                    <div class="form-text">From @BotFather on Telegram</div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.telegram_webhook_url.label(class="form-label") }}
+                                    {{ form.telegram_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/telegram") }}
+                                    <div class="form-text">URL for Telegram webhook</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Configuration -->
+                        <div class="section-header">
+                            <h5><i class="fas fa-brain me-2"></i>AI Behavior</h5>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.ai_prompt.label(class="form-label") }}
+                            {{ form.ai_prompt(class="form-control" + (" is-invalid" if form.ai_prompt.errors else ""), rows="5") }}
+                            {% if form.ai_prompt.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.ai_prompt.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Define how your AI should respond to users. Be specific about tone, approach, and spiritual guidance style.</div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('bot_management') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.section-header {
+    border-bottom: 2px solid var(--bs-border-color);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.section-header h5 {
+    margin-bottom: 0;
+    color: var(--bs-primary);
+}
+
+.platform-config {
+    background-color: var(--bs-light);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--bs-border-color);
+}
+
+.platform-checkboxes {
+    padding: 1rem;
+    background-color: var(--bs-light);
+    border-radius: 0.5rem;
+    border: 1px solid var(--bs-border-color);
+}
+
+.form-check-inline {
+    margin-right: 2rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const platformCheckboxes = document.querySelectorAll('.platform-checkbox');
+    const whatsappConfig = document.getElementById('whatsapp-config');
+    const telegramConfig = document.getElementById('telegram-config');
+
+    platformCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.value === 'whatsapp') {
+                whatsappConfig.style.display = this.checked ? 'block' : 'none';
+            } else if (this.value === 'telegram') {
+                telegramConfig.style.display = this.checked ? 'block' : 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
