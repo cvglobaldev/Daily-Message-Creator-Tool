@@ -28,7 +28,7 @@
                     <i class="fas fa-cogs me-1"></i>Settings
                 </a>
                 {% if user.role == 'super_admin' %}
-                <a class="nav-link me-3" href="{{ url_for('user_management') }}">
+                <a class="nav-link me-3" href="/user-management">
                     <i class="fas fa-users me-1"></i>Users
                 </a>
                 {% endif %}
@@ -37,11 +37,11 @@
                         <i class="fas fa-user me-1"></i>{{ user.full_name }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ url_for('change_password') }}">
+                        <li><a class="dropdown-item" href="/change-password">
                             <i class="fas fa-key me-2"></i>Change Password
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                        <li><a class="dropdown-item" href="/logout">
                             <i class="fas fa-sign-out-alt me-2"></i>Logout
                         </a></li>
                     </ul>
