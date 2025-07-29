@@ -341,41 +341,7 @@
                 });
         }
 
-        function loadGreetingContent() {
-            let url = '/api/content?content_type=greeting';
-            {% if bot %}
-            url += '&bot_id={{ bot.id }}';
-            {% endif %}
-            
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const greetingContainer = document.getElementById('greetingContent');
-                    if (data.length > 0) {
-                        const greeting = data[0];
-                        greetingContainer.innerHTML = `
-                            <div class="bg-secondary p-3 rounded">
-                                <h6 class="text-primary mb-2">${greeting.title}</h6>
-                                <p class="mb-0" style="white-space: pre-line;">${greeting.content}</p>
-                            </div>
-                        `;
-                    } else {
-                        greetingContainer.innerHTML = `
-                            <div class="text-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>No greeting message configured. Click "Edit Welcome Message" to create one.
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading greeting content:', error);
-                    document.getElementById('greetingContent').innerHTML = `
-                        <div class="text-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>Error loading greeting content.
-                        </div>
-                    `;
-                });
-        }
+        // Duplicate function removed
 
         function loadGreetingContent() {
             let url = '/api/content?content_type=greeting';

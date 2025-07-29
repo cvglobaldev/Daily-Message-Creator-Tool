@@ -838,6 +838,19 @@ def create_or_update_greeting():
         logger.error(f"Error creating/updating greeting: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/bots/<int:bot_id>/greeting', methods=['GET'])
+def get_bot_greeting(bot_id):
+    """API endpoint to get greeting content for a specific bot"""
+    try:
+        greeting = db_manager.get_greeting_content(bot_id=bot_id)
+        if greeting:
+            return jsonify(greeting.to_dict())
+        else:
+            return jsonify(None), 200
+    except Exception as e:
+        logger.error(f"Error getting greeting for bot {bot_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/content', methods=['POST'])
 def create_content():
     """API endpoint to create new content with multimedia support"""
