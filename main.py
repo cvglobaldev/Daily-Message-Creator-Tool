@@ -1285,6 +1285,7 @@ def get_filtered_messages():
         limit = int(request.args.get('limit', 20))
         sort_field = request.args.get('sort_field', 'timestamp')
         sort_order = request.args.get('sort_order', 'desc')
+        bot_id = request.args.get('bot_id', type=int)  # Get bot_id for filtering
         
         filters = {
             'date_from': request.args.get('date_from'),
@@ -1305,11 +1306,12 @@ def get_filtered_messages():
             limit=limit,
             sort_field=sort_field,
             sort_order=sort_order,
-            filters=filters
+            filters=filters,
+            bot_id=bot_id  # Pass bot_id for filtering
         )
         
         # Get stats for current filter
-        stats = db_manager.get_chat_management_stats(filters)
+        stats = db_manager.get_chat_management_stats(filters, bot_id=bot_id)
         
         return jsonify({
             'success': True,
