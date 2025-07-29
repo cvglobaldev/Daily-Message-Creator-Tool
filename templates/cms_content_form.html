@@ -4,14 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - Faith Journey CMS</title>
+    <!-- CV Global Favicon Implementation -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="msapplication-TileColor" content="#000000">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
 </head>
 <body>
     <nav class="navbar navbar-dark bg-primary mb-4">
         <div class="container">
             <a class="navbar-brand" href="/cms">
-                <i class="fas fa-photo-video me-2"></i>
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
                 {{ title }}
             </a>
             <div class="navbar-nav flex-row">
@@ -39,9 +47,9 @@
 
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="mb-0">
+                <div class="card cv-card">
+                    <div class="card-header cv-bg-secondary">
+                        <h4 class="mb-0 cv-text-primary">
                             <i class="fas fa-photo-video me-2"></i>{{ title }}
                         </h4>
                     </div>

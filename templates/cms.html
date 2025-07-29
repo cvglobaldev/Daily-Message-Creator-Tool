@@ -14,6 +14,7 @@
     <meta name="msapplication-TileColor" content="#000000">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
     <style>
         .content-preview {
             background-color: var(--bs-gray-800);
@@ -32,6 +33,11 @@
             position: absolute;
             top: 10px;
             right: 10px;
+        }
+        .cv-section-header {
+            border-left: 4px solid #00ff88;
+            padding-left: 15px;
+            margin: 20px 0 15px 0;
         }
     </style>
 </head>
@@ -57,9 +63,13 @@
         <!-- Content Overview -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i><span id="journeyTitle">30-Day</span> Journey Overview</h5>
+                <div class="cv-section-header">
+                    <h2><i class="fas fa-book-open me-3 cv-text-primary"></i>Content Management System</h2>
+                    <p class="text-muted">Create and manage daily faith journey content, configure journey length, and track content statistics</p>
+                </div>
+                <div class="card cv-card">
+                    <div class="card-header cv-bg-secondary d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 cv-text-primary"><i class="fas fa-calendar-alt me-2"></i><span id="journeyTitle">30-Day</span> Journey Overview</h5>
                         <div class="d-flex align-items-center gap-3">
                             <div class="form-group mb-0">
                                 <label for="journeyDays" class="form-label mb-1 small">Journey Length:</label>
@@ -70,7 +80,7 @@
                                     <option value="90">90 Days</option>
                                 </select>
                             </div>
-                            <button class="btn btn-success" onclick="addNewDay()">
+                            <button class="btn cv-btn-primary" onclick="addNewDay()">
                                 <i class="fas fa-plus me-1"></i>Add Day
                             </button>
                         </div>

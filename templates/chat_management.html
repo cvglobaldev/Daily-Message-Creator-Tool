@@ -14,6 +14,7 @@
     <meta name="msapplication-TileColor" content="#000000">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
     <style>
         .chat-row {
             cursor: pointer;
@@ -48,6 +49,11 @@
             padding: 15px;
             text-align: center;
         }
+        .cv-section-header {
+            border-left: 4px solid #00ff88;
+            padding-left: 15px;
+            margin: 20px 0 15px 0;
+        }
         .sentiment-positive { color: var(--bs-success); }
         .sentiment-negative { color: var(--bs-danger); }
         .sentiment-neutral { color: var(--bs-secondary); }
@@ -71,11 +77,12 @@
     <div class="container-fluid">
         <div class="row mb-4">
             <div class="col-12">
-                <h2>
-                    <i class="fas fa-comments me-3"></i>Chat Management
-                </h2>
-                <p class="text-muted">Manage user conversations, filter by date and tags, and monitor interactions</p>
-            </div>
+                <div class="cv-section-header">
+                    <h2>
+                        <i class="fas fa-comments me-3 cv-text-primary"></i>Chat Management
+                    </h2>
+                    <p class="text-muted">Manage user conversations, filter by date and tags, and monitor interactions</p>
+                </div>
         </div>
 
         <!-- Stats Row -->

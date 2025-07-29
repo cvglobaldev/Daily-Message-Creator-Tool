@@ -1,14 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ENHANCED Chat - {% if user.name %}{{ user.name }}{% elif user.first_name %}{{ user.first_name }}{% else %}{{ user.phone_number }}{% endif %} - Faith Journey</title>
+    <title>Chat - {% if user.name %}{{ user.name }}{% elif user.first_name %}{{ user.first_name }}{% else %}{{ user.phone_number }}{% endif %} - Faith Journey</title>
+    
+    <!-- CV Global Favicon Implementation -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="msapplication-TileColor" content="#000000">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css?v={{ timestamp }}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css?v={{ timestamp }}" rel="stylesheet">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
     <style>
         .chat-container {
             max-height: 70vh;
@@ -68,12 +77,12 @@
     <nav class="navbar navbar-dark bg-primary mb-4">
         <div class="container-fluid">
             <a class="navbar-brand" href="/chat-management">
-                <i class="fas fa-arrow-left me-2"></i>
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
                 Back to Chat Management
             </a>
             <div class="navbar-nav flex-row">
-                <a class="nav-link me-3" href="/">
-                    <i class="fas fa-home me-1"></i>Dashboard
+                <a class="nav-link me-3" href="/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                 </a>
             </div>
         </div>
