@@ -339,15 +339,21 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                     update_kwargs['name'] = user_name
             db_manager.update_user(phone_number, **update_kwargs)
             platform_emoji = "📱" if platform == "telegram" else "📱"
-            restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
-                              "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
-                              "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                              "Available Commands:\n"
-                              f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
-                              f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
-                              f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
-                              f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
-                              "Day 1 content will arrive in 10 seconds!")
+            # Get bot-specific greeting content
+            greeting = db_manager.get_greeting_content(bot_id=bot_id)
+            if greeting:
+                restart_message = greeting.content
+            else:
+                # Fallback to default message if no greeting configured
+                restart_message = (f"Restarting your Faith Journey! {platform_emoji}\n\n"
+                                  "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
+                                  "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                                  "Available Commands:\n"
+                                  f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
+                                  f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
+                                  f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
+                                  f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
+                                  "Day 1 content will arrive in 10 seconds!")
             send_message_to_platform(phone_number, platform, restart_message)
             
             # Log the RESTART command for chat management visibility
@@ -412,15 +418,21 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         
         # Send welcome message
         platform_emoji = "📱" if platform == "telegram" else "📱"
-        welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
-                          "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
-                          "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                          "Available Commands:\n"
-                          f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
-                          f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
-                          f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
-                          f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
-                          "Day 1 content will arrive in 10 seconds!")
+        # Get bot-specific greeting content
+        greeting = db_manager.get_greeting_content(bot_id=bot_id)
+        if greeting:
+            welcome_message = greeting.content
+        else:
+            # Fallback to default message if no greeting configured
+            welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
+                              "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
+                              "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                              "Available Commands:\n"
+                              f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
+                              f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
+                              f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
+                              f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
+                              "Day 1 content will arrive in 10 seconds!")
         
         logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
         send_message_to_platform(phone_number, platform, welcome_message)
@@ -792,11 +804,39 @@ def get_all_content():
     """API endpoint to get all content, optionally filtered by bot_id"""
     try:
         bot_id = request.args.get('bot_id', type=int)
-        content = db_manager.get_all_content(bot_id=bot_id)
-        return jsonify([c.to_dict() for c in content])
+        content_type = request.args.get('content_type', 'daily')  # 'daily' or 'greeting'
+        
+        if content_type == 'greeting':
+            greeting = db_manager.get_greeting_content(bot_id=bot_id)
+            return jsonify([greeting.to_dict()] if greeting else [])
+        else:
+            content = db_manager.get_all_content(bot_id=bot_id, content_type='daily')
+            return jsonify([c.to_dict() for c in content])
     except Exception as e:
         logger.error(f"Error getting content: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/greeting', methods=['POST'])
+def create_or_update_greeting():
+    """API endpoint to create or update greeting content"""
+    try:
+        data = request.get_json()
+        success = db_manager.create_or_update_greeting(
+            bot_id=data.get('bot_id', 1),
+            title=data['title'],
+            content=data['content'],
+            reflection_question=data.get('reflection_question', ''),
+            tags=data.get('tags', []),
+            media_type=data.get('media_type', 'text'),
+            image_filename=data.get('image_filename'),
+            video_filename=data.get('video_filename'),
+            youtube_url=data.get('youtube_url'),
+            audio_filename=data.get('audio_filename')
+        )
+        return jsonify({"status": "success" if success else "error"})
+    except Exception as e:
+        logger.error(f"Error creating/updating greeting: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/content', methods=['POST'])
 def create_content():
@@ -814,7 +854,9 @@ def create_content():
             video_filename=data.get('video_filename'),
             youtube_url=data.get('youtube_url'),
             audio_filename=data.get('audio_filename'),
-            is_active=data.get('is_active', True)
+            is_active=data.get('is_active', True),
+            bot_id=data.get('bot_id', 1),
+            content_type=data.get('content_type', 'daily')
         )
         return jsonify({"status": "success", "id": content_id})
     except Exception as e:
@@ -1662,7 +1704,8 @@ def cms_create_content():
             youtube_url=request.form.get('youtube_url'),  # Keep for backwards compatibility
             audio_filename=audio_filename,
             is_active=is_active,
-            bot_id=bot_id
+            bot_id=bot_id,
+            content_type=form_data.get('content_type', 'daily')
         )
         
         if content_id:
@@ -1747,7 +1790,8 @@ def cms_edit_content(content_id):
             video_filename=video_filename,
             youtube_url=request.form.get('youtube_url'),  # Keep for backwards compatibility
             audio_filename=audio_filename,
-            is_active=is_active
+            is_active=is_active,
+            content_type=request.form.get('content_type', 'daily')
         )
         
         if success:

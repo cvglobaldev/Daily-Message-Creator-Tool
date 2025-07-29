@@ -114,13 +114,67 @@ class DatabaseManager:
             return {'total_users': 0, 'active_users': 0, 'completed_users': 0, 'inactive_users': 0}
     
     # Content Management Methods
-    def get_content_by_day(self, day: int) -> Optional[Content]:
+    def get_content_by_day(self, day: int, bot_id: int = 1) -> Optional[Content]:
         """Get content for specific day"""
         try:
-            return Content.query.filter_by(day_number=day, is_active=True).first()
+            return Content.query.filter_by(day_number=day, is_active=True, bot_id=bot_id, content_type='daily').first()
         except SQLAlchemyError as e:
             logger.error(f"Error getting content for day {day}: {e}")
             return None
+    
+    def get_greeting_content(self, bot_id: int = 1) -> Optional[Content]:
+        """Get greeting content for a specific bot"""
+        try:
+            return Content.query.filter_by(bot_id=bot_id, content_type='greeting', is_active=True).first()
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting greeting content for bot {bot_id}: {e}")
+            return None
+    
+    def create_or_update_greeting(self, bot_id: int, title: str, content: str, reflection_question: str = "",
+                                 tags: List[str] = None, media_type: str = 'text', image_filename: str = None,
+                                 video_filename: str = None, youtube_url: str = None, audio_filename: str = None) -> bool:
+        """Create or update greeting content for a bot"""
+        try:
+            # Check if greeting already exists
+            greeting = self.get_greeting_content(bot_id)
+            
+            if greeting:
+                # Update existing greeting
+                greeting.title = title
+                greeting.content = content
+                greeting.reflection_question = reflection_question
+                greeting.tags = tags or []
+                greeting.media_type = media_type
+                greeting.image_filename = image_filename
+                greeting.video_filename = video_filename
+                greeting.youtube_url = youtube_url
+                greeting.audio_filename = audio_filename
+                greeting.updated_at = datetime.utcnow()
+            else:
+                # Create new greeting
+                greeting = Content()
+                greeting.bot_id = bot_id
+                greeting.day_number = 0  # Use 0 for greeting content
+                greeting.title = title
+                greeting.content = content
+                greeting.reflection_question = reflection_question
+                greeting.tags = tags or []
+                greeting.media_type = media_type
+                greeting.image_filename = image_filename
+                greeting.video_filename = video_filename
+                greeting.youtube_url = youtube_url
+                greeting.audio_filename = audio_filename
+                greeting.content_type = 'greeting'
+                greeting.is_active = True
+                self.db.session.add(greeting)
+            
+            self.db.session.commit()
+            logger.info(f"Greeting content for bot {bot_id} updated successfully")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error creating/updating greeting for bot {bot_id}: {e}")
+            return False
     
     def create_content_legacy(self, day: int, media_type: str, content_text: str, 
                       reflection_question: str, media_url: Optional[str] = None) -> Optional[Content]:
@@ -329,10 +383,10 @@ class DatabaseManager:
             logger.error(f"Error initializing sample content: {e}")
     
     # Content Management Methods
-    def get_all_content(self, bot_id: int = None):
-        """Get all content ordered by day number, optionally filtered by bot_id"""
+    def get_all_content(self, bot_id: int = None, content_type: str = 'daily'):
+        """Get all content ordered by day number, optionally filtered by bot_id and content_type"""
         try:
-            query = Content.query
+            query = Content.query.filter_by(content_type=content_type)
             if bot_id is not None:
                 query = query.filter_by(bot_id=bot_id)
             return query.order_by(Content.day_number).all()
@@ -340,9 +394,20 @@ class DatabaseManager:
             logger.error(f"Error getting all content: {e}")
             return []
     
+    def get_greeting_content(self, bot_id: int = None):
+        """Get greeting/welcome content for a specific bot"""
+        try:
+            query = Content.query.filter_by(content_type='greeting')
+            if bot_id is not None:
+                query = query.filter_by(bot_id=bot_id)
+            return query.first()
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting greeting content: {e}")
+            return None
+    
     def create_content(self, day_number, title, content, reflection_question, tags=None, 
                       media_type='text', image_filename=None, video_filename=None, 
-                      youtube_url=None, audio_filename=None, is_active=True, bot_id=1):
+                      youtube_url=None, audio_filename=None, is_active=True, bot_id=1, content_type='daily'):
         """Create new multimedia content"""
         try:
             new_content = Content()
@@ -358,6 +423,7 @@ class DatabaseManager:
             new_content.audio_filename = audio_filename
             new_content.is_active = is_active
             new_content.bot_id = bot_id
+            new_content.content_type = content_type
             self.db.session.add(new_content)
             self.db.session.commit()
             logger.info(f"Content for day {day_number} created successfully with media type: {media_type}")
@@ -369,7 +435,7 @@ class DatabaseManager:
     
     def update_content(self, content_id, title, content, reflection_question, tags=None, 
                       media_type='text', image_filename=None, video_filename=None, 
-                      youtube_url=None, audio_filename=None, is_active=True):
+                      youtube_url=None, audio_filename=None, is_active=True, content_type='daily'):
         """Update existing multimedia content"""
         try:
             content_obj = Content.query.get(content_id)
@@ -387,6 +453,7 @@ class DatabaseManager:
             content_obj.youtube_url = youtube_url
             content_obj.audio_filename = audio_filename
             content_obj.is_active = is_active
+            content_obj.content_type = content_type
             content_obj.updated_at = datetime.utcnow()
             
             self.db.session.commit()

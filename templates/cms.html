@@ -69,11 +69,35 @@
     </nav>
 
     <div class="container">
+        <!-- Greeting/Welcome Message Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="cv-section-header">
+                    <h3><i class="fas fa-hand-wave me-3 cv-text-primary"></i>Welcome Message{% if bot %} - {{ bot.name }}{% endif %}</h3>
+                    <p class="text-muted">Configure the greeting message that users receive when they start their faith journey</p>
+                </div>
+                <div class="card cv-card">
+                    <div class="card-header cv-bg-secondary d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 cv-text-primary"><i class="fas fa-comments me-2"></i>Greeting Content</h6>
+                        <button class="btn cv-btn-primary btn-sm" onclick="editGreeting()">
+                            <i class="fas fa-edit me-1"></i>Edit Welcome Message
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="greetingContent" class="text-muted">
+                            <!-- Greeting content will be loaded here -->
+                            Loading greeting content...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Content Overview -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="cv-section-header">
-                    <h2><i class="fas fa-book-open me-3 cv-text-primary"></i>Content Management System{% if bot %} - {{ bot.name }}{% endif %}</h2>
+                    <h2><i class="fas fa-book-open me-3 cv-text-primary"></i>Daily Content Management{% if bot %} - {{ bot.name }}{% endif %}</h2>
                     <p class="text-muted">Create and manage daily faith journey content{% if bot %} for bot: {{ bot.name }}{% endif %}, configure journey length, and track content statistics</p>
                 </div>
                 <div class="card cv-card">
@@ -277,6 +301,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             contentModal = new bootstrap.Modal(document.getElementById('contentModal'));
             loadAllContent();
+            loadGreetingContent();
             
             // Real-time preview
             ['title', 'content', 'reflectionQuestion', 'youtubeUrl'].forEach(id => {
@@ -313,6 +338,130 @@
                 .catch(error => {
                     console.error('Error loading content:', error);
                     showAlert('Error loading content: ' + error.message, 'danger');
+                });
+        }
+
+        function loadGreetingContent() {
+            let url = '/api/content?content_type=greeting';
+            {% if bot %}
+            url += '&bot_id={{ bot.id }}';
+            {% endif %}
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const greetingContainer = document.getElementById('greetingContent');
+                    if (data.length > 0) {
+                        const greeting = data[0];
+                        greetingContainer.innerHTML = `
+                            <div class="bg-secondary p-3 rounded">
+                                <h6 class="text-primary mb-2">${greeting.title}</h6>
+                                <p class="mb-0" style="white-space: pre-line;">${greeting.content}</p>
+                            </div>
+                        `;
+                    } else {
+                        greetingContainer.innerHTML = `
+                            <div class="text-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>No greeting message configured. Click "Edit Welcome Message" to create one.
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading greeting content:', error);
+                    document.getElementById('greetingContent').innerHTML = `
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>Error loading greeting content.
+                        </div>
+                    `;
+                });
+        }
+
+        function loadGreetingContent() {
+            let url = '/api/content?content_type=greeting';
+            {% if bot %}
+            url += '&bot_id={{ bot.id }}';
+            {% endif %}
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const greetingContainer = document.getElementById('greetingContent');
+                    
+                    if (data.length > 0) {
+                        const greeting = data[0];
+                        greetingContainer.innerHTML = `
+                            <div class="content-preview">
+                                <h6 class="mb-2"><i class="fas fa-handshake me-2 cv-text-primary"></i>${greeting.title || 'Welcome Message'}</h6>
+                                <p class="mb-2">${greeting.content.replace(/\n/g, '<br>')}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>Last updated: ${new Date(greeting.created_at).toLocaleDateString()}
+                                </small>
+                            </div>
+                        `;
+                    } else {
+                        greetingContainer.innerHTML = `
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                <p>No welcome message configured yet.</p>
+                                <button class="btn cv-btn-primary btn-sm" onclick="editGreeting()">
+                                    <i class="fas fa-plus me-1"></i>Create Welcome Message
+                                </button>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading greeting content:', error);
+                    document.getElementById('greetingContent').innerHTML = 
+                        '<div class="alert alert-danger">Error loading greeting content</div>';
+                });
+        }
+
+        function editGreeting() {
+            let url = '/api/content?content_type=greeting';
+            {% if bot %}
+            url += '&bot_id={{ bot.id }}';
+            {% endif %}
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const greeting = data.length > 0 ? data[0] : null;
+                    
+                    document.getElementById('modalDayNumber').textContent = 'Welcome';
+                    document.getElementById('contentId').value = greeting ? greeting.id : '';
+                    document.getElementById('dayNumber').value = 0; // Use 0 for greeting
+                    document.getElementById('title').value = greeting ? greeting.title || 'Welcome Message' : 'Welcome Message';
+                    document.getElementById('content').value = greeting ? greeting.content || '' : `Welcome to your Faith Journey! 📱
+
+You'll receive daily content for the next 10 days (every 10 minutes for testing). After each piece of content, I'll ask you a simple reflection question.
+
+Available Commands:
+• /start - Begin or restart journey
+• /stop - Unsubscribe from messages  
+• /help - Show help message
+• /human - Chat directly with a human
+
+Day 1 content will arrive in 10 seconds!`;
+                    document.getElementById('reflectionQuestion').value = ''; // No reflection for greeting
+                    document.getElementById('isActive').checked = greeting ? greeting.is_active : true;
+                    
+                    // Set multimedia type to text for greeting
+                    document.getElementById('mediaType').value = 'text';
+                    
+                    // Set tags - greeting should have Introduction to Jesus tag
+                    setSelectedTags(greeting ? greeting.tags : ['Introduction to Jesus (ITJ)']);
+                    
+                    document.getElementById('deleteButton').style.display = greeting ? 'block' : 'none';
+                    
+                    toggleMediaSections();
+                    updatePreview();
+                    contentModal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading greeting content:', error);
+                    showAlert('Error loading greeting content: ' + error.message, 'danger');
                 });
         }
 
@@ -614,7 +763,9 @@
             const reflectionQuestion = document.getElementById('reflectionQuestion').value;
             const dayNumber = document.getElementById('dayNumber').value;
             
-            if (!title || !content || !reflectionQuestion || !dayNumber) {
+            // Greeting content doesn't require reflection question
+            const isGreeting = parseInt(dayNumber) === 0;
+            if (!title || !content || (!isGreeting && !reflectionQuestion) || !dayNumber) {
                 showAlert('Please fill in all required fields', 'warning');
                 return;
             }
@@ -631,6 +782,10 @@
             formData.append('reflection_question', reflectionQuestion);
             formData.append('tags', JSON.stringify(getSelectedTags()));
             formData.append('is_active', document.getElementById('isActive').checked);
+            
+            // Add content_type for greeting content
+            const isGreeting = parseInt(dayNumber) === 0;
+            formData.append('content_type', isGreeting ? 'greeting' : 'daily');
             
             // Add bot_id if this is bot-specific content management
             {% if bot %}
@@ -667,8 +822,12 @@
             })
             .then(response => {
                 if (response.ok) {
-                    showAlert(`Day ${dayNumber} content saved successfully!`, 'success');
+                    const isGreeting = parseInt(dayNumber) === 0;
+                    showAlert(`${isGreeting ? 'Welcome message' : 'Day ' + dayNumber + ' content'} saved successfully!`, 'success');
                     contentModal.hide();
+                    if (isGreeting) {
+                        setTimeout(() => loadGreetingContent(), 500);
+                    }
                     setTimeout(() => loadAllContent(), 500);
                 } else {
                     return response.text().then(text => {

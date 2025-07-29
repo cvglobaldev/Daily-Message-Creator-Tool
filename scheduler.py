@@ -61,7 +61,7 @@ class ContentScheduler:
                         return True
                 
             # Get content for current day
-            content = self.db.get_content_by_day(current_day)
+            content = self.db.get_content_by_day(current_day, bot_id=user.bot_id)
             if not content:
                 logger.error(f"No content found for day {current_day}")
                 return False

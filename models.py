@@ -213,6 +213,7 @@ class Content(db.Model):
     audio_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    content_type: Mapped[str] = mapped_column(String(20), nullable=False, default='daily')  # 'daily' or 'greeting'
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -268,6 +269,7 @@ class Content(db.Model):
             'youtube_url': self.youtube_url,
             'audio_filename': self.audio_filename,
             'is_active': self.is_active,
+            'content_type': getattr(self, 'content_type', 'daily'),
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
