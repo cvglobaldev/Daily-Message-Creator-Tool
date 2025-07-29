@@ -20,9 +20,7 @@
     <nav class="navbar navbar-dark bg-primary mb-4">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <svg width="32" height="32" viewBox="0 0 300 70" class="me-2">
-                    <path fill="currentColor" d="M280.6,0c-4,0-7.9,1.6-10.7,4.4l-42,42.1c-3.4,3.5-8,5.4-12.9,5.4c-4.9,0-9.5-1.9-12.9-5.4l-32.4-32.4 c-3.4-3.5-8-5.4-12.9-5.4c-4.9,0-9.5-1.9-12.9,5.4L87,81.2c-3.4,3.5-8,5.4-12.9,5.4c-4.9,0-9.5-1.9-12.9-5.4L19.4,38.3 c-3.4-3.5-8-5.4-12.9-5.4C2.9,32.9,0,35.8,0,39.4s2.9,6.5,6.5,6.5c1.7,0,3.3-0.7,4.5-1.9l41.9-42.9c1.1-1.1,2.7-1.8,4.3-1.8 s3.2,0.6,4.3,1.8l67.1,67.1c1.1,1.1,2.7,1.8,4.3,1.8s3.2-0.6,4.3-1.8l67.1-67.1c1.1-1.1,2.7-1.8,4.3-1.8s3.2,0.6,4.3,1.8l42,42.1 c1.1,1.1,2.7,1.8,4.3,1.8c3.6,0,6.5-2.9,6.5-6.5S284.2,0,280.6,0z"/>
-                </svg>
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
                 Faith Journey
             </a>
             <div class="navbar-nav flex-row">
@@ -32,9 +30,7 @@
                 <a class="nav-link me-3" href="/bots">
                     <i class="fas fa-robot me-1"></i>Bot Management
                 </a>
-                <a class="nav-link me-3" href="/settings">
-                    <i class="fas fa-cogs me-1"></i>Settings
-                </a>
+
                 {% if current_user.is_authenticated and current_user.role == 'super_admin' %}
                 <a class="nav-link me-3" href="/user-management">
                     <i class="fas fa-users me-1"></i>Users

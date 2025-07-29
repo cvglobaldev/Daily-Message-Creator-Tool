@@ -852,28 +852,7 @@ Use this context to provide relevant, personalized responses to the user's messa
 
 # Chat Management Routes
 
-@app.route('/settings')
-@login_required
-def settings_page():
-    """Display chatbot settings page"""
-    try:
-        settings = db_manager.get_chatbot_settings()
-        default_prompt = """You are a compassionate AI assistant helping people on their faith journey to learn about Jesus. 
-
-Your role:
-- Respond with warmth, understanding, and respect for the user's background
-- Reference their current day's content when relevant
-- Encourage reflection and spiritual growth
-- Be sensitive to users from Muslim backgrounds
-- Provide biblical insights in an accessible way
-- Guide users toward a deeper understanding of Jesus
-
-Always maintain a respectful, caring tone and be ready to offer prayer or encouragement when needed."""
-        
-        return render_template('settings.html', settings=settings, default_prompt=default_prompt, user=current_user)
-    except Exception as e:
-        logger.error(f"Error loading settings: {e}")
-        return f"Error loading settings: {e}", 500
+# Removed redundant settings route - settings are now handled per bot in bot management
 
 @app.route('/api/send-message', methods=['POST'])
 def send_message_to_user():
