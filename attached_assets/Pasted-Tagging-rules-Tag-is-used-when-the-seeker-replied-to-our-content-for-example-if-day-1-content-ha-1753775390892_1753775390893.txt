@@ -1,0 +1,26 @@
+Tagging rules :  Tag is used when the seeker replied to our content, for example if day 1 content has the bible exposure and introduction to Jesus tags, then after the seeker responds back to the day 1 content we will activate the tagging.  Tag is used to record day 1 - day 90  You can’t create a new tag outside of the defined tagging below  Allowed Tagging :
+
+Marker or Milestone Name	Tags in Gorgias	Milestone definition	Milestone examples
+Introduction to Jesus (ITJ)	#ITJ	An aspect of the Gospel is presented, introducing Jesus.	An individual sends a message, saying “I read/watched the message about Jesus"
+Gospel Presentation	#GP	A more substantial explanation of the Gospel (i.e. 4 beats) is presented	An individual sends a message saying, “I watched the video you sent me explaining all about Jesus"
+Prayer	#Prayer	An individual indicated that they have prayed, or are praying about a situation in their life; or they have prayed or are praying for someone else; or they have requested prayer for themselves or someone else.	An individual sends a message, in the context of a faith journey, saying “I prayed I would get the job - and I did!"; “Would you pray for my son? He is struggling to make friends at school”
+Bible Exposure	#Bible exp	An individual has been exposed to a story or teaching from the Bible.	In response to a question from a bot or human, in the context of a faith journey, an individual affirms they read the posted story or teaching;
+
+An individual sends a message, in the context of a faith journey, saying “someone told me the story of how Jesus fed 5000 people";
+Bible Engagement	#Bible eng	An individual indicates that they have read or are reading the Bible in an effort to further their spiritual walk.	An individual sends a message, in the context of a faith journey, saying “I downloaded a Bible app on my phone and have been following a reading plan";
+Christian Learning	#Learning	An individual indicates they have engaged with material or content to help them follow Jesus.	An individual sends a message, in the context of a faith journey, saying “I watched the video explaining that Jesus is the son of God";
+
+In response to a question from a bot or human, in the context of a faith journey, an individual affirms they have followed the link and read the posted information;
+Salvation Prayer	#Salvation	A seeker prays (or indicated that they have prayed) to follow Jesus.	An individual sends a message, in the context of a faith journey, saying “I asked Jesus to forgive my sins and that I wanted to follow him";
+
+In response to a question from a bot or human, in the context of a faith journey, an individual affirms they have prayed to follow Jesus;
+
+A pioneer reports that a particular individual on a faith journey (or a group of individuals) have prayed a salvation prayer to follow Jesus.
+Holy Spirit Empowerment	#HS	An individual exhibits evidence of the work of the Holy Spirit in their life. This may be evidenced in the form of Fruit of the Spirit, or Gifts of the Spirit.	An individual sends a message, in the context of a faith journey, saying: “for the first time I was able to control my anger"; “since I started to learn more about Jesus I have found peace inside me”; “Instead of fear, I found courage inside me to confront an injustice in my neighbourhood - and I know this came from God”
+*Human	Seeker is asking for human responder
+*Blocked	Seeker has blocked us, or we have blocked them
+*Already in church	Seeker has indicated they are already in a church when we started the chat, we have not connected them
+*Not connected	We have not been successful in connecting the seeker to a partner/pioneer/church
+*Not genuine	The seeker is not genuine and being inappropriate, or spamming
+*No response	The seeker has not responded ever to our messages since asking for a human
+ Day 1 - Day 90 tagging
