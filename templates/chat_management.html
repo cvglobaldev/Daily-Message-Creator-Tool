@@ -411,6 +411,11 @@
                         ...this.currentFilters
                     });
 
+                    // Add bot_id parameter if this is bot-specific chat management
+                    {% if bot %}
+                    params.append('bot_id', '{{ bot.id }}');
+                    {% endif %}
+
                     const response = await fetch(`/api/chat-management/messages?${params}`);
                     const data = await response.json();
 

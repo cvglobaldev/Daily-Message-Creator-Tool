@@ -329,10 +329,13 @@ class DatabaseManager:
             logger.error(f"Error initializing sample content: {e}")
     
     # Content Management Methods
-    def get_all_content(self):
-        """Get all content ordered by day number"""
+    def get_all_content(self, bot_id: int = None):
+        """Get all content ordered by day number, optionally filtered by bot_id"""
         try:
-            return Content.query.order_by(Content.day_number).all()
+            query = Content.query
+            if bot_id is not None:
+                query = query.filter_by(bot_id=bot_id)
+            return query.order_by(Content.day_number).all()
         except SQLAlchemyError as e:
             logger.error(f"Error getting all content: {e}")
             return []
@@ -500,7 +503,7 @@ class DatabaseManager:
             logger.error(f"Error getting recent active users: {e}")
             return []
     
-    def get_consolidated_user_conversations(self, page: int = 1, limit: int = 20, sort_field: str = 'timestamp', sort_order: str = 'desc', filters: Dict = None) -> Dict:
+    def get_consolidated_user_conversations(self, page: int = 1, limit: int = 20, sort_field: str = 'timestamp', sort_order: str = 'desc', filters: Dict = None, bot_id: int = None) -> Dict:
         """Get consolidated user conversations for chat management (unique users only)"""
         try:
             # Build base query for users with their conversation stats and enhanced fields
@@ -534,8 +537,13 @@ class DatabaseManager:
                     (MessageLog.is_human_handoff == True, 1),
                     else_=0
                 )).label('handoff_requests'),
-            ).outerjoin(MessageLog, User.id == MessageLog.user_id)\
-            .group_by(User.id, User.phone_number, User.name, User.username, User.first_name, User.last_name,
+            ).outerjoin(MessageLog, User.id == MessageLog.user_id)
+            
+            # Add bot_id filtering if specified
+            if bot_id is not None:
+                query = query.filter(User.bot_id == bot_id)
+                
+            query = query.group_by(User.id, User.phone_number, User.name, User.username, User.first_name, User.last_name,
                      User.status, User.current_day, User.join_date, User.country, User.region, User.city,
                      User.language_code, User.is_premium, User.ip_address)\
             .having(func.count(MessageLog.id) > 0)

@@ -49,11 +49,20 @@
                 Faith Journey - Content Management System
             </a>
             <div class="navbar-nav flex-row">
-                <a class="nav-link me-3" href="/">
+                <a class="nav-link me-3" href="/dashboard">
                     <i class="fas fa-chart-line me-1"></i>Dashboard
                 </a>
-                <a class="nav-link" href="/test-interface">
-                    <i class="fas fa-vial me-1"></i>Test
+                {% if bot %}
+                <a class="nav-link me-3" href="/bots">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Bot Management
+                </a>
+                {% else %}
+                <a class="nav-link me-3" href="/bots">
+                    <i class="fas fa-robot me-1"></i>Bot Management
+                </a>
+                {% endif %}
+                <a class="nav-link" href="/logout">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
                 </a>
             </div>
         </div>
@@ -64,8 +73,8 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="cv-section-header">
-                    <h2><i class="fas fa-book-open me-3 cv-text-primary"></i>Content Management System</h2>
-                    <p class="text-muted">Create and manage daily faith journey content, configure journey length, and track content statistics</p>
+                    <h2><i class="fas fa-book-open me-3 cv-text-primary"></i>Content Management System{% if bot %} - {{ bot.name }}{% endif %}</h2>
+                    <p class="text-muted">Create and manage daily faith journey content{% if bot %} for bot: {{ bot.name }}{% endif %}, configure journey length, and track content statistics</p>
                 </div>
                 <div class="card cv-card">
                     <div class="card-header cv-bg-secondary d-flex justify-content-between align-items-center">
@@ -290,7 +299,12 @@
         });
 
         function loadAllContent() {
-            fetch('/api/content')
+            let url = '/api/content';
+            {% if bot %}
+            url += '?bot_id={{ bot.id }}';
+            {% endif %}
+            
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     allContent = data;
@@ -617,6 +631,11 @@
             formData.append('reflection_question', reflectionQuestion);
             formData.append('tags', JSON.stringify(getSelectedTags()));
             formData.append('is_active', document.getElementById('isActive').checked);
+            
+            // Add bot_id if this is bot-specific content management
+            {% if bot %}
+            formData.append('bot_id', '{{ bot.id }}');
+            {% endif %}
             
             // Multimedia fields
             const mediaType = document.getElementById('mediaType').value;

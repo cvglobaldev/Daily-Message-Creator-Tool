@@ -309,8 +309,27 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         existing_user = db_manager.get_user_by_phone(phone_number)
         
         if existing_user and existing_user.status == 'active':
+            # Determine bot_id for restart as well
+            bot_id = 1  # Default bot
+            if platform == "telegram":
+                # Find the active bot for Telegram platform
+                active_telegram_bot = Bot.query.filter(
+                    Bot.status == 'active',
+                    Bot.telegram_token.isnot(None)
+                ).first()
+                if active_telegram_bot:
+                    bot_id = active_telegram_bot.id
+            elif platform == "whatsapp":
+                # Find the active bot for WhatsApp platform  
+                active_whatsapp_bot = Bot.query.filter(
+                    Bot.status == 'active',
+                    Bot.whatsapp_access_token.isnot(None)
+                ).first()
+                if active_whatsapp_bot:
+                    bot_id = active_whatsapp_bot.id
+                    
             # Allow restart - reset to Day 1 and update with enhanced user data
-            update_kwargs = {'current_day': 1, 'join_date': datetime.now()}
+            update_kwargs = {'current_day': 1, 'join_date': datetime.now(), 'bot_id': bot_id}
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 update_kwargs.update(enhanced_data)
@@ -350,9 +369,28 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             logger.info(f"User {phone_number} restarted journey from Day 1")
             return
         
+        # Determine bot_id based on platform configuration
+        bot_id = 1  # Default bot
+        if platform == "telegram":
+            # Find the active bot for Telegram platform
+            active_telegram_bot = Bot.query.filter(
+                Bot.status == 'active',
+                Bot.telegram_token.isnot(None)
+            ).first()
+            if active_telegram_bot:
+                bot_id = active_telegram_bot.id
+        elif platform == "whatsapp":
+            # Find the active bot for WhatsApp platform  
+            active_whatsapp_bot = Bot.query.filter(
+                Bot.status == 'active',
+                Bot.whatsapp_access_token.isnot(None)
+            ).first()
+            if active_whatsapp_bot:
+                bot_id = active_whatsapp_bot.id
+
         # Create or reactivate user
         if existing_user:
-            update_kwargs = {'status': 'active', 'current_day': 1, 'join_date': datetime.now()}
+            update_kwargs = {'status': 'active', 'current_day': 1, 'join_date': datetime.now(), 'bot_id': bot_id}
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 update_kwargs.update(enhanced_data)
@@ -362,7 +400,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                     update_kwargs['name'] = user_name
             db_manager.update_user(phone_number, **update_kwargs)
         else:
-            create_kwargs = {'status': 'active', 'current_day': 1, 'tags': []}
+            create_kwargs = {'status': 'active', 'current_day': 1, 'tags': [], 'bot_id': bot_id}
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 create_kwargs.update(enhanced_data)
@@ -751,9 +789,10 @@ def cms():
 
 @app.route('/api/content', methods=['GET'])
 def get_all_content():
-    """API endpoint to get all content"""
+    """API endpoint to get all content, optionally filtered by bot_id"""
     try:
-        content = db_manager.get_all_content()
+        bot_id = request.args.get('bot_id', type=int)
+        content = db_manager.get_all_content(bot_id=bot_id)
         return jsonify([c.to_dict() for c in content])
     except Exception as e:
         logger.error(f"Error getting content: {e}")
@@ -1605,6 +1644,9 @@ def cms_create_content():
         except json.JSONDecodeError:
             tags = []
         
+        # Get bot_id from form data (defaults to 1 for backward compatibility)
+        bot_id = int(request.form.get('bot_id', 1))
+        
         # Create content
         content_id = db_manager.create_content(
             day_number=day_number,
@@ -1617,7 +1659,8 @@ def cms_create_content():
             video_filename=video_filename,
             youtube_url=request.form.get('youtube_url'),  # Keep for backwards compatibility
             audio_filename=audio_filename,
-            is_active=is_active
+            is_active=is_active,
+            bot_id=bot_id
         )
         
         if content_id:
