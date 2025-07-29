@@ -4,6 +4,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
+/* Favicon and Meta Tags - Include in all HTML templates */
+/*
+<!-- CV Global Favicon Implementation -->
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+<link rel="shortcut icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<meta name="theme-color" content="#00ff88">
+<meta name="msapplication-TileColor" content="#000000">
+<meta name="msapplication-config" content="/static/browserconfig.xml">
+*/
+
 /* CSS Custom Properties - CVGlobal Color Palette */
 :root {
   /* Primary Colors */
