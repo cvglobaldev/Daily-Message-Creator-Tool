@@ -101,6 +101,7 @@ def start_scheduler():
     logger.info("Background scheduler started")
 
 @app.route('/')
+@app.route('/dashboard')
 @login_required
 def dashboard():
     """Simple dashboard to monitor the system"""
