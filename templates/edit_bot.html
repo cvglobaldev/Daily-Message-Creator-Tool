@@ -16,14 +16,15 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/cvglobal-theme.css">
 </head>
-<body class="bg-dark">
+<body class="cv-bg-dark">
 
 <div class="container-fluid">
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/dashboard">
-                <i class="fas fa-cross me-2"></i>Faith Journey Admin
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
+                Faith Journey Admin
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/dashboard">
@@ -41,9 +42,9 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-robot me-2"></i>Edit Bot: {{ bot.name }}</h3>
+            <div class="card cv-card">
+                <div class="card-header cv-bg-secondary">
+                    <h3><i class="fas fa-robot me-2 cv-text-primary"></i>Edit Bot: {{ bot.name }}</h3>
                     <p class="text-muted mb-0">Update bot configuration and platform settings</p>
                 </div>
                 <div class="card-body">
@@ -51,8 +52,8 @@
                         {{ form.hidden_tag() }}
 
                         <!-- Basic Information -->
-                        <div class="section-header">
-                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-info-circle me-2 cv-text-primary"></i>Basic Information</h5>
                         </div>
 
                         <div class="row mb-3">
@@ -93,8 +94,8 @@
                         </div>
 
                         <!-- Platform Selection -->
-                        <div class="section-header">
-                            <h5><i class="fas fa-mobile-alt me-2"></i>Platform Selection</h5>
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-mobile-alt me-2 cv-text-primary"></i>Platform Selection</h5>
                         </div>
 
                         <div class="mb-4">
@@ -119,8 +120,8 @@
 
                         <!-- WhatsApp Configuration -->
                         <div id="whatsapp-config" class="platform-config" style="display: {{ 'block' if 'whatsapp' in bot.platforms else 'none' }};">
-                            <div class="section-header">
-                                <h5><i class="fab fa-whatsapp me-2"></i>WhatsApp Configuration</h5>
+                            <div class="section-header cv-section-header">
+                                <h5><i class="fab fa-whatsapp me-2 cv-text-primary"></i>WhatsApp Configuration</h5>
                             </div>
 
                             <div class="row mb-3">
@@ -145,8 +146,8 @@
 
                         <!-- Telegram Configuration -->
                         <div id="telegram-config" class="platform-config" style="display: {{ 'block' if 'telegram' in bot.platforms else 'none' }};">
-                            <div class="section-header">
-                                <h5><i class="fab fa-telegram-plane me-2"></i>Telegram Configuration</h5>
+                            <div class="section-header cv-section-header">
+                                <h5><i class="fab fa-telegram-plane me-2 cv-text-primary"></i>Telegram Configuration</h5>
                             </div>
 
                             <div class="row mb-3">
@@ -164,8 +165,8 @@
                         </div>
 
                         <!-- AI Configuration -->
-                        <div class="section-header">
-                            <h5><i class="fas fa-brain me-2"></i>AI Behavior</h5>
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-brain me-2 cv-text-primary"></i>AI Behavior</h5>
                         </div>
 
                         <div class="mb-4">
@@ -184,16 +185,16 @@
                             <a href="/bots" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left me-2"></i>Back to Bots
                             </a>
-                            {{ form.submit(class="btn btn-primary") }}
+                            {{ form.submit(class="btn cv-btn-primary") }}
                         </div>
                     </form>
                 </div>
             </div>
 
             <!-- Bot Statistics -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5><i class="fas fa-chart-bar me-2"></i>Bot Statistics</h5>
+            <div class="card cv-card mt-4">
+                <div class="card-header cv-bg-secondary">
+                    <h5><i class="fas fa-chart-bar me-2 cv-text-primary"></i>Bot Statistics</h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">

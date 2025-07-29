@@ -16,16 +16,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/cvglobal-theme.css">
 </head>
-<body class="bg-dark">
+<body class="cv-bg-dark">
 
 <div class="container-fluid">
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/dashboard">
-                <svg width="32" height="32" viewBox="0 0 300 70" class="me-2">
-                    <path fill="currentColor" d="M280.6,0c-4,0-7.9,1.6-10.7,4.4l-42,42.1c-3.4,3.5-8,5.4-12.9,5.4c-4.9,0-9.5-1.9-12.9-5.4l-32.4-32.4 c-3.4-3.5-8-5.4-12.9-5.4c-4.9,0-9.5,1.9-12.9,5.4L87,81.2c-3.4,3.5-8,5.4-12.9,5.4c-4.9,0-9.5-1.9-12.9-5.4L19.4,38.3 c-3.4-3.5-8-5.4-12.9-5.4C2.9,32.9,0,35.8,0,39.4s2.9,6.5,6.5,6.5c1.7,0,3.3-0.7,4.5-1.9l41.9-42.9c1.1-1.1,2.7-1.8,4.3-1.8 s3.2,0.6,4.3,1.8l67.1,67.1c1.1,1.1,2.7,1.8,4.3,1.8s3.2-0.6,4.3-1.8l67.1-67.1c1.1-1.1,2.7-1.8,4.3-1.8s3.2,0.6,4.3,1.8l42,42.1 c1.1,1.1,2.7,1.8,4.3,1.8c3.6,0,6.5-2.9,6.5-6.5S284.2,0,280.6,0z"/>
-                </svg>
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
                 Faith Journey
             </a>
             <div class="navbar-nav ms-auto">
@@ -44,9 +42,9 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-robot me-2"></i>Create New Bot</h3>
+            <div class="card cv-card">
+                <div class="card-header cv-bg-secondary">
+                    <h3><i class="fas fa-robot me-2 cv-text-primary"></i>Create New Bot</h3>
                     <p class="text-muted mb-0">Set up a new faith journey chatbot with platform-specific configurations</p>
                 </div>
                 <div class="card-body">
@@ -54,8 +52,8 @@
                         {{ form.hidden_tag() }}
 
                         <!-- Basic Information -->
-                        <div class="section-header">
-                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-info-circle me-2 cv-text-primary"></i>Basic Information</h5>
                         </div>
 
                         <div class="row mb-3">
@@ -87,8 +85,8 @@
                         </div>
 
                         <!-- Platform Selection -->
-                        <div class="section-header">
-                            <h5><i class="fas fa-mobile-alt me-2"></i>Platform Selection</h5>
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-mobile-alt me-2 cv-text-primary"></i>Platform Selection</h5>
                         </div>
 
                         <div class="mb-4">
@@ -112,8 +110,8 @@
 
                         <!-- WhatsApp Configuration -->
                         <div id="whatsapp-config" class="platform-config" style="display: none;">
-                            <div class="section-header">
-                                <h5><i class="fab fa-whatsapp me-2"></i>WhatsApp Configuration</h5>
+                            <div class="section-header cv-section-header">
+                                <h5><i class="fab fa-whatsapp me-2 cv-text-primary"></i>WhatsApp Configuration</h5>
                             </div>
 
                             <div class="row mb-3">
@@ -138,8 +136,8 @@
 
                         <!-- Telegram Configuration -->
                         <div id="telegram-config" class="platform-config" style="display: none;">
-                            <div class="section-header">
-                                <h5><i class="fab fa-telegram-plane me-2"></i>Telegram Configuration</h5>
+                            <div class="section-header cv-section-header">
+                                <h5><i class="fab fa-telegram-plane me-2 cv-text-primary"></i>Telegram Configuration</h5>
                             </div>
 
                             <div class="row mb-3">
@@ -157,8 +155,8 @@
                         </div>
 
                         <!-- AI Configuration -->
-                        <div class="section-header">
-                            <h5><i class="fas fa-brain me-2"></i>AI Behavior</h5>
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-brain me-2 cv-text-primary"></i>AI Behavior</h5>
                         </div>
 
                         <div class="mb-4">
@@ -177,7 +175,7 @@
                             <a href="/bots" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left me-2"></i>Cancel
                             </a>
-                            {{ form.submit(class="btn btn-primary") }}
+                            {{ form.submit(class="btn cv-btn-primary") }}
                         </div>
                     </form>
                 </div>
