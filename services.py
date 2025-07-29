@@ -660,22 +660,22 @@ class GeminiService:
                 logger.error(f"Error initializing Gemini client: {e}")
                 self.client = None
         
-        # Predefined tags for classification
+        # Predefined tags for classification (updated per tagging rules)
         self.predefined_tags = [
-            "Bible Engagement",
+            "Introduction to Jesus (ITJ)",
             "Gospel Presentation", 
-            "Christian Learning",
+            "Prayer",
             "Bible Exposure",
+            "Bible Engagement",
+            "Christian Learning",
             "Salvation Prayer",
-            "Question",
-            "Doubt",
-            "Positive Feedback",
-            "Negative Feedback",
-            "Spiritual Seeking",
-            "Personal Story",
-            "Gratitude",
-            "Confusion",
-            "Interest"
+            "Holy Spirit Empowerment",
+            "Human",
+            "Blocked",
+            "Already in church",
+            "Not connected",
+            "Not genuine",
+            "No response"
         ]
     
     def analyze_response(self, text: str) -> Dict[str, Any]:
@@ -761,16 +761,18 @@ class GeminiService:
         else:
             sentiment = "neutral"
         
-        # Simple tag assignment
+        # Simple tag assignment based on new tagging rules
         tags = []
-        if any(word in text_lower for word in ["question", "why", "how", "what", "?"]):
-            tags.append("Question")
-        if any(word in text_lower for word in ["doubt", "confused", "unsure"]):
-            tags.append("Doubt")
-        if sentiment == "positive":
-            tags.append("Positive Feedback")
-        elif sentiment == "negative":
-            tags.append("Negative Feedback")
+        if any(word in text_lower for word in ["jesus", "isa", "christ", "read", "watched", "message"]):
+            tags.append("Introduction to Jesus (ITJ)")
+        elif any(word in text_lower for word in ["pray", "prayer", "praying", "prayed"]):
+            tags.append("Prayer")
+        elif any(word in text_lower for word in ["bible", "scripture", "story", "teaching"]):
+            tags.append("Bible Exposure")
+        elif any(word in text_lower for word in ["learning", "understand", "follow", "video", "link"]):
+            tags.append("Christian Learning")
+        elif any(word in text_lower for word in ["human", "help", "person", "talk"]):
+            tags.append("Human")
         
         if not tags:
             tags = ["Christian Learning"]

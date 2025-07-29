@@ -46,7 +46,8 @@ Preferred communication style: Simple, everyday language.
 ### AI Response Analysis (`prompts.py`)
 - Contains structured prompts for Gemini API
 - Analyzes user responses for sentiment (positive/negative/neutral)
-- Tags responses with predefined keywords relevant to spiritual journey
+- Tags responses with predefined milestones: Introduction to Jesus (ITJ), Gospel Presentation, Prayer, Bible Exposure, Bible Engagement, Christian Learning, Salvation Prayer, Holy Spirit Empowerment
+- Tagging only applied when seekers respond to daily content (Day 1-90)
 - Culturally sensitive to Muslim background and terminology
 
 ## Data Flow
@@ -111,6 +112,13 @@ Preferred communication style: Simple, everyday language.
 - **Bot Form Enhancement**: Updated create_bot.html and edit_bot.html with CV Global favicon navigation and CVGlobal card styling
 - **Form Styling**: Applied cv-card, cv-bg-secondary, cv-text-primary, and cv-btn-primary classes throughout bot management forms
 - **Section Headers**: Enhanced all section headers with CVGlobal styling and primary color accents
+
+### ✅ COMPLETED: Updated AI Tagging System (July 29, 2025)
+- **Predefined Tags**: Updated to match exact tagging rules: Introduction to Jesus (ITJ), Gospel Presentation, Prayer, Bible Exposure, Bible Engagement, Christian Learning, Salvation Prayer, Holy Spirit Empowerment
+- **Status Tags**: Added Human, Blocked, Already in church, Not connected, Not genuine, No response status tags
+- **Tagging Logic**: Tags only applied when seekers respond to daily content (Day 1-90) not for general conversation
+- **Milestone Tracking**: Tags record milestone responses to specific daily content delivery
+- **Fallback Analysis**: Updated fallback tagging to use new predefined tag system when Gemini API unavailable
 
 ## Recent Changes (July 28, 2025)
 
