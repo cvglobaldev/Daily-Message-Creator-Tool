@@ -1526,14 +1526,14 @@ def test_image_delivery():
 @app.route('/chat/<int:user_id>')
 @login_required
 def view_full_chat(user_id):
-    """Display full chat history for a specific user"""
+    """Display full chat history for a specific user with bot isolation"""
     try:
         # Get user information
         user = User.query.get(user_id)
         if not user:
             return "User not found", 404
         
-        # Get all messages for this user
+        # Get all messages for this user with bot isolation
         messages = db_manager.get_user_messages_by_id(user_id, limit=1000)
         
         # Create a comprehensive user dict with enhanced information

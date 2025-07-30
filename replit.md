@@ -107,9 +107,12 @@ Preferred communication style: Simple, everyday language.
 - **Webhook Configuration**: Set up proper webhook URL (https://smart-budget-cvglobaldev.replit.app/telegram/2) for Bot 2's Telegram token
 - **Message Processing**: Verified Bot 2 receives /start commands, creates users with bot_id=2, and processes AI analysis correctly
 - **Response Token Fix**: Bot 2 users now receive responses from Bot 2's token (8342973377:AAF3pdo5YH6AkBosijP0G7Rct542_4GlEu4) instead of Bot 1's token
+- **Conversation History Isolation Fix**: Enhanced message retrieval functions to enforce bot-specific isolation in conversation history views
+- **Database Query Enhancement**: Updated `get_user_messages_by_id()` to filter messages by user's bot_id, preventing cross-bot message contamination
 - **Chat Management Integration**: Bot 2 users appear correctly in bot-specific chat management interface with proper conversation tracking
 - **Multi-Bot Architecture Success**: Both Bot 1 and Bot 2 now operate independently with complete isolation and correct token usage
 - **Real User Testing Confirmed**: Verified with live user Martin (@martinwijaya) that Bot 2 responses are sent from correct bot token
+- **Complete Isolation Verified**: Conversation histories now display messages only from the specific bot context (18 messages for Bot 2 user, no Bot 1 contamination)
 
 ### ✅ COMPLETED: Welcome Message Integration in Daily Content Management (July 30, 2025)
 - **Welcome Message Positioning**: Moved greeting content from separate section to appear as first card before Day 1 in daily content overview

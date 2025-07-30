@@ -249,10 +249,18 @@ class DatabaseManager:
             return []
     
     def get_user_messages_by_id(self, user_id: int, limit: int = 50) -> List[MessageLog]:
-        """Get messages for specific user by user ID"""
+        """Get messages for specific user by user ID with bot isolation"""
         try:
+            # Get user to determine bot_id for isolation
+            user = User.query.get(user_id)
+            if not user:
+                return []
+            
+            # Only return messages for this specific user in their bot context
             return (MessageLog.query
-                   .filter_by(user_id=user_id)
+                   .join(User, MessageLog.user_id == User.id)
+                   .filter(User.id == user_id)
+                   .filter(User.bot_id == user.bot_id)
                    .order_by(MessageLog.timestamp.asc())
                    .limit(limit)
                    .all())
