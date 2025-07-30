@@ -117,8 +117,8 @@ class ContentScheduler:
                 
                 # Get user to determine bot_id for service selection
                 user = self.db.get_user_by_phone(phone_number)
-                if user and user.bot_id == 2:
-                    # Use Bot 2's Telegram service
+                if user and user.bot_id and user.bot_id != 1:
+                    # Use bot-specific Telegram service for non-default bots
                     from main import get_telegram_service_for_bot
                     telegram_service = get_telegram_service_for_bot(user.bot_id)
                 else:
