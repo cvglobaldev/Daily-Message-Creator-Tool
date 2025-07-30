@@ -84,14 +84,14 @@
                         <div class="d-flex align-items-center gap-3">
                             <div class="form-group mb-0">
                                 <label for="journeyDays" class="form-label mb-1 small">Journey Length:</label>
-                                <select class="form-select form-select-sm" id="journeyDays" onchange="updateJourneyLength()">
+                                <select class="form-select form-select-sm" id="journeyDays">
                                     <option value="10">10 Days</option>
                                     <option value="30" selected>30 Days</option>
                                     <option value="60">60 Days</option>
                                     <option value="90">90 Days</option>
                                 </select>
                             </div>
-                            <button class="btn cv-btn-primary" onclick="addNewDay()">
+                            <button class="btn cv-btn-primary" id="addNewDayBtn">
                                 <i class="fas fa-plus me-1"></i>Add Day
                             </button>
                         </div>
@@ -135,7 +135,7 @@
                                 <label for="mediaType" class="form-label">
                                     <i class="fas fa-photo-video me-1"></i>Media Type
                                 </label>
-                                <select class="form-select" id="mediaType" onchange="toggleMediaSections()">
+                                <select class="form-select" id="mediaType">
                                     <option value="text">📄 Text Only</option>
                                     <option value="image">🖼️ Image</option>
                                     <option value="video">🎥 Video Upload</option>
@@ -150,7 +150,7 @@
                                         <i class="fas fa-image me-2"></i>Image Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="imageFile" accept="image/*" onchange="updatePreview()">
+                                        <input type="file" class="form-control" id="imageFile" accept="image/*">
                                         <div class="form-text">Supported: JPG, PNG, GIF (Max 16MB)</div>
                                         <div id="imagePreview" class="mt-2"></div>
                                     </div>
@@ -164,7 +164,7 @@
                                         <i class="fas fa-video me-2"></i>Video Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="videoFile" accept="video/*" onchange="updatePreview()">
+                                        <input type="file" class="form-control" id="videoFile" accept="video/*">
                                         <div class="form-text">Supported: MP4, MOV, AVI, MKV, WebM (Max 200MB)</div>
                                         <div id="videoPreview" class="mt-2"></div>
                                     </div>
@@ -178,7 +178,7 @@
                                         <i class="fas fa-volume-up me-2"></i>Audio Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="audioFile" accept="audio/*" onchange="updatePreview()">
+                                        <input type="file" class="form-control" id="audioFile" accept="audio/*">
                                         <div class="form-text">Supported: MP3, WAV, OGG, M4A (Max 16MB)</div>
                                         <div id="audioPreview" class="mt-2"></div>
                                     </div>
@@ -259,10 +259,10 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger me-auto" id="deleteButton" onclick="deleteContent()" style="display: none;">
+                        <button type="button" class="btn btn-danger me-auto" id="deleteButton" style="display: none;">
                             <i class="fas fa-trash me-1"></i>Delete
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="saveContent()">
+                        <button type="button" class="btn btn-primary" id="saveContentBtn">
                             <i class="fas fa-save me-1"></i>Save Content
                         </button>
                     </div>
@@ -299,6 +299,33 @@
             document.getElementById('mediaType').addEventListener('change', function() {
                 toggleMediaSections();
                 updatePreview();
+            });
+            
+            // Add event listeners for journey days selector
+            document.getElementById('journeyDays').addEventListener('change', updateJourneyLength);
+            
+            // Add event listeners for buttons
+            document.getElementById('addNewDayBtn').addEventListener('click', addNewDay);
+            document.getElementById('saveContentBtn').addEventListener('click', saveContent);
+            document.getElementById('deleteButton').addEventListener('click', deleteContent);
+            
+            // Add event listeners for file inputs
+            document.getElementById('imageFile').addEventListener('change', updatePreview);
+            document.getElementById('videoFile').addEventListener('change', updatePreview);
+            document.getElementById('audioFile').addEventListener('change', updatePreview);
+            
+            // Add event delegation for card clicks
+            document.getElementById('daysOverview').addEventListener('click', function(e) {
+                const card = e.target.closest('[data-action]');
+                if (card) {
+                    const action = card.dataset.action;
+                    if (action === 'edit-greeting') {
+                        editGreeting();
+                    } else if (action === 'edit-day') {
+                        const dayNumber = parseInt(card.dataset.day);
+                        editDay(dayNumber);
+                    }
+                }
             });
         });
 
@@ -416,7 +443,7 @@ Day 1 content will arrive in 10 seconds!`;
             const hasGreeting = greetingContent && greetingContent.content;
             welcomeCard.innerHTML = `
                 <div class="card day-card h-100 ${hasGreeting ? 'border-primary' : 'border-secondary'}" 
-                     onclick="editGreeting()" style="cursor: pointer; position: relative;">
+                     data-action="edit-greeting" style="cursor: pointer; position: relative;">
                     <div class="content-status">
                         ${hasGreeting ? 
                             '<span class="badge bg-primary"><i class="fas fa-handshake"></i></span>' : 
@@ -465,7 +492,7 @@ Day 1 content will arrive in 10 seconds!`;
                 card.className = 'col-md-3 col-sm-4 col-6 mb-3';
                 card.innerHTML = `
                     <div class="card day-card h-100 ${hasContent ? 'border-success' : 'border-secondary'}" 
-                         onclick="editDay(${day})" style="cursor: pointer; position: relative;">
+                         data-action="edit-day" data-day="${day}" style="cursor: pointer; position: relative;">
                         <div class="content-status">
                             ${hasContent ? 
                                 `<span class="badge ${isActive ? 'bg-success' : 'bg-warning'}">
