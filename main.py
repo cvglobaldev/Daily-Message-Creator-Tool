@@ -62,6 +62,21 @@ scheduler = ContentScheduler(whatsapp_service, telegram_service, db_manager)
 # Global flag to ensure scheduler starts only once
 scheduler_started = False
 
+# Cache for bot-specific services
+bot_telegram_services = {}
+
+def get_telegram_service_for_bot(bot_id):
+    """Get bot-specific Telegram service"""
+    if bot_id not in bot_telegram_services:
+        # Get bot configuration from database
+        bot = Bot.query.get(bot_id)
+        if bot and bot.telegram_bot_token:
+            bot_telegram_services[bot_id] = TelegramService(bot.telegram_bot_token)
+        else:
+            # Fallback to default service
+            bot_telegram_services[bot_id] = telegram_service
+    return bot_telegram_services[bot_id]
+
 def ensure_scheduler_running():
     """Ensure the scheduler is running (called on first request)"""
     global scheduler_started
@@ -1174,6 +1189,19 @@ def test_chatbot_response():
         return jsonify({'success': True, 'response': response})
     except Exception as e:
         logger.error(f"Error testing response: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/test-scheduler-user', methods=['POST'])
+def test_scheduler_user():
+    """Test content delivery for a specific user"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        
+        success = scheduler.send_content_to_user(phone_number)
+        return jsonify({'success': success, 'message': f'Content delivery attempted for {phone_number}'})
+    except Exception as e:
+        logger.error(f"Error testing scheduler: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Bot Management Routes

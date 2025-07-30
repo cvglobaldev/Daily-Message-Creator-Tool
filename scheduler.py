@@ -109,21 +109,31 @@ class ContentScheduler:
             if reflection_question:
                 message += f"\n\n💭 Reflection Question:\n{reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
             
-            # Determine platform and service based on phone_number
+            # Determine platform and service based on phone_number and user's bot_id
             if phone_number.startswith('tg_'):
-                # Telegram user
+                # Telegram user - get bot-specific service
                 platform = "telegram"
                 chat_id = phone_number[3:]  # Remove 'tg_' prefix
                 
+                # Get user to determine bot_id for service selection
+                user = self.db.get_user_by_phone(phone_number)
+                if user and user.bot_id == 2:
+                    # Use Bot 2's Telegram service
+                    from main import get_telegram_service_for_bot
+                    telegram_service = get_telegram_service_for_bot(user.bot_id)
+                else:
+                    # Use Bot 1's service (default)
+                    telegram_service = self.telegram_service
+                
                 if media_type == 'text' or not media_url:
-                    return self.telegram_service.send_message(chat_id, message)
+                    return telegram_service.send_message(chat_id, message)
                 elif media_type in ['image', 'video', 'audio']:
                     # For Telegram, send media first, then text content
                     media_sent = False
                     if media_url:
                         if media_type == 'image':
                             # Send photo via Telegram API first
-                            media_sent = self.telegram_service.send_photo(chat_id, media_url)
+                            media_sent = telegram_service.send_photo(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Photo sent to {chat_id}, success: {media_sent}")
                             if not media_sent:
                                 # If photo failed (likely chat not found), mark user as inactive
@@ -134,11 +144,11 @@ class ContentScheduler:
                                     self.db.db.session.commit()
                         elif media_type == 'video':
                             # Send video via Telegram API first
-                            media_sent = self.telegram_service.send_video(chat_id, media_url)
+                            media_sent = telegram_service.send_video(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Video sent to {chat_id}, success: {media_sent}")
                         elif media_type == 'audio':
                             # Send audio via Telegram API first
-                            media_sent = self.telegram_service.send_audio(chat_id, media_url)
+                            media_sent = telegram_service.send_audio(chat_id, media_url)
                             logger.info(f"🔴 TELEGRAM: Audio sent to {chat_id}, success: {media_sent}")
                         else:
                             # For other media types, log but don't implement yet
@@ -147,13 +157,13 @@ class ContentScheduler:
                     # Now send text content after media
                     if media_sent:
                         time.sleep(1)
-                        text_sent = self.telegram_service.send_message(chat_id, message)
+                        text_sent = telegram_service.send_message(chat_id, message)
                         return text_sent
                     else:
                         # If media failed, still send text
-                        return self.telegram_service.send_message(chat_id, message)
+                        return telegram_service.send_message(chat_id, message)
                 else:
-                    return self.telegram_service.send_message(chat_id, message)
+                    return telegram_service.send_message(chat_id, message)
             else:
                 # WhatsApp user (default)
                 if media_type == 'text' or not media_url:
