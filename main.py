@@ -126,7 +126,8 @@ def dashboard():
         return f"Dashboard error: {e}", 500
 
 @app.route('/telegram', methods=['POST'])
-def telegram_webhook():
+@app.route('/telegram/<int:bot_id>', methods=['POST'])
+def telegram_webhook(bot_id=1):
     """Handle incoming Telegram messages"""
     try:
         data = request.get_json()
@@ -158,7 +159,7 @@ def telegram_webhook():
                 
                 # Process the message with enhanced user data
                 process_incoming_message(phone_number, message_text, platform="telegram", 
-                                       user_data=user_info, request_ip=client_ip)
+                                       user_data=user_info, request_ip=client_ip, bot_id=bot_id)
         
         # Handle callback queries from inline keyboards (2025 feature)
         elif 'callback_query' in data:
@@ -183,7 +184,7 @@ def telegram_webhook():
                     
                     # Process as regular message
                     process_incoming_message(phone_number, reply_text, platform="telegram", 
-                                           user_data=user_info, request_ip=client_ip)
+                                           user_data=user_info, request_ip=client_ip, bot_id=bot_id)
                     
                     # Answer the callback query
                     telegram_service.answer_callback_query(callback_query_id, "Thank you for your response!")
@@ -221,7 +222,7 @@ def whatsapp_webhook():
         logger.error(f"Error processing WhatsApp webhook: {e}")
         return jsonify({"error": str(e)}), 500
 
-def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None):
+def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Process incoming message from user"""
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
@@ -237,28 +238,28 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         # Handle commands
         if message_lower == 'start' or message_lower == '/start':
-            handle_start_command(phone_number, platform, user_data, request_ip)
+            handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
             return
         
         elif message_lower == 'stop' or message_lower == '/stop':
-            handle_stop_command(phone_number, platform)
+            handle_stop_command(phone_number, platform, bot_id)
             return
         
         elif message_lower == 'help' or message_lower == '/help':
-            handle_help_command(phone_number, platform)
+            handle_help_command(phone_number, platform, bot_id)
             return
         
         elif message_lower == 'human' or message_lower == '/human':
-            handle_human_command(phone_number, platform)
+            handle_human_command(phone_number, platform, bot_id)
             return
         
         # Check for human handoff triggers
         if any(keyword in message_lower for keyword in HUMAN_HANDOFF_KEYWORDS):
-            handle_human_handoff(phone_number, message_text, platform)
+            handle_human_handoff(phone_number, message_text, platform, bot_id)
             return
         
         # Handle regular response (likely to a reflection question)
-        handle_reflection_response(phone_number, message_text, platform)
+        handle_reflection_response(phone_number, message_text, platform, bot_id)
         
     except Exception as e:
         logger.error(f"Error processing message from {phone_number}: {e}")
@@ -301,7 +302,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
         logger.error(f"Error sending message to {platform}: {e}")
         return False
 
-def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None):
+def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Handle START command - onboard new user"""
     try:
         logger.info(f"Processing START command for {phone_number} on {platform}")
@@ -309,24 +310,6 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         existing_user = db_manager.get_user_by_phone(phone_number)
         
         if existing_user and existing_user.status == 'active':
-            # Determine bot_id for restart as well
-            bot_id = 1  # Default bot
-            if platform == "telegram":
-                # Find the active bot for Telegram platform
-                active_telegram_bot = Bot.query.filter(
-                    Bot.status == 'active',
-                    Bot.telegram_token.isnot(None)
-                ).first()
-                if active_telegram_bot:
-                    bot_id = active_telegram_bot.id
-            elif platform == "whatsapp":
-                # Find the active bot for WhatsApp platform  
-                active_whatsapp_bot = Bot.query.filter(
-                    Bot.status == 'active',
-                    Bot.whatsapp_access_token.isnot(None)
-                ).first()
-                if active_whatsapp_bot:
-                    bot_id = active_whatsapp_bot.id
                     
             # Allow restart - reset to Day 1 and update with enhanced user data
             update_kwargs = {'current_day': 1, 'join_date': datetime.now(), 'bot_id': bot_id}
@@ -375,24 +358,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             logger.info(f"User {phone_number} restarted journey from Day 1")
             return
         
-        # Determine bot_id based on platform configuration
-        bot_id = 1  # Default bot
-        if platform == "telegram":
-            # Find the active bot for Telegram platform
-            active_telegram_bot = Bot.query.filter(
-                Bot.status == 'active',
-                Bot.telegram_token.isnot(None)
-            ).first()
-            if active_telegram_bot:
-                bot_id = active_telegram_bot.id
-        elif platform == "whatsapp":
-            # Find the active bot for WhatsApp platform  
-            active_whatsapp_bot = Bot.query.filter(
-                Bot.status == 'active',
-                Bot.whatsapp_access_token.isnot(None)
-            ).first()
-            if active_whatsapp_bot:
-                bot_id = active_whatsapp_bot.id
+        # bot_id is already provided from the webhook routing
 
         # Create or reactivate user
         if existing_user:
@@ -465,7 +431,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             "Sorry, there was an error setting up your journey. Please try again."
         )
 
-def handle_stop_command(phone_number: str, platform: str = "whatsapp"):
+def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle STOP command - deactivate user"""
     try:
         user = db_manager.get_user_by_phone(phone_number)
@@ -484,7 +450,7 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp"):
     except Exception as e:
         logger.error(f"Error handling STOP command for {phone_number}: {e}")
 
-def handle_help_command(phone_number: str, platform: str = "whatsapp"):
+def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HELP command"""
     commands_prefix = "/" if platform == "telegram" else ""
     help_message = ("📖 Faith Journey Help\n\n"
@@ -499,13 +465,16 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp"):
     
     send_message_to_platform(phone_number, platform, help_message)
 
-def handle_human_command(phone_number: str, platform: str = "whatsapp"):
+def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HUMAN command - direct human chat request"""
     try:
-        # Get or create user
+        # Get or create user with bot_id
         user = db_manager.get_user_by_phone(phone_number)
         if not user:
-            user = db_manager.create_user(phone_number, status='active', current_day=1)
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Log the human command for chat management visibility
         db_manager.log_message(
@@ -536,13 +505,16 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp"):
             "Sorry, there was an error connecting you with a human. Please try again or contact us directly."
         )
 
-def handle_human_handoff(phone_number: str, message_text: str, platform: str = "whatsapp"):
+def handle_human_handoff(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle messages that require human intervention"""
     try:
-        # Get or create user
+        # Get or create user with bot_id
         user = db_manager.get_user_by_phone(phone_number)
         if not user:
-            user = db_manager.create_user(phone_number)
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Log the handoff request
         db_manager.log_message(
@@ -565,16 +537,19 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
-def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp"):
+def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle user's reflection response with contextual AI response"""
     try:
         # Analyze the response with Gemini
         analysis = gemini_service.analyze_response(message_text)
         
-        # Get or create user
+        # Get or create user with bot_id
         user = db_manager.get_user_by_phone(phone_number)
         if not user:
-            user = db_manager.create_user(phone_number)
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Log the response
         db_manager.log_message(
