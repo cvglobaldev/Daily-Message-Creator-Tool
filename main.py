@@ -610,7 +610,7 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
         
         # Get current day content for contextual response
         current_day = user.current_day - 1  # User was advanced after receiving content, so subtract 1 for the content they just reflected on
-        content = db_manager.get_content_by_day(current_day) if current_day > 0 else None
+        content = db_manager.get_content_by_day(current_day, bot_id=user.bot_id) if current_day > 0 else None
         
         if content:
             # Generate contextual response based on current day's content
