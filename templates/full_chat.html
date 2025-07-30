@@ -299,6 +299,15 @@
                                             {% for tag in message.llm_tags %}
                                                 <span class="badge bg-secondary tag-badge">{{ tag }}</span>
                                             {% endfor %}
+                                            <button class="btn btn-xs btn-outline-light ms-2" onclick="editMessageTags({{ message.id }}, {{ message.llm_tags|safe }})" style="font-size: 0.6rem; padding: 1px 4px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <div class="message-tags mt-2">
+                                            <button class="btn btn-xs btn-outline-secondary" onclick="editMessageTags({{ message.id }}, [])" style="font-size: 0.6rem; padding: 1px 4px;">
+                                                <i class="fas fa-tag"></i> Add Tags
+                                            </button>
                                         </div>
                                     {% endif %}
                                     {% if message.is_human_handoff %}
@@ -338,17 +347,85 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Add Tags:</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="ADMIN_MESSAGE" id="tag1">
-                                <label class="form-check-label" for="tag1">Admin Message</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="small text-primary">Faith Journey Milestones:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Introduction to Jesus (ITJ)" id="tag_itj">
+                                        <label class="form-check-label" for="tag_itj">Introduction to Jesus (ITJ)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Gospel Presentation" id="tag_gospel">
+                                        <label class="form-check-label" for="tag_gospel">Gospel Presentation</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Prayer" id="tag_prayer">
+                                        <label class="form-check-label" for="tag_prayer">Prayer</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Bible Exposure" id="tag_bible_exposure">
+                                        <label class="form-check-label" for="tag_bible_exposure">Bible Exposure</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Bible Engagement" id="tag_bible_engagement">
+                                        <label class="form-check-label" for="tag_bible_engagement">Bible Engagement</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="small text-success">Advanced Milestones:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Christian Learning" id="tag_christian_learning">
+                                        <label class="form-check-label" for="tag_christian_learning">Christian Learning</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Salvation Prayer" id="tag_salvation">
+                                        <label class="form-check-label" for="tag_salvation">Salvation Prayer</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Holy Spirit Empowerment" id="tag_holy_spirit">
+                                        <label class="form-check-label" for="tag_holy_spirit">Holy Spirit Empowerment</label>
+                                    </div>
+                                    <h6 class="small text-warning mt-3">Status Tags:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Human" id="tag_human">
+                                        <label class="form-check-label" for="tag_human">Human</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Blocked" id="tag_blocked">
+                                        <label class="form-check-label" for="tag_blocked">Blocked</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Already in church" id="tag_church">
+                                        <label class="form-check-label" for="tag_church">Already in church</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Not connected" id="tag_not_connected">
+                                        <label class="form-check-label" for="tag_not_connected">Not connected</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Not genuine" id="tag_not_genuine">
+                                        <label class="form-check-label" for="tag_not_genuine">Not genuine</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="No response" id="tag_no_response">
+                                        <label class="form-check-label" for="tag_no_response">No response</label>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="HUMAN_RESPONSE" id="tag2">
-                                <label class="form-check-label" for="tag2">Human Response</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="SUPPORT" id="tag3">
-                                <label class="form-check-label" for="tag3">Support</label>
+                            <div class="mt-3">
+                                <h6 class="small text-info">Admin Tags:</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="ADMIN_MESSAGE" id="tag_admin">
+                                    <label class="form-check-label" for="tag_admin">Admin Message</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="HUMAN_RESPONSE" id="tag_human_response">
+                                    <label class="form-check-label" for="tag_human_response">Human Response</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="SUPPORT" id="tag_support">
+                                    <label class="form-check-label" for="tag_support">Support</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -419,6 +496,156 @@
 
         function refreshChat() {
             location.reload();
+        }
+
+        // Edit message tags functionality
+        function editMessageTags(messageId, currentTags) {
+            // Create modal for tag editing
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Message Tags</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary">Faith Journey Milestones:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Introduction to Jesus (ITJ)" id="edit_tag_itj">
+                                        <label class="form-check-label" for="edit_tag_itj">Introduction to Jesus (ITJ)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Gospel Presentation" id="edit_tag_gospel">
+                                        <label class="form-check-label" for="edit_tag_gospel">Gospel Presentation</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Prayer" id="edit_tag_prayer">
+                                        <label class="form-check-label" for="edit_tag_prayer">Prayer</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Bible Exposure" id="edit_tag_bible_exposure">
+                                        <label class="form-check-label" for="edit_tag_bible_exposure">Bible Exposure</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Bible Engagement" id="edit_tag_bible_engagement">
+                                        <label class="form-check-label" for="edit_tag_bible_engagement">Bible Engagement</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Christian Learning" id="edit_tag_christian_learning">
+                                        <label class="form-check-label" for="edit_tag_christian_learning">Christian Learning</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Salvation Prayer" id="edit_tag_salvation">
+                                        <label class="form-check-label" for="edit_tag_salvation">Salvation Prayer</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Holy Spirit Empowerment" id="edit_tag_holy_spirit">
+                                        <label class="form-check-label" for="edit_tag_holy_spirit">Holy Spirit Empowerment</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">Status Tags:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Human" id="edit_tag_human">
+                                        <label class="form-check-label" for="edit_tag_human">Human</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Blocked" id="edit_tag_blocked">
+                                        <label class="form-check-label" for="edit_tag_blocked">Blocked</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Already in church" id="edit_tag_church">
+                                        <label class="form-check-label" for="edit_tag_church">Already in church</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Not connected" id="edit_tag_not_connected">
+                                        <label class="form-check-label" for="edit_tag_not_connected">Not connected</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="Not genuine" id="edit_tag_not_genuine">
+                                        <label class="form-check-label" for="edit_tag_not_genuine">Not genuine</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="No response" id="edit_tag_no_response">
+                                        <label class="form-check-label" for="edit_tag_no_response">No response</label>
+                                    </div>
+                                    <h6 class="text-info mt-3">Admin Tags:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="ADMIN_MESSAGE" id="edit_tag_admin">
+                                        <label class="form-check-label" for="edit_tag_admin">Admin Message</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="HUMAN_RESPONSE" id="edit_tag_human_response">
+                                        <label class="form-check-label" for="edit_tag_human_response">Human Response</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input tag-checkbox" type="checkbox" value="SUPPORT" id="edit_tag_support">
+                                        <label class="form-check-label" for="edit_tag_support">Support</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveMessageTags(${messageId})">Save Tags</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Pre-check current tags
+            if (currentTags && Array.isArray(currentTags)) {
+                currentTags.forEach(tag => {
+                    const checkbox = modal.querySelector(`input[value="${tag}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+            
+            // Show modal
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+            
+            // Remove modal from DOM when hidden
+            modal.addEventListener('hidden.bs.modal', function() {
+                modal.remove();
+            });
+        }
+
+        async function saveMessageTags(messageId) {
+            const modal = document.querySelector('.modal.show');
+            const selectedTags = Array.from(modal.querySelectorAll('.tag-checkbox:checked'))
+                                     .map(cb => cb.value);
+
+            try {
+                const response = await fetch('/api/update-message-tags', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message_id: messageId,
+                        tags: selectedTags
+                    }),
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Close modal and refresh page to show updated tags
+                    bootstrap.Modal.getInstance(modal).hide();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    alert('Error updating tags: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating tags');
+            }
         }
     </script>
 </body>
