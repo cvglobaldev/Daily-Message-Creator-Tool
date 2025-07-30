@@ -773,7 +773,6 @@ Day 1 content will arrive in 10 seconds!`;
             formData.append('is_active', document.getElementById('isActive').checked);
             
             // Add content_type for greeting content
-            const isGreeting = parseInt(dayNumber) === 0;
             formData.append('content_type', isGreeting ? 'greeting' : 'daily');
             
             // Add bot_id if this is bot-specific content management
