@@ -321,11 +321,10 @@ def get_telegram_service_for_bot(bot_id: int, phone_number: str = None) -> 'Tele
                 bot_id = 1  # Default to Bot 1
         
         if bot_id == 2:
-            # Bot 2 - Create service with Bot 2's token  
-            # For now, return Bot 1 service since we need to configure bot-specific services
-            # TODO: Implement proper bot-specific Telegram services
-            logger.warning(f"Using Bot 1 Telegram service for Bot 2 - bot-specific messaging not yet implemented")
-            return telegram_service
+            # Bot 2 - Create service with Bot 2's token
+            from services import TelegramService
+            bot2_token = "8342973377:AAF3pdo5YH6AkBosijP0G7Rct542_4GlEu4"
+            return TelegramService(bot2_token)
         else:
             # Bot 1 - Use global service
             return telegram_service

@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class TelegramService:
     """Service for Telegram Bot API integration"""
     
-    def __init__(self):
-        self.bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    def __init__(self, bot_token=None):
+        self.bot_token = bot_token or os.environ.get("TELEGRAM_BOT_TOKEN", "")
         self.api_base_url = f"https://api.telegram.org/bot{self.bot_token}"
         
         # For development, we'll simulate message sending

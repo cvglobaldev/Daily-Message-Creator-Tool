@@ -102,11 +102,14 @@ Preferred communication style: Simple, everyday language.
 - **Critical Webhook Routing Issue Resolved**: Fixed Bot 2 webhook routing so messages sent to Bot 2 are properly processed with correct bot_id assignment
 - **Bot-Specific Webhook Endpoints**: Implemented dedicated webhook endpoints (/telegram for Bot 1, /telegram/2 for Bot 2) with proper message routing
 - **Handler Function Updates**: Modified all message handler functions (handle_start_command, handle_reflection_response, etc.) to accept and use bot_id parameter correctly
+- **Bot-Specific Messaging Services**: Enhanced TelegramService class to accept custom bot tokens, enabling Bot 2 to send responses using its own token instead of Bot 1's
 - **User Isolation Verification**: Confirmed Bot 2 users are properly isolated from Bot 1 users in database and chat management
 - **Webhook Configuration**: Set up proper webhook URL (https://smart-budget-cvglobaldev.replit.app/telegram/2) for Bot 2's Telegram token
 - **Message Processing**: Verified Bot 2 receives /start commands, creates users with bot_id=2, and processes AI analysis correctly
+- **Response Token Fix**: Bot 2 users now receive responses from Bot 2's token (8342973377:AAF3pdo5YH6AkBosijP0G7Rct542_4GlEu4) instead of Bot 1's token
 - **Chat Management Integration**: Bot 2 users appear correctly in bot-specific chat management interface with proper conversation tracking
-- **Multi-Bot Architecture Success**: Both Bot 1 (13 users) and Bot 2 (4 users) now operate independently with complete isolation
+- **Multi-Bot Architecture Success**: Both Bot 1 and Bot 2 now operate independently with complete isolation and correct token usage
+- **Real User Testing Confirmed**: Verified with live user Martin (@martinwijaya) that Bot 2 responses are sent from correct bot token
 
 ### ✅ COMPLETED: Welcome Message Integration in Daily Content Management (July 30, 2025)
 - **Welcome Message Positioning**: Moved greeting content from separate section to appear as first card before Day 1 in daily content overview
