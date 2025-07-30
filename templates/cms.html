@@ -69,29 +69,7 @@
     </nav>
 
     <div class="container">
-        <!-- Greeting/Welcome Message Section -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="cv-section-header">
-                    <h3><i class="fas fa-hand-wave me-3 cv-text-primary"></i>Welcome Message{% if bot %} - {{ bot.name }}{% endif %}</h3>
-                    <p class="text-muted">Configure the greeting message that users receive when they start their faith journey</p>
-                </div>
-                <div class="card cv-card">
-                    <div class="card-header cv-bg-secondary d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 cv-text-primary"><i class="fas fa-comments me-2"></i>Greeting Content</h6>
-                        <button class="btn cv-btn-primary btn-sm" onclick="editGreeting()">
-                            <i class="fas fa-edit me-1"></i>Edit Welcome Message
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div id="greetingContent" class="text-muted">
-                            <!-- Greeting content will be loaded here -->
-                            Loading greeting content...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Content Overview -->
         <div class="row mb-4">
@@ -297,6 +275,7 @@
     <script>
         let contentModal;
         let allContent = [];
+        let greetingContent = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             contentModal = new bootstrap.Modal(document.getElementById('contentModal'));
@@ -352,35 +331,13 @@
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    const greetingContainer = document.getElementById('greetingContent');
-                    
-                    if (data.length > 0) {
-                        const greeting = data[0];
-                        greetingContainer.innerHTML = `
-                            <div class="content-preview">
-                                <h6 class="mb-2"><i class="fas fa-handshake me-2 cv-text-primary"></i>${greeting.title || 'Welcome Message'}</h6>
-                                <p class="mb-2">${greeting.content.replace(/\n/g, '<br>')}</p>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i>Last updated: ${new Date(greeting.created_at).toLocaleDateString()}
-                                </small>
-                            </div>
-                        `;
-                    } else {
-                        greetingContainer.innerHTML = `
-                            <div class="text-center text-muted py-3">
-                                <i class="fas fa-plus-circle fa-2x mb-2"></i>
-                                <p>No welcome message configured yet.</p>
-                                <button class="btn cv-btn-primary btn-sm" onclick="editGreeting()">
-                                    <i class="fas fa-plus me-1"></i>Create Welcome Message
-                                </button>
-                            </div>
-                        `;
-                    }
+                    greetingContent = data.length > 0 ? data[0] : null;
+                    displayDaysOverview(); // Refresh the display to include greeting
                 })
                 .catch(error => {
                     console.error('Error loading greeting content:', error);
-                    document.getElementById('greetingContent').innerHTML = 
-                        '<div class="alert alert-danger">Error loading greeting content</div>';
+                    greetingContent = null;
+                    displayDaysOverview(); // Refresh even on error
                 });
         }
 
@@ -442,6 +399,35 @@ Day 1 content will arrive in 10 seconds!`;
         function displayDaysOverview() {
             const container = document.getElementById('daysOverview');
             container.innerHTML = '';
+            
+            // First, add the welcome message card
+            const welcomeCard = document.createElement('div');
+            welcomeCard.className = 'col-md-3 col-sm-4 col-6 mb-3';
+            const hasGreeting = greetingContent && greetingContent.content;
+            welcomeCard.innerHTML = `
+                <div class="card day-card h-100 ${hasGreeting ? 'border-primary' : 'border-secondary'}" 
+                     onclick="editGreeting()" style="cursor: pointer; position: relative;">
+                    <div class="content-status">
+                        ${hasGreeting ? 
+                            '<span class="badge bg-primary"><i class="fas fa-handshake"></i></span>' : 
+                            '<span class="badge bg-secondary"><i class="fas fa-plus"></i></span>'
+                        }
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title">
+                            👋 Welcome
+                        </h6>
+                        <p class="card-text flex-grow-1 small">
+                            ${hasGreeting ? 
+                                `<strong>${greetingContent.title || 'Welcome Message'}</strong><br>
+                                 <span class="text-muted">${(greetingContent.content || '').substring(0, 35)}...</span>` : 
+                                '<span class="text-muted">Click to add welcome message</span>'
+                            }
+                        </p>
+                    </div>
+                </div>
+            `;
+            container.appendChild(welcomeCard);
             
             // Create day cards based on selected journey length
             for (let day = 1; day <= currentJourneyDays; day++) {

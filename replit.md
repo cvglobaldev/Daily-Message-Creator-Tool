@@ -96,6 +96,19 @@ Preferred communication style: Simple, everyday language.
 - **Production Mode**: Requires actual API credentials, sends real messages
 - Environment-based configuration switches between modes automatically
 
+## Recent Changes (July 30, 2025)
+
+### ✅ COMPLETED: Welcome Message Integration in Daily Content Management (July 30, 2025)
+- **Welcome Message Positioning**: Moved greeting content from separate section to appear as first card before Day 1 in daily content overview
+- **Unified Content Interface**: Welcome message now displays as a clickable card within the daily content management section
+- **Visual Consistency**: Welcome card styled with primary border when configured, handshake icon, and same card layout as daily content
+- **JavaScript Integration**: Updated `displayDaysOverview()` function to include greeting content as first card in content grid
+- **Database Integration**: Created default greeting content for Bot 1 with proper content_type='greeting' and day_number=0
+- **API Enhancement**: Added bot-specific greeting endpoint `/api/bots/<bot_id>/greeting` for direct bot greeting access
+- **User Onboarding Update**: Modified `handle_start_command()` to use configurable greeting content instead of hardcoded messages
+- **Scheduler Enhancement**: Updated content retrieval to properly filter by bot_id for multi-bot content isolation
+- **Template Cleanup**: Removed duplicate JavaScript functions and fixed content loading issues in CMS interface
+
 ## Recent Changes (July 29, 2025)
 
 ### ✅ COMPLETED: Bang Kris Indonesian Content Creation (July 29, 2025)
