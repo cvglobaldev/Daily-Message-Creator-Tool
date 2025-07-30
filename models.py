@@ -108,6 +108,11 @@ class Bot(db.Model):
     ai_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="You are a helpful spiritual guide chatbot.")
     journey_duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     
+    # Customizable command messages
+    help_message: Mapped[str] = mapped_column(Text, nullable=False, default="🤝 Available Commands:\n\n📖 START - Begin your faith journey\n⏹️ STOP - Pause the journey\n❓ HELP - Show this help message\n👤 HUMAN - Connect with a human counselor\n\nI'm here to guide you through a meaningful spiritual journey. Feel free to ask questions or share your thoughts anytime!")
+    stop_message: Mapped[str] = mapped_column(Text, nullable=False, default="⏸️ Your faith journey has been paused.\n\nTake your time whenever you're ready to continue. Send START to resume your journey, or HUMAN if you'd like to speak with someone.\n\nRemember, this is your personal space for spiritual exploration. There's no pressure - go at your own pace. 🙏")
+    human_message: Mapped[str] = mapped_column(Text, nullable=False, default="👤 Human Support Requested\n\nI've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.\n\nIn the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝")
+    
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -132,6 +137,9 @@ class Bot(db.Model):
             'telegram_webhook_url': self.telegram_webhook_url,
             'ai_prompt': self.ai_prompt,
             'journey_duration_days': self.journey_duration_days,
+            'help_message': self.help_message,
+            'stop_message': self.stop_message,
+            'human_message': self.human_message,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }

@@ -41,6 +41,23 @@ class CreateBotForm(FlaskForm):
         default=30
     )
     
+    # Customizable command messages
+    help_message = TextAreaField(
+        'Help Command Message',
+        validators=[DataRequired(), Length(min=10, max=1000)],
+        default="🤝 Available Commands:\n\n📖 START - Begin your faith journey\n⏹️ STOP - Pause the journey\n❓ HELP - Show this help message\n👤 HUMAN - Connect with a human counselor\n\nI'm here to guide you through a meaningful spiritual journey. Feel free to ask questions or share your thoughts anytime!"
+    )
+    stop_message = TextAreaField(
+        'Stop Command Message',
+        validators=[DataRequired(), Length(min=10, max=1000)],
+        default="⏸️ Your faith journey has been paused.\n\nTake your time whenever you're ready to continue. Send START to resume your journey, or HUMAN if you'd like to speak with someone.\n\nRemember, this is your personal space for spiritual exploration. There's no pressure - go at your own pace. 🙏"
+    )
+    human_message = TextAreaField(
+        'Human Command Message',
+        validators=[DataRequired(), Length(min=10, max=1000)],
+        default="👤 Human Support Requested\n\nI've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.\n\nIn the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝"
+    )
+    
     submit = SubmitField('Create Bot')
 
 class EditBotForm(FlaskForm):
@@ -72,6 +89,20 @@ class EditBotForm(FlaskForm):
     journey_duration_days = IntegerField(
         'Journey Duration (Days)',
         validators=[DataRequired(), NumberRange(min=1, max=365)]
+    )
+    
+    # Customizable command messages
+    help_message = TextAreaField(
+        'Help Command Message',
+        validators=[DataRequired(), Length(min=10, max=1000)]
+    )
+    stop_message = TextAreaField(
+        'Stop Command Message',
+        validators=[DataRequired(), Length(min=10, max=1000)]
+    )
+    human_message = TextAreaField(
+        'Human Command Message',
+        validators=[DataRequired(), Length(min=10, max=1000)]
     )
     
     # Status

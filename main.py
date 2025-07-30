@@ -484,13 +484,30 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
         if user:
             db_manager.update_user(phone_number, status='inactive')
             
-            message = ("You have been unsubscribed from the Faith Journey. "
-                      "If you'd like to restart your journey, simply send START anytime. "
-                      "Peace be with you. 🙏")
+            # Get bot configuration for custom stop message
+            bot = Bot.query.get(bot_id)
+            if bot and bot.stop_message:
+                message = bot.stop_message
+            else:
+                # Fallback message
+                message = ("You have been unsubscribed from the Faith Journey. "
+                          "If you'd like to restart your journey, simply send START anytime. "
+                          "Peace be with you. 🙏")
         else:
             message = "You weren't subscribed to any journey. Send START to begin your faith journey."
         
         send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+        
+        # Log the stop request
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=f'/stop' if platform == 'telegram' else 'STOP',
+                sentiment='neutral',
+                tags=['STOP']
+            )
+        
         logger.info(f"User {phone_number} unsubscribed")
         
     except Exception as e:
@@ -498,18 +515,48 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
 
 def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HELP command"""
-    commands_prefix = "/" if platform == "telegram" else ""
-    help_message = ("📖 Faith Journey Help\n\n"
-                   "Commands:\n"
-                   f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
-                   f"• {commands_prefix}STOP - Unsubscribe from messages\n"
-                   f"• {commands_prefix}HELP - Show this help message\n"
-                   f"• {commands_prefix}HUMAN - Chat directly with a human\n\n"
-                   "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
-                   "Feel free to share your thoughts - there are no wrong answers!\n\n"
-                   "If you need to speak with someone, just let us know.")
-    
-    send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
+    try:
+        # Get or create user with bot_id
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user(phone_number, bot_id=bot_id)
+        
+        # Get bot configuration for custom help message
+        bot = Bot.query.get(bot_id)
+        if bot and bot.help_message:
+            help_message = bot.help_message
+        else:
+            # Fallback message
+            commands_prefix = "/" if platform == "telegram" else ""
+            help_message = ("📖 Faith Journey Help\n\n"
+                           "Commands:\n"
+                           f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
+                           f"• {commands_prefix}STOP - Unsubscribe from messages\n"
+                           f"• {commands_prefix}HELP - Show this help message\n"
+                           f"• {commands_prefix}HUMAN - Chat directly with a human\n\n"
+                           "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
+                           "Feel free to share your thoughts - there are no wrong answers!\n\n"
+                           "If you need to speak with someone, just let us know.")
+        
+        send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
+        
+        # Log the help request
+        db_manager.log_message(
+            user=user,
+            direction='incoming',
+            raw_text=f'/help' if platform == 'telegram' else 'HELP',
+            sentiment='neutral',
+            tags=['HELP']
+        )
+        
+        logger.info(f"Help command processed for {phone_number}")
+        
+    except Exception as e:
+        logger.error(f"Error handling help command for {phone_number}: {e}")
 
 def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HUMAN command - direct human chat request"""
@@ -533,12 +580,17 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
             confidence=1.0
         )
         
-        # Send response to user
-        response_message = ("🤝 Direct Human Chat Requested\n\n"
-                          "Thank you for reaching out! A member of our team will connect with you shortly. "
-                          "This conversation has been flagged for priority human response.\n\n"
-                          "In the meantime, know that you are valued and your journey matters. "
-                          "Feel free to share what's on your heart. 🙏")
+        # Get bot configuration for custom human message
+        bot = Bot.query.get(bot_id)
+        if bot and bot.human_message:
+            response_message = bot.human_message
+        else:
+            # Fallback message
+            response_message = ("🤝 Direct Human Chat Requested\n\n"
+                              "Thank you for reaching out! A member of our team will connect with you shortly. "
+                              "This conversation has been flagged for priority human response.\n\n"
+                              "In the meantime, know that you are valued and your journey matters. "
+                              "Feel free to share what's on your heart. 🙏")
         
         send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
         
@@ -1244,6 +1296,9 @@ def create_bot():
             bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
+            bot.help_message = form.help_message.data
+            bot.stop_message = form.stop_message.data
+            bot.human_message = form.human_message.data
             
             db.session.add(bot)
             db.session.commit()
@@ -1277,6 +1332,9 @@ def edit_bot(bot_id):
             bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
+            bot.help_message = form.help_message.data
+            bot.stop_message = form.stop_message.data
+            bot.human_message = form.human_message.data
             bot.status = 'active' if form.status.data else 'inactive'
             
             db.session.commit()

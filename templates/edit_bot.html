@@ -180,6 +180,44 @@
                             <div class="form-text">Define how your AI should respond to users. Be specific about tone, approach, and spiritual guidance style.</div>
                         </div>
 
+                        <!-- Command Messages Configuration -->
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-comments me-2 cv-text-primary"></i>Command Messages</h5>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.help_message.label(class="form-label") }}
+                            {{ form.help_message(class="form-control" + (" is-invalid" if form.help_message.errors else ""), rows="4") }}
+                            {% if form.help_message.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.help_message.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Message sent when users type /help or HELP</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.stop_message.label(class="form-label") }}
+                            {{ form.stop_message(class="form-control" + (" is-invalid" if form.stop_message.errors else ""), rows="4") }}
+                            {% if form.stop_message.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.stop_message.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Message sent when users type /stop or STOP</div>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.human_message.label(class="form-label") }}
+                            {{ form.human_message(class="form-control" + (" is-invalid" if form.human_message.errors else ""), rows="4") }}
+                            {% if form.human_message.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.human_message.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Message sent when users type /human or HUMAN</div>
+                        </div>
+
                         <!-- Form Actions -->
                         <div class="d-flex justify-content-between">
                             <a href="/bots" class="btn btn-secondary">
