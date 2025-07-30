@@ -266,12 +266,13 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         # Send error message to user
         send_message_to_platform(
             phone_number, platform,
-            "Sorry, there was an error processing your message. Please try again or type HELP for assistance."
+            "Sorry, there was an error processing your message. Please try again or type HELP for assistance.",
+            bot_id=bot_id
         )
 
 def send_message_to_platform(phone_number: str, platform: str, message: str, 
                            with_quick_replies: bool = False, copy_text: str = "", 
-                           copy_label: str = "Copy Text") -> bool:
+                           copy_label: str = "Copy Text", bot_id: int = None) -> bool:
     """Send message to the appropriate platform with enhanced features"""
     try:
         if platform == "telegram":
@@ -279,19 +280,25 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
             if phone_number.startswith("tg_"):
                 chat_id = phone_number[3:]  # Remove 'tg_' prefix
                 
+                # Get bot-specific Telegram service
+                bot_service = get_telegram_service_for_bot(bot_id, phone_number)
+                if not bot_service:
+                    logger.error(f"No Telegram service available for bot_id {bot_id}")
+                    return False
+                
                 # Enhanced Telegram messaging with 2025 features
                 if copy_text and copy_label:
                     # Send message with copy button for Bible verses or inspirational content
-                    return telegram_service.send_copy_text_message(chat_id, message, copy_text, copy_label)
+                    return bot_service.send_copy_text_message(chat_id, message, copy_text, copy_label)
                 elif with_quick_replies:
                     # Send message with quick reply buttons for common responses
                     quick_replies = [
                         "Tell me more", "I have a question", 
                         "This is helpful", "I need time to think"
                     ]
-                    return telegram_service.send_quick_reply_message(chat_id, message, quick_replies)
+                    return bot_service.send_quick_reply_message(chat_id, message, quick_replies)
                 else:
-                    return telegram_service.send_message(chat_id, message)
+                    return bot_service.send_message(chat_id, message)
             else:
                 logger.error(f"Invalid Telegram chat_id format: {phone_number}")
                 return False
@@ -301,6 +308,30 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
     except Exception as e:
         logger.error(f"Error sending message to {platform}: {e}")
         return False
+
+def get_telegram_service_for_bot(bot_id: int, phone_number: str = None) -> 'TelegramService':
+    """Get the appropriate Telegram service for a bot"""
+    try:
+        if bot_id is None and phone_number:
+            # Get bot_id from user if not provided
+            user = db_manager.get_user_by_phone(phone_number)
+            if user:
+                bot_id = user.bot_id
+            else:
+                bot_id = 1  # Default to Bot 1
+        
+        if bot_id == 2:
+            # Bot 2 - Create service with Bot 2's token  
+            # For now, return Bot 1 service since we need to configure bot-specific services
+            # TODO: Implement proper bot-specific Telegram services
+            logger.warning(f"Using Bot 1 Telegram service for Bot 2 - bot-specific messaging not yet implemented")
+            return telegram_service
+        else:
+            # Bot 1 - Use global service
+            return telegram_service
+    except Exception as e:
+        logger.error(f"Error getting Telegram service for bot {bot_id}: {e}")
+        return telegram_service  # Fallback to Bot 1
 
 def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Handle START command - onboard new user"""
@@ -337,7 +368,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                                   f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
                                   f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
                                   "Day 1 content will arrive in 10 seconds!")
-            send_message_to_platform(phone_number, platform, restart_message)
+            send_message_to_platform(phone_number, platform, restart_message, bot_id=bot_id)
             
             # Log the RESTART command for chat management visibility
             db_manager.log_message(
@@ -401,7 +432,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                               "Day 1 content will arrive in 10 seconds!")
         
         logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
-        send_message_to_platform(phone_number, platform, welcome_message)
+        send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
         
         # Log the START command for chat management visibility
         user = db_manager.get_user_by_phone(phone_number)
@@ -428,7 +459,8 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         logger.error(f"Error handling START command for {phone_number}: {e}")
         send_message_to_platform(
             phone_number, platform,
-            "Sorry, there was an error setting up your journey. Please try again."
+            "Sorry, there was an error setting up your journey. Please try again.",
+            bot_id=bot_id
         )
 
 def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
@@ -444,7 +476,7 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
         else:
             message = "You weren't subscribed to any journey. Send START to begin your faith journey."
         
-        send_message_to_platform(phone_number, platform, message)
+        send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
         logger.info(f"User {phone_number} unsubscribed")
         
     except Exception as e:
@@ -463,7 +495,7 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                    "Feel free to share your thoughts - there are no wrong answers!\n\n"
                    "If you need to speak with someone, just let us know.")
     
-    send_message_to_platform(phone_number, platform, help_message)
+    send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
 
 def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HUMAN command - direct human chat request"""
@@ -494,7 +526,7 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
                           "In the meantime, know that you are valued and your journey matters. "
                           "Feel free to share what's on your heart. 🙏")
         
-        send_message_to_platform(phone_number, platform, response_message)
+        send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
         
         logger.warning(f"HUMAN COMMAND - Direct chat requested by {phone_number} on {platform}")
         
@@ -502,7 +534,8 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
         logger.error(f"Error handling HUMAN command for {phone_number}: {e}")
         send_message_to_platform(
             phone_number, platform,
-            "Sorry, there was an error connecting you with a human. Please try again or contact us directly."
+            "Sorry, there was an error connecting you with a human. Please try again or contact us directly.",
+            bot_id=bot_id
         )
 
 def handle_human_handoff(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
@@ -530,7 +563,7 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
         response_message = ("Thank you for reaching out. A member of our team will contact you shortly. "
                           "In the meantime, know that you are valued and your journey matters. 🙏")
         
-        send_message_to_platform(phone_number, platform, response_message)
+        send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
         
         logger.warning(f"HUMAN HANDOFF requested by {phone_number}: {message_text}")
         
@@ -582,7 +615,7 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
             logger.warning(f"No content found for contextual response to {phone_number}")
         
         # Send the contextual response
-        send_message_to_platform(phone_number, platform, contextual_response)
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
         
         # Log the outgoing contextual response
         db_manager.log_message(
@@ -600,7 +633,7 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
         logger.error(f"Error handling reflection response from {phone_number}: {e}")
         # Still acknowledge the user's response with fallback
         fallback_response = "Thank you for your reflection. Your thoughtfulness is appreciated."
-        send_message_to_platform(phone_number, platform, fallback_response)
+        send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
 
 @app.route('/telegram/setup', methods=['POST'])
 def setup_telegram_webhook():
