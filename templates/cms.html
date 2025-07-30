@@ -303,14 +303,19 @@
         });
 
         function loadAllContent() {
-            let url = '/api/content';
+            let url = '/api/content?content_type=daily';
             {% if bot %}
-            url += '?bot_id={{ bot.id }}';
+            url += '&bot_id={{ bot.id }}';
             {% endif %}
             
             fetch(url)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Content API response status:', response.status);
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Loaded daily content:', data);
+                    console.log('Content count:', data.length);
                     allContent = data;
                     displayDaysOverview();
                 })
@@ -399,6 +404,11 @@ Day 1 content will arrive in 10 seconds!`;
         function displayDaysOverview() {
             const container = document.getElementById('daysOverview');
             container.innerHTML = '';
+            
+            console.log('displayDaysOverview called');
+            console.log('currentJourneyDays:', currentJourneyDays);
+            console.log('allContent length:', allContent.length);
+            console.log('greetingContent:', greetingContent);
             
             // First, add the welcome message card
             const welcomeCard = document.createElement('div');
