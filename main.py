@@ -67,15 +67,26 @@ bot_telegram_services = {}
 
 def get_telegram_service_for_bot(bot_id):
     """Get bot-specific Telegram service"""
-    if bot_id not in bot_telegram_services:
-        # Get bot configuration from database
-        bot = Bot.query.get(bot_id)
-        if bot and bot.telegram_bot_token:
-            bot_telegram_services[bot_id] = TelegramService(bot.telegram_bot_token)
+    logger.info(f"🔥 DEBUG: Getting Telegram service for bot_id {bot_id}")
+    try:
+        if bot_id not in bot_telegram_services:
+            with app.app_context():  # Ensure database context
+                # Get bot configuration from database
+                bot = Bot.query.get(bot_id)
+                logger.info(f"🔥 DEBUG: Bot found: {bot.name if bot else 'None'}, has token: {bool(bot and bot.telegram_bot_token)}")
+                if bot and bot.telegram_bot_token:
+                    bot_telegram_services[bot_id] = TelegramService(bot.telegram_bot_token)
+                    logger.info(f"🔥 DEBUG: Created new TelegramService for bot_id {bot_id}")
+                else:
+                    # Fallback to default service
+                    bot_telegram_services[bot_id] = telegram_service
+                    logger.info(f"🔥 DEBUG: Using default TelegramService for bot_id {bot_id}")
         else:
-            # Fallback to default service
-            bot_telegram_services[bot_id] = telegram_service
-    return bot_telegram_services[bot_id]
+            logger.info(f"🔥 DEBUG: Using cached TelegramService for bot_id {bot_id}")
+        return bot_telegram_services[bot_id]
+    except Exception as e:
+        logger.error(f"🔥 ERROR: Failed to get Telegram service for bot_id {bot_id}: {e}")
+        return telegram_service  # Fallback to default
 
 def ensure_scheduler_running():
     """Ensure the scheduler is running (called on first request)"""
@@ -360,7 +371,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                                   f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
                                   f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
                                   f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
-                                  "Day 1 content will arrive in 10 seconds!")
+                                  "Day 1 content will arrive in a few seconds!")
             send_message_to_platform(phone_number, platform, restart_message, bot_id=bot_id)
             
             # Log the RESTART command for chat management visibility
@@ -373,12 +384,42 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                 confidence=1.0
             )
             
-            # Send Day 1 content after 10 second delay
-            def delayed_content():
-                with app.app_context():
-                    time.sleep(10)
-                    scheduler.send_content_to_user(phone_number)
-            threading.Thread(target=delayed_content, daemon=True).start()
+            # Send Day 1 content directly (bypass scheduler for immediate delivery)
+            try:
+                logger.info(f"Attempting direct Day 1 content delivery for restart user {phone_number}")
+                user = db_manager.get_user_by_phone(phone_number)
+                if user and user.bot_id:
+                    # Get Day 1 content for this bot
+                    content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
+                    if content:
+                        # Format the message
+                        message = f"📖 Day 1 - {content.title}\n\n{content.content}"
+                        if content.reflection_question:
+                            message += f"\n\n💭 Reflection Question:\n{content.reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
+                        
+                        # Send directly to the platform
+                        success = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
+                        if success:
+                            logger.info(f"✅ Day 1 content delivered successfully to restart user {phone_number}")
+                            # Advance user to Day 2
+                            db_manager.update_user(phone_number, current_day=2)
+                            # Log the delivery
+                            db_manager.log_message(
+                                user=user,
+                                direction='outgoing',
+                                raw_text=message,
+                                sentiment='positive',
+                                tags=['DAY_1', 'CONTENT_DELIVERY', 'RESTART'],
+                                confidence=1.0
+                            )
+                        else:
+                            logger.error(f"❌ Failed to send Day 1 content to restart user {phone_number}")
+                    else:
+                        logger.error(f"❌ No Day 1 content found for restart user bot_id {user.bot_id}")
+                else:
+                    logger.error(f"❌ No restart user found for {phone_number}")
+            except Exception as e:
+                logger.error(f"❌ Exception delivering direct content for restart {phone_number}: {e}")
             logger.info(f"User {phone_number} restarted journey from Day 1")
             return
         
@@ -422,7 +463,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                               f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
                               f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
                               f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
-                              "Day 1 content will arrive in 10 seconds!")
+                              "Day 1 content will arrive in a few seconds!")
         
         logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
         send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
@@ -439,12 +480,47 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                 confidence=1.0
             )
         
-        # Send Day 1 content after 10 second delay
-        def delayed_content():
-            with app.app_context():
-                time.sleep(10)
-                scheduler.send_content_to_user(phone_number)
-        threading.Thread(target=delayed_content, daemon=True).start()
+        # Send Day 1 content directly (bypass scheduler for immediate delivery)
+        try:
+            logger.info(f"🔥 DEBUG: Attempting direct Day 1 content delivery for {phone_number}")
+            user = db_manager.get_user_by_phone(phone_number)
+            logger.info(f"🔥 DEBUG: User found: {user.phone_number if user else 'None'}, bot_id: {user.bot_id if user else 'None'}")
+            if user and user.bot_id:
+                # Get Day 1 content for this bot
+                content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
+                logger.info(f"🔥 DEBUG: Content found: {content.title if content else 'None'}")
+                if content:
+                    # Format the message
+                    message = f"📖 Day 1 - {content.title}\n\n{content.content}"
+                    if content.reflection_question:
+                        message += f"\n\n💭 Reflection Question:\n{content.reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
+                    
+                    # Send directly to the platform
+                    logger.info(f"🔥 DEBUG: About to send message to {phone_number} on {platform} with bot_id {user.bot_id}")
+                    logger.info(f"🔥 DEBUG: Message preview: {message[:100]}...")
+                    success = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
+                    logger.info(f"🔥 DEBUG: Message send result: {success}")
+                    if success:
+                        logger.info(f"✅ Day 1 content delivered successfully to {phone_number}")
+                        # Advance user to Day 2
+                        db_manager.update_user(phone_number, current_day=2)
+                        # Log the delivery
+                        db_manager.log_message(
+                            user=user,
+                            direction='outgoing',
+                            raw_text=message,
+                            sentiment='positive',
+                            tags=['DAY_1', 'CONTENT_DELIVERY'],
+                            confidence=1.0
+                        )
+                    else:
+                        logger.error(f"❌ Failed to send Day 1 content to {phone_number}")
+                else:
+                    logger.error(f"❌ No Day 1 content found for bot_id {user.bot_id}")
+            else:
+                logger.error(f"❌ No user found for {phone_number}")
+        except Exception as e:
+            logger.error(f"❌ Exception delivering direct content for {phone_number}: {e}")
         
         logger.info(f"User {phone_number} successfully onboarded")
         
@@ -2231,7 +2307,25 @@ def cms_content_delete(content_id):
     
     return redirect(url_for('cms'))
 
-
+@app.route('/test_day1_delivery', methods=['POST'])
+def test_day1_delivery():
+    """Test endpoint to manually trigger Day 1 content delivery"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        platform = data.get('platform', 'telegram')
+        bot_id = data.get('bot_id', 5)
+        
+        logger.info(f"Manual Day 1 test for {phone_number}, platform: {platform}, bot_id: {bot_id}")
+        success = scheduler.send_content_to_user(phone_number)
+        
+        return jsonify({
+            'success': success,
+            'message': f'Day 1 content delivery {"successful" if success else "failed"} for {phone_number}'
+        })
+    except Exception as e:
+        logger.error(f"Error in test Day 1 delivery: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

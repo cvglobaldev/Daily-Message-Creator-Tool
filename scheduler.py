@@ -117,13 +117,21 @@ class ContentScheduler:
                 
                 # Get user to determine bot_id for service selection
                 user = self.db.get_user_by_phone(phone_number)
-                if user and user.bot_id and user.bot_id != 1:
-                    # Use bot-specific Telegram service for non-default bots
-                    from main import get_telegram_service_for_bot
-                    telegram_service = get_telegram_service_for_bot(user.bot_id)
+                if user and user.bot_id:
+                    # Get bot-specific service by creating it directly from the bot's token
+                    from models import Bot
+                    bot = Bot.query.get(user.bot_id)
+                    if bot and bot.telegram_bot_token:
+                        telegram_service = TelegramService(bot.telegram_bot_token)
+                        logger.info(f"Using bot-specific service for bot_id {user.bot_id}")
+                    else:
+                        # Fallback to default service
+                        telegram_service = self.telegram_service
+                        logger.info(f"Using default service for bot_id {user.bot_id} (no token found)")
                 else:
                     # Use Bot 1's service (default)
                     telegram_service = self.telegram_service
+                    logger.info("Using default service (no user found)")
                 
                 if media_type == 'text' or not media_url:
                     return telegram_service.send_message(chat_id, message)
