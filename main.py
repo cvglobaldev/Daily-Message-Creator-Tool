@@ -1277,6 +1277,40 @@ def bot_management():
         flash(f'Error loading bots: {str(e)}', 'error')
         return redirect('/dashboard')
 
+def setup_telegram_webhook(bot_id, telegram_token):
+    """Automatically setup Telegram webhook for a bot"""
+    try:
+        if not telegram_token:
+            return None, "No Telegram token provided"
+        
+        # Generate bot-specific webhook URL
+        webhook_url = f"https://smart-budget-cvglobaldev.replit.app/telegram/{bot_id}"
+        
+        # Set webhook via Telegram API
+        import requests
+        response = requests.post(
+            f"https://api.telegram.org/bot{telegram_token}/setWebhook",
+            json={"url": webhook_url},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('ok'):
+                logger.info(f"Telegram webhook set successfully for bot {bot_id}: {webhook_url}")
+                return webhook_url, None
+            else:
+                error_msg = result.get('description', 'Unknown error')
+                logger.error(f"Failed to set Telegram webhook for bot {bot_id}: {error_msg}")
+                return None, f"Telegram API error: {error_msg}"
+        else:
+            logger.error(f"HTTP error setting Telegram webhook for bot {bot_id}: {response.status_code}")
+            return None, f"HTTP error: {response.status_code}"
+            
+    except Exception as e:
+        logger.error(f"Exception setting Telegram webhook for bot {bot_id}: {e}")
+        return None, f"Exception: {str(e)}"
+
 @app.route('/bots/create', methods=['GET', 'POST'])
 @login_required
 def create_bot():
@@ -1293,17 +1327,32 @@ def create_bot():
             bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
-            bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data
             bot.human_message = form.human_message.data
             
+            # Save bot first to get the ID
             db.session.add(bot)
             db.session.commit()
             
-            flash(f'Bot "{bot.name}" created successfully!', 'success')
+            # Auto-setup Telegram webhook if Telegram is enabled
+            webhook_messages = []
+            if 'telegram' in (form.platforms.data or []) and bot.telegram_bot_token:
+                webhook_url, error = setup_telegram_webhook(bot.id, bot.telegram_bot_token)
+                if webhook_url:
+                    bot.telegram_webhook_url = webhook_url
+                    db.session.commit()
+                    webhook_messages.append(f"Telegram webhook configured automatically: {webhook_url}")
+                else:
+                    webhook_messages.append(f"Warning: Failed to set Telegram webhook - {error}")
+            
+            success_message = f'Bot "{bot.name}" created successfully!'
+            if webhook_messages:
+                success_message += " " + " ".join(webhook_messages)
+            
+            flash(success_message, 'success')
             return redirect('/bots')
             
         except Exception as e:
@@ -1322,6 +1371,10 @@ def edit_bot(bot_id):
     
     if form.validate_on_submit():
         try:
+            # Store old values to detect changes
+            old_telegram_token = bot.telegram_bot_token
+            old_platforms = bot.platforms
+            
             bot.name = form.name.data
             bot.description = form.description.data
             bot.platforms = form.platforms.data or []
@@ -1329,7 +1382,6 @@ def edit_bot(bot_id):
             bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
-            bot.telegram_webhook_url = form.telegram_webhook_url.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
             bot.help_message = form.help_message.data
@@ -1337,8 +1389,30 @@ def edit_bot(bot_id):
             bot.human_message = form.human_message.data
             bot.status = 'active' if form.status.data else 'inactive'
             
+            # Auto-setup or update Telegram webhook if needed
+            webhook_messages = []
+            telegram_enabled = 'telegram' in (form.platforms.data or [])
+            telegram_token_changed = bot.telegram_bot_token != old_telegram_token
+            telegram_newly_enabled = telegram_enabled and 'telegram' not in (old_platforms or [])
+            
+            if telegram_enabled and bot.telegram_bot_token and (telegram_token_changed or telegram_newly_enabled or not bot.telegram_webhook_url):
+                webhook_url, error = setup_telegram_webhook(bot.id, bot.telegram_bot_token)
+                if webhook_url:
+                    bot.telegram_webhook_url = webhook_url
+                    webhook_messages.append(f"Telegram webhook updated automatically: {webhook_url}")
+                else:
+                    webhook_messages.append(f"Warning: Failed to update Telegram webhook - {error}")
+            elif not telegram_enabled:
+                # Clear webhook URL if Telegram is disabled
+                bot.telegram_webhook_url = None
+            
             db.session.commit()
-            flash(f'Bot "{bot.name}" updated successfully!', 'success')
+            
+            success_message = f'Bot "{bot.name}" updated successfully!'
+            if webhook_messages:
+                success_message += " " + " ".join(webhook_messages)
+            
+            flash(success_message, 'success')
             return redirect('/bots')
             
         except Exception as e:

@@ -158,8 +158,8 @@
                                 </div>
                                 <div class="col-md-6">
                                     {{ form.telegram_webhook_url.label(class="form-label") }}
-                                    {{ form.telegram_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/telegram") }}
-                                    <div class="form-text">URL for Telegram webhook</div>
+                                    {{ form.telegram_webhook_url(class="form-control", readonly=true) }}
+                                    <div class="form-text"><i class="fas fa-magic me-1 text-success"></i>Automatically managed - updates when token changes</div>
                                 </div>
                             </div>
                         </div>
