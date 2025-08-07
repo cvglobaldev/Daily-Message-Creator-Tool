@@ -107,6 +107,7 @@ class Bot(db.Model):
     # Bot behavior settings
     ai_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="You are a helpful spiritual guide chatbot.")
     journey_duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    delivery_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     
     # Customizable command messages
     help_message: Mapped[str] = mapped_column(Text, nullable=False, default="🤝 Available Commands:\n\n📖 START - Begin your faith journey\n⏹️ STOP - Pause the journey\n❓ HELP - Show this help message\n👤 HUMAN - Connect with a human counselor\n\nI'm here to guide you through a meaningful spiritual journey. Feel free to ask questions or share your thoughts anytime!")
@@ -137,6 +138,7 @@ class Bot(db.Model):
             'telegram_webhook_url': self.telegram_webhook_url,
             'ai_prompt': self.ai_prompt,
             'journey_duration_days': self.journey_duration_days,
+            'delivery_interval_minutes': self.delivery_interval_minutes,
             'help_message': self.help_message,
             'stop_message': self.stop_message,
             'human_message': self.human_message,

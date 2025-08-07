@@ -16,23 +16,96 @@ class ContentScheduler:
         self.telegram_service = telegram_service
     
     def send_daily_content(self) -> None:
-        """Send daily content to all active users"""
+        """Send daily content to users based on their bot's delivery interval"""
         try:
-            active_users = self.db.get_active_users()
-            logger.info(f"Sending daily content to {len(active_users)} active users")
+            from models import Bot, User
+            from main import app
             
-            for user in active_users:
+            # Get all active bots and check their delivery intervals
+            bots = Bot.query.filter(Bot.status == 'active').all()
+            
+            for bot in bots:
                 try:
-                    self.send_content_to_user(user.phone_number)
-                    # Small delay between users to avoid rate limiting
-                    time.sleep(1)
+                    # Check if it's time to send content for this bot
+                    if self._should_send_content_for_bot(bot):
+                        # Get active users for this bot
+                        active_users = User.query.filter(
+                            User.bot_id == bot.id,
+                            User.status == 'active'
+                        ).all()
+                        
+                        logger.info(f"Sending content to {len(active_users)} users for bot '{bot.name}' (interval: {bot.delivery_interval_minutes} min)")
+                        
+                        for user in active_users:
+                            try:
+                                self.send_content_to_user(user.phone_number)
+                                # Small delay between users to avoid rate limiting
+                                time.sleep(1)
+                            except Exception as e:
+                                logger.error(f"Error sending content to {user.phone_number}: {e}")
+                        
+                        # Update the bot's last content delivery time
+                        self._update_bot_last_delivery(bot.id)
+                        
                 except Exception as e:
-                    logger.error(f"Error sending content to {user.phone_number}: {e}")
+                    logger.error(f"Error processing bot {bot.name}: {e}")
             
-            logger.info("Daily content delivery completed")
+            logger.info("Daily content delivery check completed")
             
         except Exception as e:
             logger.error(f"Error in daily content delivery: {e}")
+    
+    def _should_send_content_for_bot(self, bot) -> bool:
+        """Check if it's time to send content for a specific bot based on its delivery interval"""
+        try:
+            from models import SystemSettings
+            import datetime
+            
+            # Get the last delivery time for this bot
+            key = f"bot_{bot.id}_last_delivery"
+            setting = SystemSettings.query.filter_by(key=key).first()
+            
+            if not setting:
+                # First time sending content for this bot
+                return True
+            
+            # Parse the last delivery time
+            last_delivery = datetime.datetime.fromisoformat(setting.value)
+            
+            # Calculate minutes since last delivery
+            minutes_since = (datetime.datetime.utcnow() - last_delivery).total_seconds() / 60
+            
+            # Check if enough time has passed based on bot's interval
+            return minutes_since >= bot.delivery_interval_minutes
+            
+        except Exception as e:
+            logger.error(f"Error checking delivery time for bot {bot.id}: {e}")
+            return False
+    
+    def _update_bot_last_delivery(self, bot_id: int) -> None:
+        """Update the last delivery time for a bot"""
+        try:
+            from models import SystemSettings, db
+            import datetime
+            
+            key = f"bot_{bot_id}_last_delivery"
+            setting = SystemSettings.query.filter_by(key=key).first()
+            
+            if setting:
+                setting.value = datetime.datetime.utcnow().isoformat()
+                setting.updated_at = datetime.datetime.utcnow()
+            else:
+                setting = SystemSettings(
+                    key=key,
+                    value=datetime.datetime.utcnow().isoformat(),
+                    description=f"Last content delivery time for bot {bot_id}"
+                )
+                db.session.add(setting)
+            
+            db.session.commit()
+            
+        except Exception as e:
+            logger.error(f"Error updating last delivery time for bot {bot_id}: {e}")
     
     def send_content_to_user(self, phone_number: str) -> bool:
         """Send content to a specific user and advance their journey"""

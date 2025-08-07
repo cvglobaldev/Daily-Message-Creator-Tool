@@ -113,11 +113,11 @@ def start_scheduler():
     def run_scheduler():
         while True:
             try:
-                logger.info("Running content scheduler (every 10 minutes for testing)...")
+                logger.info("Running content scheduler with bot-specific intervals...")
                 with app.app_context():  # Ensure Flask app context for database operations
                     scheduler.send_daily_content()
-                # Sleep for 10 minutes (600 seconds) between content deliveries
-                time.sleep(600)
+                # Sleep for 1 minute before checking again (allows for different bot intervals)
+                time.sleep(60)
             except Exception as e:
                 logger.error(f"Error in scheduler: {e}")
                 time.sleep(60)
@@ -1402,6 +1402,7 @@ def create_bot():
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
+            bot.delivery_interval_minutes = form.delivery_interval_minutes.data
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data
             bot.human_message = form.human_message.data
@@ -1493,6 +1494,7 @@ def edit_bot(bot_id):
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
+            bot.delivery_interval_minutes = form.delivery_interval_minutes.data
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data
             bot.human_message = form.human_message.data

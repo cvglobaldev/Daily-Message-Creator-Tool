@@ -40,6 +40,12 @@ class CreateBotForm(FlaskForm):
         validators=[DataRequired(), NumberRange(min=1, max=365)],
         default=30
     )
+    delivery_interval_minutes = IntegerField(
+        'Content Delivery Interval (Minutes)',
+        validators=[DataRequired(), NumberRange(min=1, max=1440)],
+        default=10,
+        description="How often to deliver daily content (1-1440 minutes). Default: 10 minutes for testing, 1440 for daily delivery."
+    )
     
     # Customizable command messages
     help_message = TextAreaField(
@@ -89,6 +95,11 @@ class EditBotForm(FlaskForm):
     journey_duration_days = IntegerField(
         'Journey Duration (Days)',
         validators=[DataRequired(), NumberRange(min=1, max=365)]
+    )
+    delivery_interval_minutes = IntegerField(
+        'Content Delivery Interval (Minutes)',
+        validators=[DataRequired(), NumberRange(min=1, max=1440)],
+        description="How often to deliver daily content (1-1440 minutes). Default: 10 minutes for testing, 1440 for daily delivery."
     )
     
     # Customizable command messages
