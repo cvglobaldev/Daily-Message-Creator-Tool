@@ -571,10 +571,12 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
 def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HELP command"""
     try:
+        logger.info(f"🔥 DEBUG: Processing HELP command for {phone_number} on {platform} with bot_id {bot_id}")
         # Get or create user with bot_id
         user = db_manager.get_user_by_phone(phone_number)
         if not user:
             user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+            logger.info(f"🔥 DEBUG: Created new user for {phone_number}")
         
         # Update existing user to use correct bot_id if different
         elif user.bot_id != bot_id:
@@ -597,7 +599,9 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                            "Feel free to share your thoughts - there are no wrong answers!\n\n"
                            "If you need to speak with someone, just let us know.")
         
-        send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
+        logger.info(f"🔥 DEBUG: About to send help message to {phone_number}: {help_message[:50]}...")
+        success = send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
+        logger.info(f"🔥 DEBUG: Help message send result: {success}")
         
         # Log the help request
         db_manager.log_message(
@@ -607,6 +611,20 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
             sentiment='neutral',
             tags=['HELP']
         )
+        
+        if success:
+            # Log the outgoing help response
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=help_message,
+                sentiment='neutral',
+                tags=['HELP_RESPONSE'],
+                confidence=1.0
+            )
+            logger.info(f"✅ Help command processed successfully for {phone_number}")
+        else:
+            logger.error(f"❌ Help command failed to send for {phone_number}")
         
         logger.info(f"Help command processed for {phone_number}")
         
