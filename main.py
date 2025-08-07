@@ -296,7 +296,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                 chat_id = phone_number[3:]  # Remove 'tg_' prefix
                 
                 # Get bot-specific Telegram service
-                bot_service = get_telegram_service_for_bot(bot_id, phone_number)
+                bot_service = get_telegram_service_for_bot(bot_id)
                 if not bot_service:
                     logger.error(f"No Telegram service available for bot_id {bot_id}")
                     return False
@@ -324,28 +324,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
         logger.error(f"Error sending message to {platform}: {e}")
         return False
 
-def get_telegram_service_for_bot(bot_id: int, phone_number: str = None) -> 'TelegramService':
-    """Get the appropriate Telegram service for a bot"""
-    try:
-        if bot_id is None and phone_number:
-            # Get bot_id from user if not provided
-            user = db_manager.get_user_by_phone(phone_number)
-            if user:
-                bot_id = user.bot_id
-            else:
-                bot_id = 1  # Default to Bot 1
-        
-        if bot_id == 2:
-            # Bot 2 - Create service with Bot 2's token
-            from services import TelegramService
-            bot2_token = "8342973377:AAF3pdo5YH6AkBosijP0G7Rct542_4GlEu4"
-            return TelegramService(bot2_token)
-        else:
-            # Bot 1 - Use global service
-            return telegram_service
-    except Exception as e:
-        logger.error(f"Error getting Telegram service for bot {bot_id}: {e}")
-        return telegram_service  # Fallback to Bot 1
+
 
 def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Handle START command - onboard new user"""
@@ -1359,11 +1338,11 @@ def create_bot():
                         if test_response.status_code == 200:
                             webhook_messages.append("Bot validation successful - ready for users!")
                             
-                            # Send welcome message to creator's chat if available (using a known creator chat ID)
-                            # You can modify this to use the creator's actual Telegram chat ID
-                            creator_chat_id = "960173404"  # Replace with actual creator's chat ID
+                            # Send welcome message to a test chat to verify bot is working
+                            # Note: This sends to the admin/creator's chat for verification
+                            creator_chat_id = "960173404"  # Admin/creator chat ID
                             try:
-                                requests.post(
+                                welcome_response = requests.post(
                                     f"https://api.telegram.org/bot{bot.telegram_bot_token}/sendMessage",
                                     json={
                                         "chat_id": creator_chat_id,
@@ -1371,9 +1350,13 @@ def create_bot():
                                     },
                                     timeout=5
                                 )
-                                webhook_messages.append("Welcome message sent to creator!")
+                                if welcome_response.status_code == 200:
+                                    webhook_messages.append("Bot tested successfully - welcome message sent!")
+                                else:
+                                    webhook_messages.append("Bot created but could not send test message")
                             except Exception as creator_msg_error:
                                 logger.info(f"Could not send welcome to creator: {creator_msg_error}")
+                                webhook_messages.append("Bot created but test message failed")
                         
                     except Exception as e:
                         logger.warning(f"Could not validate new bot {bot.id}: {e}")

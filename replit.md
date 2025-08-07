@@ -8,6 +8,16 @@ This project is a WhatsApp-based chatbot designed to guide young adults (18-24) 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Updates
+
+### ✅ COMPLETED: Telegram Bot Routing Fix (August 7, 2025)
+- **Root Cause**: Conflicting `get_telegram_service_for_bot` function definitions caused Bot 5 messages to be processed by Bot 1's service
+- **Solution**: Removed conflicting function that only handled Bot 2, kept dynamic function that supports all bots via database lookup
+- **Database Fix**: Corrected user assignment for Bot 5 routing to ensure proper message flow
+- **Testing**: Verified Fun-Meaningful-Transformation-Bot now receives and responds with correct Bot 5 content
+- **Automatic Welcome**: Enhanced new bot creation to send welcome messages using the correct bot token
+- **Multi-Bot Support**: All bots now use their specific tokens for message sending, ensuring complete isolation
+
 ## System Architecture
 
 ### Core Design Principles
