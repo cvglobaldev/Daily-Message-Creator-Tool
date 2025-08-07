@@ -1345,6 +1345,38 @@ def create_bot():
                     bot.telegram_webhook_url = webhook_url
                     db.session.commit()
                     webhook_messages.append(f"Telegram webhook configured automatically: {webhook_url}")
+                    
+                    # Send welcome message to the bot creator via the new bot
+                    try:
+                        import requests
+                        welcome_msg = f"🎉 Welcome to {bot.name}!\n\nYour new bot has been created and is ready to serve users. The webhook has been automatically configured.\n\n✅ Bot ID: {bot.id}\n✅ Webhook: {webhook_url}\n\nUsers can now start conversations with this bot!\n\n📝 Type 'START' to begin your spiritual journey, or send any message to get personalized guidance."
+                        
+                        # Bot validation
+                        test_response = requests.post(
+                            f"https://api.telegram.org/bot{bot.telegram_bot_token}/getMe",
+                            timeout=5
+                        )
+                        if test_response.status_code == 200:
+                            webhook_messages.append("Bot validation successful - ready for users!")
+                            
+                            # Send welcome message to creator's chat if available (using a known creator chat ID)
+                            # You can modify this to use the creator's actual Telegram chat ID
+                            creator_chat_id = "960173404"  # Replace with actual creator's chat ID
+                            try:
+                                requests.post(
+                                    f"https://api.telegram.org/bot{bot.telegram_bot_token}/sendMessage",
+                                    json={
+                                        "chat_id": creator_chat_id,
+                                        "text": welcome_msg
+                                    },
+                                    timeout=5
+                                )
+                                webhook_messages.append("Welcome message sent to creator!")
+                            except Exception as creator_msg_error:
+                                logger.info(f"Could not send welcome to creator: {creator_msg_error}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Could not validate new bot {bot.id}: {e}")
                 else:
                     webhook_messages.append(f"Warning: Failed to set Telegram webhook - {error}")
             
