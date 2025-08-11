@@ -1384,6 +1384,122 @@ def setup_telegram_webhook(bot_id, telegram_token):
         logger.error(f"Exception setting Telegram webhook for bot {bot_id}: {e}")
         return None, f"Exception: {str(e)}"
 
+def setup_whatsapp_webhook(bot_id, whatsapp_access_token, whatsapp_phone_number_id):
+    """Automatically setup WhatsApp webhook for a bot"""
+    try:
+        if not whatsapp_access_token or not whatsapp_phone_number_id:
+            return None, "Missing WhatsApp access token or phone number ID"
+        
+        # Generate bot-specific webhook URL
+        webhook_url = f"https://smart-budget-cvglobaldev.replit.app/whatsapp/{bot_id}"
+        
+        # Set webhook via WhatsApp Business API
+        import requests
+        
+        # First, verify the access token by getting the phone number info
+        verify_response = requests.get(
+            f"https://graph.facebook.com/v18.0/{whatsapp_phone_number_id}",
+            headers={"Authorization": f"Bearer {whatsapp_access_token}"},
+            params={"fields": "display_phone_number,verified_name,status"},
+            timeout=10
+        )
+        
+        if verify_response.status_code != 200:
+            error_data = verify_response.json() if verify_response.content else {}
+            error_msg = error_data.get('error', {}).get('message', f'HTTP {verify_response.status_code}')
+            logger.error(f"WhatsApp token verification failed for bot {bot_id}: {error_msg}")
+            return None, f"Invalid WhatsApp credentials: {error_msg}"
+        
+        # Update webhook configuration
+        webhook_response = requests.post(
+            f"https://graph.facebook.com/v18.0/{whatsapp_phone_number_id}/subscribed_apps",
+            headers={"Authorization": f"Bearer {whatsapp_access_token}"},
+            json={
+                "subscribed_fields": ["messages", "message_deliveries", "message_reads", "message_echoes"]
+            },
+            timeout=10
+        )
+        
+        if webhook_response.status_code == 200:
+            result = webhook_response.json()
+            if result.get('success'):
+                logger.info(f"WhatsApp webhook configured successfully for bot {bot_id}: {webhook_url}")
+                return webhook_url, None
+            else:
+                error_msg = result.get('error', {}).get('message', 'Unknown error')
+                logger.error(f"Failed to configure WhatsApp webhook for bot {bot_id}: {error_msg}")
+                return None, f"WhatsApp API error: {error_msg}"
+        else:
+            logger.error(f"HTTP error configuring WhatsApp webhook for bot {bot_id}: {webhook_response.status_code}")
+            return None, f"HTTP error: {webhook_response.status_code}"
+            
+    except Exception as e:
+        logger.error(f"Exception setting WhatsApp webhook for bot {bot_id}: {e}")
+        return None, f"Exception: {str(e)}"
+
+def test_whatsapp_connection(whatsapp_access_token, whatsapp_phone_number_id):
+    """Test WhatsApp API connection"""
+    try:
+        import requests
+        
+        # Test the connection by getting phone number info
+        response = requests.get(
+            f"https://graph.facebook.com/v18.0/{whatsapp_phone_number_id}",
+            headers={"Authorization": f"Bearer {whatsapp_access_token}"},
+            params={"fields": "display_phone_number,verified_name,status"},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return True, {
+                "phone_number": data.get("display_phone_number", "N/A"),
+                "verified_name": data.get("verified_name", "N/A"),
+                "status": data.get("status", "N/A")
+            }
+        else:
+            return False, f"HTTP {response.status_code}: {response.text}"
+            
+    except Exception as e:
+        return False, f"Connection error: {str(e)}"
+
+@app.route('/test_whatsapp/<int:bot_id>')
+@login_required
+def test_whatsapp_connection_route(bot_id):
+    """Test WhatsApp connection for a specific bot"""
+    bot = Bot.query.get_or_404(bot_id)
+    
+    if not bot.whatsapp_access_token or not bot.whatsapp_phone_number_id:
+        return {
+            "success": False,
+            "error": "Missing WhatsApp credentials"
+        }
+    
+    success, result = test_whatsapp_connection(bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
+    
+    if success:
+        # Test webhook setup
+        webhook_url, webhook_error = setup_whatsapp_webhook(bot.id, bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
+        if webhook_url:
+            bot.whatsapp_webhook_url = webhook_url
+            db.session.commit()
+            return {
+                "success": True,
+                "connection": result,
+                "webhook": f"Webhook configured: {webhook_url}"
+            }
+        else:
+            return {
+                "success": False,
+                "connection": result,
+                "webhook_error": webhook_error
+            }
+    else:
+        return {
+            "success": False,
+            "error": result
+        }
+
 @app.route('/bots/create', methods=['GET', 'POST'])
 @login_required
 def create_bot():
@@ -1411,52 +1527,66 @@ def create_bot():
             db.session.add(bot)
             db.session.commit()
             
-            # Auto-setup Telegram webhook if Telegram is enabled
+            # Auto-setup webhooks for enabled platforms
             webhook_messages = []
+            
+            # Auto-setup Telegram webhook if Telegram is enabled
             if 'telegram' in (form.platforms.data or []) and bot.telegram_bot_token:
                 webhook_url, error = setup_telegram_webhook(bot.id, bot.telegram_bot_token)
                 if webhook_url:
                     bot.telegram_webhook_url = webhook_url
-                    db.session.commit()
                     webhook_messages.append(f"Telegram webhook configured automatically: {webhook_url}")
-                    
-                    # Send welcome message to the bot creator via the new bot
-                    try:
-                        import requests
-                        welcome_msg = f"🎉 Welcome to {bot.name}!\n\nYour new bot has been created and is ready to serve users. The webhook has been automatically configured.\n\n✅ Bot ID: {bot.id}\n✅ Webhook: {webhook_url}\n\nUsers can now start conversations with this bot!\n\n📝 Type 'START' to begin your spiritual journey, or send any message to get personalized guidance."
-                        
-                        # Bot validation
-                        test_response = requests.post(
-                            f"https://api.telegram.org/bot{bot.telegram_bot_token}/getMe",
-                            timeout=5
-                        )
-                        if test_response.status_code == 200:
-                            webhook_messages.append("Bot validation successful - ready for users!")
-                            
-                            # Send welcome message to a test chat to verify bot is working
-                            # Note: This sends to the admin/creator's chat for verification
-                            creator_chat_id = "960173404"  # Admin/creator chat ID
-                            try:
-                                welcome_response = requests.post(
-                                    f"https://api.telegram.org/bot{bot.telegram_bot_token}/sendMessage",
-                                    json={
-                                        "chat_id": creator_chat_id,
-                                        "text": welcome_msg
-                                    },
-                                    timeout=5
-                                )
-                                if welcome_response.status_code == 200:
-                                    webhook_messages.append("Bot tested successfully - welcome message sent!")
-                                else:
-                                    webhook_messages.append("Bot created but could not send test message")
-                            except Exception as creator_msg_error:
-                                logger.info(f"Could not send welcome to creator: {creator_msg_error}")
-                                webhook_messages.append("Bot created but test message failed")
-                        
-                    except Exception as e:
-                        logger.warning(f"Could not validate new bot {bot.id}: {e}")
                 else:
-                    webhook_messages.append(f"Warning: Failed to set Telegram webhook - {error}")
+                    webhook_messages.append(f"Warning: Failed to setup Telegram webhook - {error}")
+            
+            # Auto-setup WhatsApp webhook if WhatsApp is enabled
+            if 'whatsapp' in (form.platforms.data or []) and bot.whatsapp_access_token and bot.whatsapp_phone_number_id:
+                webhook_url, error = setup_whatsapp_webhook(bot.id, bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
+                if webhook_url:
+                    bot.whatsapp_webhook_url = webhook_url
+                    webhook_messages.append(f"WhatsApp webhook configured automatically: {webhook_url}")
+                else:
+                    webhook_messages.append(f"Warning: Failed to setup WhatsApp webhook - {error}")
+            
+            # Commit all webhook updates
+            db.session.commit()
+            
+            # Send welcome message if Telegram is configured
+            if 'telegram' in (form.platforms.data or []) and bot.telegram_bot_token and bot.telegram_webhook_url:
+                try:
+                    import requests
+                    welcome_msg = f"🎉 Welcome to {bot.name}!\n\nYour new bot has been created and is ready to serve users. Webhooks have been automatically configured.\n\n✅ Bot ID: {bot.id}\n✅ Platforms: {', '.join(form.platforms.data or [])}\n\nUsers can now start conversations with this bot!\n\n📝 Type 'START' to begin your spiritual journey, or send any message to get personalized guidance."
+                    
+                    # Bot validation
+                    test_response = requests.post(
+                        f"https://api.telegram.org/bot{bot.telegram_bot_token}/getMe",
+                        timeout=5
+                    )
+                    if test_response.status_code == 200:
+                        webhook_messages.append("Bot validation successful - ready for users!")
+                        
+                        # Send welcome message to a test chat to verify bot is working
+                        # Note: This sends to the admin/creator's chat for verification
+                        creator_chat_id = "960173404"  # Admin/creator chat ID
+                        try:
+                            welcome_response = requests.post(
+                                f"https://api.telegram.org/bot{bot.telegram_bot_token}/sendMessage",
+                                json={
+                                    "chat_id": creator_chat_id,
+                                    "text": welcome_msg
+                                },
+                                timeout=5
+                            )
+                            if welcome_response.status_code == 200:
+                                webhook_messages.append("Bot tested successfully - welcome message sent!")
+                            else:
+                                webhook_messages.append("Bot created but could not send test message")
+                        except Exception as creator_msg_error:
+                            logger.info(f"Could not send welcome to creator: {creator_msg_error}")
+                            webhook_messages.append("Bot created but test message failed")
+                    
+                except Exception as e:
+                    logger.warning(f"Could not validate new bot {bot.id}: {e}")
             
             success_message = f'Bot "{bot.name}" created successfully!'
             if webhook_messages:
@@ -1500,8 +1630,10 @@ def edit_bot(bot_id):
             bot.human_message = form.human_message.data
             bot.status = 'active' if form.status.data else 'inactive'
             
-            # Auto-setup or update Telegram webhook if needed
+            # Auto-setup or update webhooks if needed
             webhook_messages = []
+            
+            # Handle Telegram webhook updates
             telegram_enabled = 'telegram' in (form.platforms.data or [])
             telegram_token_changed = bot.telegram_bot_token != old_telegram_token
             telegram_newly_enabled = telegram_enabled and 'telegram' not in (old_platforms or [])
@@ -1514,8 +1646,23 @@ def edit_bot(bot_id):
                 else:
                     webhook_messages.append(f"Warning: Failed to update Telegram webhook - {error}")
             elif not telegram_enabled:
-                # Clear webhook URL if Telegram is disabled
                 bot.telegram_webhook_url = None
+            
+            # Handle WhatsApp webhook updates
+            whatsapp_enabled = 'whatsapp' in (form.platforms.data or [])
+            whatsapp_token_changed = bot.whatsapp_access_token != getattr(form, 'whatsapp_access_token', {}).get('data', '')
+            whatsapp_phone_changed = bot.whatsapp_phone_number_id != getattr(form, 'whatsapp_phone_number_id', {}).get('data', '')
+            whatsapp_newly_enabled = whatsapp_enabled and 'whatsapp' not in (old_platforms or [])
+            
+            if whatsapp_enabled and bot.whatsapp_access_token and bot.whatsapp_phone_number_id and (whatsapp_token_changed or whatsapp_phone_changed or whatsapp_newly_enabled or not bot.whatsapp_webhook_url):
+                webhook_url, error = setup_whatsapp_webhook(bot.id, bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
+                if webhook_url:
+                    bot.whatsapp_webhook_url = webhook_url
+                    webhook_messages.append(f"WhatsApp webhook updated automatically: {webhook_url}")
+                else:
+                    webhook_messages.append(f"Warning: Failed to update WhatsApp webhook - {error}")
+            elif not whatsapp_enabled:
+                bot.whatsapp_webhook_url = None
             
             db.session.commit()
             
