@@ -140,10 +140,22 @@
                                 </div>
                             </div>
 
-                            <div class="mb-4">
-                                {{ form.whatsapp_webhook_url.label(class="form-label") }}
-                                {{ form.whatsapp_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/whatsapp") }}
-                                <div class="form-text">URL where WhatsApp will send webhook notifications</div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.whatsapp_webhook_url.label(class="form-label") }}
+                                    {{ form.whatsapp_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/whatsapp") }}
+                                    <div class="form-text">URL where WhatsApp will send webhook notifications</div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.whatsapp_verify_token.label(class="form-label") }}
+                                    {{ form.whatsapp_verify_token(class="form-control" + (" is-invalid" if form.whatsapp_verify_token.errors else "")) }}
+                                    {% if form.whatsapp_verify_token.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.whatsapp_verify_token.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Token for webhook verification with Meta</div>
+                                </div>
                             </div>
                         </div>
 

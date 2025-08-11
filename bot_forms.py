@@ -24,6 +24,7 @@ class CreateBotForm(FlaskForm):
     whatsapp_access_token = StringField('WhatsApp Access Token', validators=[Optional(), Length(max=500)])
     whatsapp_phone_number_id = StringField('WhatsApp Phone Number ID', validators=[Optional(), Length(max=100)])
     whatsapp_webhook_url = StringField('WhatsApp Webhook URL', validators=[Optional(), Length(max=500)])
+    whatsapp_verify_token = StringField('WhatsApp Verify Token', validators=[DataRequired(), Length(min=5, max=255)], default='CVGlobal_WhatsApp_Verify_2024')
     
     # Telegram configuration
     telegram_bot_token = StringField('Telegram Bot Token', validators=[Optional(), Length(max=500)])
@@ -82,6 +83,7 @@ class EditBotForm(FlaskForm):
     whatsapp_access_token = StringField('WhatsApp Access Token', validators=[Optional(), Length(max=500)])
     whatsapp_phone_number_id = StringField('WhatsApp Phone Number ID', validators=[Optional(), Length(max=100)])
     whatsapp_webhook_url = StringField('WhatsApp Webhook URL', validators=[Optional(), Length(max=500)])
+    whatsapp_verify_token = StringField('WhatsApp Verify Token', validators=[DataRequired(), Length(min=5, max=255)], default='CVGlobal_WhatsApp_Verify_2024')
     
     # Telegram configuration
     telegram_bot_token = StringField('Telegram Bot Token', validators=[Optional(), Length(max=500)])

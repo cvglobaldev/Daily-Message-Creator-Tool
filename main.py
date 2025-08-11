@@ -232,14 +232,20 @@ def whatsapp_webhook(bot_id=1):
     
     # GET request for webhook verification
     if request.method == 'GET':
-        # WhatsApp webhook verification
-        verify_token = "CVGlobal_WhatsApp_Verify_2024"  # Our verify token
+        # Get the bot's verify token from database
+        bot = Bot.query.get(bot_id)
+        if not bot:
+            logger.error(f"Bot {bot_id} not found for webhook verification")
+            return 'Bot not found', 404
+            
+        verify_token = bot.whatsapp_verify_token or "CVGlobal_WhatsApp_Verify_2024"
         mode = request.args.get('hub.mode')
         token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
         
-        logger.info(f"WhatsApp webhook verification request for bot {bot_id}")
+        logger.info(f"WhatsApp webhook verification request for bot {bot_id} ({bot.name})")
         logger.info(f"Mode: {mode}, Token: {token}, Challenge: {challenge}")
+        logger.info(f"Expected verify token: {verify_token}")
         
         if mode == 'subscribe' and token == verify_token:
             logger.info(f"WhatsApp webhook verified successfully for bot {bot_id}")
@@ -1575,6 +1581,7 @@ def create_bot():
             bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.whatsapp_verify_token = form.whatsapp_verify_token.data or 'CVGlobal_WhatsApp_Verify_2024'
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
@@ -1681,6 +1688,7 @@ def edit_bot(bot_id):
             bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_phone_number_id = form.whatsapp_phone_number_id.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
+            bot.whatsapp_verify_token = form.whatsapp_verify_token.data or 'CVGlobal_WhatsApp_Verify_2024'
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data

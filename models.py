@@ -100,6 +100,7 @@ class Bot(db.Model):
     whatsapp_access_token: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     whatsapp_phone_number_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     whatsapp_webhook_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    whatsapp_verify_token: Mapped[str] = mapped_column(String(255), nullable=False, default='CVGlobal_WhatsApp_Verify_2024')
     
     telegram_bot_token: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     telegram_webhook_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
