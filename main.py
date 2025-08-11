@@ -225,27 +225,87 @@ def telegram_webhook(bot_id=1):
         logger.error(f"Error processing Telegram webhook: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.route('/whatsapp', methods=['POST'])
-def whatsapp_webhook():
-    """Handle incoming WhatsApp messages"""
+@app.route('/whatsapp', methods=['GET', 'POST'])
+@app.route('/whatsapp/<int:bot_id>', methods=['GET', 'POST'])
+def whatsapp_webhook(bot_id=1):
+    """Handle WhatsApp webhook verification and incoming messages"""
+    
+    # GET request for webhook verification
+    if request.method == 'GET':
+        # WhatsApp webhook verification
+        verify_token = "CVGlobal_WhatsApp_Verify_2024"  # Our verify token
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+        
+        logger.info(f"WhatsApp webhook verification request for bot {bot_id}")
+        logger.info(f"Mode: {mode}, Token: {token}, Challenge: {challenge}")
+        
+        if mode == 'subscribe' and token == verify_token:
+            logger.info(f"WhatsApp webhook verified successfully for bot {bot_id}")
+            return challenge, 200, {'Content-Type': 'text/plain'}
+        else:
+            logger.warning(f"WhatsApp webhook verification failed for bot {bot_id}: mode={mode}, token={token}")
+            return 'Verification failed', 403
+    
+    # POST request for incoming messages
     try:
         data = request.get_json()
-        logger.debug(f"Received webhook data: {data}")
+        logger.debug(f"Received WhatsApp webhook data for bot {bot_id}: {data}")
         
-        # Extract message data (structure may vary based on WhatsApp provider)
-        # This is a generic structure that works with most providers
-        if 'messages' in data:
+        # Handle Facebook/Meta WhatsApp Business API format
+        if 'entry' in data:
+            for entry in data['entry']:
+                if 'changes' in entry:
+                    for change in entry['changes']:
+                        if change.get('field') == 'messages':
+                            value = change.get('value', {})
+                            
+                            # Process incoming messages
+                            if 'messages' in value:
+                                for message_data in value['messages']:
+                                    phone_number = message_data.get('from', '')
+                                    message_type = message_data.get('type', '')
+                                    
+                                    message_text = ''
+                                    if message_type == 'text':
+                                        message_text = message_data.get('text', {}).get('body', '').strip()
+                                    elif message_type == 'button':
+                                        message_text = message_data.get('button', {}).get('text', '').strip()
+                                    elif message_type == 'interactive':
+                                        interactive = message_data.get('interactive', {})
+                                        if 'button_reply' in interactive:
+                                            message_text = interactive['button_reply'].get('title', '').strip()
+                                        elif 'list_reply' in interactive:
+                                            message_text = interactive['list_reply'].get('title', '').strip()
+                                    
+                                    if phone_number and message_text:
+                                        # Get client IP for location data
+                                        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+                                        if client_ip and ',' in client_ip:
+                                            client_ip = client_ip.split(',')[0].strip()
+                                        
+                                        process_incoming_message(phone_number, message_text, platform="whatsapp", 
+                                                               request_ip=client_ip, bot_id=bot_id)
+        
+        # Handle legacy format for other providers
+        elif 'messages' in data:
             for message_data in data['messages']:
                 phone_number = message_data.get('from', '').replace('whatsapp:', '')
                 message_text = message_data.get('text', {}).get('body', '').strip()
                 
                 if phone_number and message_text:
-                    process_incoming_message(phone_number, message_text, platform="whatsapp")
+                    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+                    if client_ip and ',' in client_ip:
+                        client_ip = client_ip.split(',')[0].strip()
+                    
+                    process_incoming_message(phone_number, message_text, platform="whatsapp", 
+                                           request_ip=client_ip, bot_id=bot_id)
         
         return jsonify({"status": "success"}), 200
         
     except Exception as e:
-        logger.error(f"Error processing WhatsApp webhook: {e}")
+        logger.error(f"Error processing WhatsApp webhook for bot {bot_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
