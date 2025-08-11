@@ -225,8 +225,8 @@ def telegram_webhook(bot_id=1):
         logger.error(f"Error processing Telegram webhook: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.route('/whatsapp', methods=['GET', 'POST'])
 @app.route('/whatsapp/<int:bot_id>', methods=['GET', 'POST'])
+@app.route('/whatsapp', methods=['GET', 'POST'])
 def whatsapp_webhook(bot_id=1):
     """Handle WhatsApp webhook verification and incoming messages"""
     
@@ -940,6 +940,64 @@ def health_check():
             "gemini": "operational"
         }
     })
+
+@app.route('/debug/routes', methods=['GET'])
+def debug_routes():
+    """Debug endpoint to show all routes"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            "rule": rule.rule,
+            "endpoint": rule.endpoint,
+            "methods": list(rule.methods)
+        })
+    return jsonify({"routes": routes})
+
+@app.route('/debug/webhook/<int:bot_id>', methods=['GET'])
+def debug_webhook_test(bot_id):
+    """Debug webhook test endpoint"""
+    mode = request.args.get('hub.mode')
+    token = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge')
+    
+    # Get bot from database
+    try:
+        bot = Bot.query.get(bot_id)
+        if not bot:
+            return jsonify({"error": f"Bot {bot_id} not found"}), 404
+        
+        return jsonify({
+            "bot_id": bot_id,
+            "bot_name": bot.name,
+            "verify_token": bot.whatsapp_verify_token,
+            "request_params": {
+                "mode": mode,
+                "token": token,
+                "challenge": challenge
+            },
+            "verification": mode == 'subscribe' and token == bot.whatsapp_verify_token
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/webhook-simple', methods=['GET'])
+def simple_webhook():
+    """Simple webhook test without parameters"""
+    return "Simple webhook working!", 200
+
+@app.route('/whatsapp-test/<int:bot_id>', methods=['GET'])
+def whatsapp_test_webhook(bot_id):
+    """Test WhatsApp webhook with simplified logic"""
+    mode = request.args.get('hub.mode')
+    token = request.args.get('hub.verify_token') 
+    challenge = request.args.get('hub.challenge')
+    
+    logger.info(f"WhatsApp test webhook called: bot_id={bot_id}, mode={mode}, token={token}, challenge={challenge}")
+    
+    if mode == 'subscribe' and token == 'CVGlobal_WhatsApp_Verify_2024':
+        return challenge, 200, {'Content-Type': 'text/plain'}
+    else:
+        return 'Verification failed', 403
 
 @app.route('/test', methods=['POST'])
 def test_message():
@@ -2562,29 +2620,30 @@ def test_day1_delivery():
         logger.error(f"Error in test Day 1 delivery: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Initialize application context for both Gunicorn and development
+with app.app_context():
+    # Create database tables
+    db.create_all()
+    
+    # Initialize database with sample content
+    db_manager.initialize_sample_content()
+    
+    # Create default super admin if no users exist
+    if AdminUser.query.count() == 0:
+        admin = AdminUser(
+            username='admin',
+            email='admin@faithjourney.com',
+            full_name='System Administrator',
+            role='super_admin'
+        )
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.commit()
+        logger.info("Default admin user created: admin / admin123")
+
+# Start background scheduler for both Gunicorn and development
+start_scheduler()
+
 if __name__ == '__main__':
-    with app.app_context():
-        # Create database tables
-        db.create_all()
-        
-        # Initialize database with sample content
-        db_manager.initialize_sample_content()
-        
-        # Create default super admin if no users exist
-        if AdminUser.query.count() == 0:
-            admin = AdminUser(
-                username='admin',
-                email='admin@faithjourney.com',
-                full_name='System Administrator',
-                role='super_admin'
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            logger.info("Default admin user created: admin / admin123")
-    
-    # Start background scheduler
-    start_scheduler()
-    
-    # Start Flask app
+    # Start Flask app only when running directly (development mode)
     app.run(host='0.0.0.0', port=5000, debug=True)
