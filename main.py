@@ -475,7 +475,7 @@ def debug_whatsapp():
         logger.error(f"Error in debug endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
-def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = "", bot_id: int = 1):
+def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Process incoming message from user"""
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
@@ -552,7 +552,7 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
 
 def send_message_to_platform(phone_number: str, platform: str, message: str, 
                            with_quick_replies: bool = False, copy_text: str = "", 
-                           copy_label: str = "Copy Text", bot_id: int = None, retry_count: int = 3) -> bool:
+                           copy_label: str = "Copy Text", bot_id: int = 1, retry_count: int = 3) -> bool:
     """Send message to the appropriate platform with enhanced reliability and retry logic"""
     success = False
     attempt = 0
@@ -639,7 +639,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
 
 
 
-def extract_whatsapp_user_data(message_data: dict, contacts_data: list = None, request_ip: str = "") -> dict:
+def extract_whatsapp_user_data(message_data: dict, contacts_data: list = None, request_ip: str = None) -> dict:
     """Extract enhanced user data from WhatsApp message payload"""
     enhanced_data = {}
     
@@ -1153,7 +1153,7 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
-def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = "", bot_id: int = 1):
+def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Handle first message from WhatsApp user with welcome flow: greeting → 10 sec delay → Day 1 content"""
     try:
         from datetime import datetime

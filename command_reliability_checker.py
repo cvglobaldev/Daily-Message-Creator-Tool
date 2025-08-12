@@ -243,8 +243,10 @@ class CommandReliabilityChecker:
 
 def run_health_check():
     """Run comprehensive health check and return report"""
-    checker = CommandReliabilityChecker()
-    return checker.check_command_processing_health()
+    from app import app
+    with app.app_context():
+        checker = CommandReliabilityChecker()
+        return checker.check_command_processing_health()
 
 if __name__ == "__main__":
     # Configure logging
@@ -253,7 +255,7 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Run health check
+    # Run health check with proper Flask context
     report = run_health_check()
     
     print(f"\n{'='*60}")
