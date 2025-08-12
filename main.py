@@ -1599,8 +1599,9 @@ def send_admin_message():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/upload-video', methods=['POST'])
-def upload_video():
-    """Handle video file uploads for content"""
+@app.route('/api/upload-video/<int:bot_id>', methods=['POST'])
+def upload_video(bot_id=None):
+    """Handle video file uploads for content with bot-specific isolation"""
     try:
         if 'video' not in request.files:
             return jsonify({'success': False, 'error': 'No video file provided'}), 400
@@ -1614,9 +1615,14 @@ def upload_video():
         if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
             return jsonify({'success': False, 'error': 'Invalid file type. Allowed: mp4, mov, avi, mkv, webm'}), 400
         
-        # Generate secure filename
+        # Generate secure filename with bot isolation
         filename = secure_filename(file.filename)
-        unique_filename = f"{uuid.uuid4()}_{filename}"
+        if bot_id:
+            # Bot-specific filename to prevent conflicts between bots
+            unique_filename = f"bot{bot_id}_{uuid.uuid4()}_{filename}"
+        else:
+            # Legacy format for backward compatibility
+            unique_filename = f"{uuid.uuid4()}_{filename}"
         
         # Ensure upload directory exists
         video_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
@@ -1626,7 +1632,7 @@ def upload_video():
         file_path = os.path.join(video_dir, unique_filename)
         file.save(file_path)
         
-        logger.info(f"Video uploaded successfully: {unique_filename}")
+        logger.info(f"Video uploaded successfully for bot {bot_id or 'legacy'}: {unique_filename}")
         return jsonify({'success': True, 'filename': unique_filename})
         
     except Exception as e:
@@ -1634,8 +1640,9 @@ def upload_video():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/upload-image', methods=['POST'])
-def upload_image():
-    """Handle image file uploads for content"""
+@app.route('/api/upload-image/<int:bot_id>', methods=['POST'])
+def upload_image(bot_id=None):
+    """Handle image file uploads for content with bot-specific isolation"""
     try:
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No image file provided'}), 400
@@ -1649,9 +1656,14 @@ def upload_image():
         if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
             return jsonify({'success': False, 'error': 'Invalid file type. Allowed: jpg, jpeg, png, gif'}), 400
         
-        # Generate secure filename
+        # Generate secure filename with bot isolation
         filename = secure_filename(file.filename)
-        unique_filename = f"{uuid.uuid4()}_{filename}"
+        if bot_id:
+            # Bot-specific filename to prevent conflicts between bots
+            unique_filename = f"bot{bot_id}_{uuid.uuid4()}_{filename}"
+        else:
+            # Legacy format for backward compatibility
+            unique_filename = f"{uuid.uuid4()}_{filename}"
         
         # Ensure upload directory exists
         image_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'images')
@@ -1661,7 +1673,7 @@ def upload_image():
         file_path = os.path.join(image_dir, unique_filename)
         file.save(file_path)
         
-        logger.info(f"Image uploaded successfully: {unique_filename}")
+        logger.info(f"Image uploaded successfully for bot {bot_id or 'legacy'}: {unique_filename}")
         return jsonify({'success': True, 'filename': unique_filename})
         
     except Exception as e:
@@ -1669,8 +1681,9 @@ def upload_image():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/upload-audio', methods=['POST'])
-def upload_audio():
-    """Handle audio file uploads for content"""
+@app.route('/api/upload-audio/<int:bot_id>', methods=['POST'])
+def upload_audio(bot_id=None):
+    """Handle audio file uploads for content with bot-specific isolation"""
     try:
         if 'audio' not in request.files:
             return jsonify({'success': False, 'error': 'No audio file provided'}), 400
@@ -1684,9 +1697,14 @@ def upload_audio():
         if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
             return jsonify({'success': False, 'error': 'Invalid file type. Allowed: mp3, wav, ogg, m4a'}), 400
         
-        # Generate secure filename
+        # Generate secure filename with bot isolation
         filename = secure_filename(file.filename)
-        unique_filename = f"{uuid.uuid4()}_{filename}"
+        if bot_id:
+            # Bot-specific filename to prevent conflicts between bots
+            unique_filename = f"bot{bot_id}_{uuid.uuid4()}_{filename}"
+        else:
+            # Legacy format for backward compatibility
+            unique_filename = f"{uuid.uuid4()}_{filename}"
         
         # Ensure upload directory exists
         audio_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'audio')
@@ -1696,7 +1714,7 @@ def upload_audio():
         file_path = os.path.join(audio_dir, unique_filename)
         file.save(file_path)
         
-        logger.info(f"Audio uploaded successfully: {unique_filename}")
+        logger.info(f"Audio uploaded successfully for bot {bot_id or 'legacy'}: {unique_filename}")
         return jsonify({'success': True, 'filename': unique_filename})
         
     except Exception as e:
@@ -2883,13 +2901,19 @@ def allowed_file(filename, allowed_extensions):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-def save_uploaded_file(file, subfolder, allowed_extensions):
-    """Save uploaded file and return filename"""
+def save_uploaded_file(file, subfolder, allowed_extensions, bot_id=None):
+    """Save uploaded file and return filename with optional bot isolation"""
     if file and allowed_file(file.filename, allowed_extensions):
-        # Generate unique filename
+        # Generate unique filename with bot isolation
         filename = secure_filename(file.filename)
         name, ext = os.path.splitext(filename)
-        unique_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+        
+        if bot_id:
+            # Bot-specific filename to prevent conflicts between bots
+            unique_filename = f"bot{bot_id}_{name}_{uuid.uuid4().hex[:8]}{ext}"
+        else:
+            # Legacy format for backward compatibility
+            unique_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
         
         # Save file
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
@@ -2914,13 +2938,21 @@ def cms_content_create():
         youtube_url = None
         
         if form.media_type.data == 'image' and form.image_file.data:
+            # Get bot_id from form if available (for new bot content creation)
+            bot_id = getattr(form, 'bot_id', None)
+            if hasattr(form.bot_id, 'data'):
+                bot_id = form.bot_id.data
             image_filename = save_uploaded_file(
-                form.image_file.data, 'images', ['jpg', 'jpeg', 'png', 'gif']
+                form.image_file.data, 'images', ['jpg', 'jpeg', 'png', 'gif'], bot_id
             )
         
         if form.media_type.data == 'audio' and form.audio_file.data:
+            # Get bot_id from form if available (for new bot content creation)
+            bot_id = getattr(form, 'bot_id', None)
+            if hasattr(form.bot_id, 'data'):
+                bot_id = form.bot_id.data
             audio_filename = save_uploaded_file(
-                form.audio_file.data, 'audio', ['mp3', 'wav', 'ogg', 'm4a']
+                form.audio_file.data, 'audio', ['mp3', 'wav', 'ogg', 'm4a'], bot_id
             )
         
         if form.media_type.data == 'video' and form.youtube_url.data:
@@ -2979,19 +3011,21 @@ def cms_content_edit(content_id):
             except:
                 tags = []
             
-            # Handle file uploads
+            # Handle file uploads with bot isolation
             if media_type == 'image' and 'image_file' in request.files:
                 file = request.files['image_file']
                 if file and file.filename:
+                    # Use existing content's bot_id for proper isolation
                     image_filename = save_uploaded_file(
-                        file, 'images', ['jpg', 'jpeg', 'png', 'gif']
+                        file, 'images', ['jpg', 'jpeg', 'png', 'gif'], content.bot_id
                     )
             
             if media_type == 'audio' and 'audio_file' in request.files:
                 file = request.files['audio_file']
                 if file and file.filename:
+                    # Use existing content's bot_id for proper isolation
                     audio_filename = save_uploaded_file(
-                        file, 'audio', ['mp3', 'wav', 'ogg', 'm4a']
+                        file, 'audio', ['mp3', 'wav', 'ogg', 'm4a'], content.bot_id
                     )
             
             if media_type == 'video':

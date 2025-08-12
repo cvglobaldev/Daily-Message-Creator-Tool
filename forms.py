@@ -45,6 +45,7 @@ class ChangePasswordForm(FlaskForm):
 
 class ContentForm(FlaskForm):
     """Form for creating and editing multimedia content"""
+    bot_id = SelectField('Bot', coerce=int, validators=[Optional()])  # For bot-specific content isolation
     day_number = SelectField('Day Number', coerce=int, validators=[DataRequired()])
     title = StringField('Title', validators=[DataRequired(), Length(min=1, max=200)])
     content = TextAreaField('Content', validators=[DataRequired()], render_kw={"rows": 8})
