@@ -1120,57 +1120,59 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
                     import time
                     time.sleep(10)  # 10 second delay
                     
-                    # Get fresh user data
-                    fresh_user = db_manager.get_user_by_phone(phone_number)
-                    if not fresh_user:
-                        logger.error(f"User {phone_number} not found for delayed Day 1 delivery")
-                        return
-                    
-                    # Get Day 1 content
-                    content = db_manager.get_content_by_day(1, bot_id=bot_id)
-                    if content:
-                        # Format message with media if available
-                        message = f"📖 Day 1 - {content.title}\n\n{content.content}"
-                        if content.reflection_question:
-                            message += f"\n\n{content.reflection_question}"
+                    # Ensure Flask app context for database operations
+                    with app.app_context():
+                        # Get fresh user data
+                        fresh_user = db_manager.get_user_by_phone(phone_number)
+                        if not fresh_user:
+                            logger.error(f"User {phone_number} not found for delayed Day 1 delivery")
+                            return
                         
-                        # Send Day 1 content with media support
-                        if content.media_type == 'image' and content.image_filename:
-                            # Send image first, then text
-                            # Use environment variable or construct URL dynamically
-                            base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
-                            if not base_url.startswith('http'):
-                                base_url = f"https://{base_url}"
-                            media_url = f"{base_url}/static/uploads/images/{content.image_filename}"
-                            bot_service = get_whatsapp_service_for_bot(bot_id)
-                            bot_service.send_image(phone_number, media_url, caption="")
-                            time.sleep(1)  # Small delay between image and text
-                        elif content.media_type == 'video' and content.youtube_url:
-                            message = f"📖 Day 1 - {content.title}\n\n{content.content}\n\n🎥 Video: {content.youtube_url}"
+                        # Get Day 1 content
+                        content = db_manager.get_content_by_day(1, bot_id=bot_id)
+                        if content:
+                            # Format message with media if available
+                            message = f"📖 Day 1 - {content.title}\n\n{content.content}"
                             if content.reflection_question:
                                 message += f"\n\n{content.reflection_question}"
-                        
-                        # Send the content message
-                        success = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
-                        
-                        if success:
-                            logger.info(f"✅ Day 1 content delivered to new user {phone_number} after 10 seconds")
-                            # Advance user to Day 2
-                            db_manager.update_user(phone_number, current_day=2)
-                            # Log the Day 1 content delivery
-                            db_manager.log_message(
-                                user=fresh_user,
-                                direction='outgoing',
-                                raw_text=message,
-                                sentiment='positive',
-                                tags=['DAY_1', 'CONTENT_DELIVERY', 'NEW_USER'],
-                                confidence=1.0
-                            )
+                            
+                            # Send Day 1 content with media support
+                            if content.media_type == 'image' and content.image_filename:
+                                # Send image first, then text
+                                # Use environment variable or construct URL dynamically
+                                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                                if not base_url.startswith('http'):
+                                    base_url = f"https://{base_url}"
+                                media_url = f"{base_url}/static/uploads/images/{content.image_filename}"
+                                bot_service = get_whatsapp_service_for_bot(bot_id)
+                                bot_service.send_media_message(phone_number, "image", media_url, caption="")
+                                time.sleep(1)  # Small delay between image and text
+                            elif content.media_type == 'video' and content.youtube_url:
+                                message = f"📖 Day 1 - {content.title}\n\n{content.content}\n\n🎥 Video: {content.youtube_url}"
+                                if content.reflection_question:
+                                    message += f"\n\n{content.reflection_question}"
+                            
+                            # Send the content message
+                            success = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+                            
+                            if success:
+                                logger.info(f"✅ Day 1 content delivered to new user {phone_number} after 10 seconds")
+                                # Advance user to Day 2
+                                db_manager.update_user(phone_number, current_day=2)
+                                # Log the Day 1 content delivery
+                                db_manager.log_message(
+                                    user=fresh_user,
+                                    direction='outgoing',
+                                    raw_text=message,
+                                    sentiment='positive',
+                                    tags=['DAY_1', 'CONTENT_DELIVERY', 'NEW_USER'],
+                                    confidence=1.0
+                                )
+                            else:
+                                logger.error(f"❌ Failed to deliver Day 1 content to {phone_number}")
                         else:
-                            logger.error(f"❌ Failed to deliver Day 1 content to {phone_number}")
-                    else:
-                        logger.error(f"❌ No Day 1 content found for bot {bot_id}")
-                        
+                            logger.error(f"❌ No Day 1 content found for bot {bot_id}")
+                            
                 except Exception as e:
                     logger.error(f"Error in delayed Day 1 delivery for {phone_number}: {e}")
             
