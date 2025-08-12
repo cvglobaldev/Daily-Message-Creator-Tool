@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
+### ✅ COMPLETED: Automatic Test User Creation for New Bots (August 12, 2025)
+- **Automatic User Generation**: All newly created bots automatically get test users for immediate testing
+- **Platform-Specific Test Users**: Creates both WhatsApp and Telegram test users with bot-specific identifiers
+- **Smart Duplication Prevention**: Checks for existing test users to avoid creating duplicates
+- **Environment Control**: Configurable via `CREATE_TEST_USERS` environment variable (default: enabled)
+- **Bot Isolation**: Test users are properly assigned to their specific bot_id for complete isolation
+- **Development Efficiency**: New bots are immediately ready for testing without manual user setup
+
 ### ✅ COMPLETED: Bot-Specific Media File Isolation System (August 12, 2025)
 - **Media File Isolation**: Implemented comprehensive bot-specific media file isolation for all future bots
 - **Filename Prefixing**: All new media uploads (images, audio, video) automatically get `bot{id}_` prefix to prevent cross-bot conflicts

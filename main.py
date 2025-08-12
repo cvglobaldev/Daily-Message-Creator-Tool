@@ -97,6 +97,60 @@ def invalidate_bot_service_cache(bot_id):
     if bot_id in bot_whatsapp_services:
         del bot_whatsapp_services[bot_id]
 
+def create_initial_test_users(bot_id: int, bot_name: str):
+    """Create initial test users for a newly created bot"""
+    try:
+        # Check if we should create test users
+        create_test_users = os.environ.get('CREATE_TEST_USERS', 'true').lower() == 'true'
+        if not create_test_users:
+            logger.info(f"Skipping test user creation for bot {bot_id} (CREATE_TEST_USERS=false)")
+            return
+        
+        # Create test users for different scenarios
+        test_users = [
+            {
+                'phone_number': f'+test_whatsapp_{bot_id}_001',
+                'name': f'WhatsApp Test User - {bot_name}',
+                'current_day': 1,
+                'status': 'active',
+                'platform': 'whatsapp'
+            },
+            {
+                'phone_number': f'tg_test_{bot_id}_001',
+                'name': f'Telegram Test User - {bot_name}',
+                'current_day': 1,
+                'status': 'active', 
+                'platform': 'telegram'
+            }
+        ]
+        
+        created_count = 0
+        for user_data in test_users:
+            # Check if test user already exists
+            existing_user = db_manager.get_user_by_phone(user_data['phone_number'])
+            if not existing_user:
+                user = User()
+                user.phone_number = user_data['phone_number']
+                user.name = user_data['name']
+                user.current_day = user_data['current_day']
+                user.status = user_data['status']
+                user.bot_id = bot_id
+                user.join_date = datetime.utcnow()
+                
+                db.session.add(user)
+                created_count += 1
+                logger.info(f"Created test user {user_data['phone_number']} for bot {bot_id}")
+        
+        if created_count > 0:
+            db.session.commit()
+            logger.info(f"Successfully created {created_count} test users for bot {bot_id}")
+        else:
+            logger.info(f"No new test users needed for bot {bot_id} (already exist)")
+            
+    except Exception as e:
+        logger.error(f"Error creating test users for bot {bot_id}: {e}")
+        db.session.rollback()
+
 def get_telegram_service_for_bot(bot_id):
     """Get bot-specific Telegram service"""
     logger.info(f"🔥 DEBUG: Getting Telegram service for bot_id {bot_id}")
@@ -2085,6 +2139,9 @@ In the meantime, feel free to continue sharing your thoughts or questions. Every
             
             # Invalidate service cache for this bot
             invalidate_bot_service_cache(bot.id)
+            
+            # Create initial test users for the new bot
+            create_initial_test_users(bot.id, bot.name)
             
             # Handle AI Content Generation if enabled
             content_generation_status = []
