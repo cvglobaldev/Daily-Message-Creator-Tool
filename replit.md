@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
+### ✅ COMPLETED: Enhanced Bot Creation with Indonesian Language Templates (August 12, 2025)
+- **Template System**: Added comprehensive bot template selection with Indonesian Muslim (Bang Kris) and English General options
+- **Indonesian Language Enhancement**: All new Indonesian bots automatically receive proper Bahasa Indonesia AI prompts and command messages
+- **Improved Bot Isolation**: Enhanced cache invalidation system ensures each bot uses its own WhatsApp credentials when created or edited
+- **JavaScript Template Handler**: Added dynamic form updates that populate AI prompts and command messages based on template selection
+- **Cultural Sensitivity**: Indonesian template includes Islamic-friendly terminology (Isa Al-Masih, Allah SWT) and respectful bridging language
+- **Seamless Integration**: Both CreateBotForm and EditBotForm now support template-based configuration with proper backend processing
+- **Service Cache Management**: Improved bot service isolation with proper cache invalidation on bot creation and updates
+
 ### ✅ COMPLETED: Bot 2 Indonesian Language Fix (August 12, 2025)
 - **Critical Bug Fix**: Resolved Bot 2 responding in English instead of Indonesian despite being designed for Indonesian audience
 - **Root Cause**: AI prompt lacked specific Indonesian language instructions and Day 1 users were incorrectly routed through reflection handler

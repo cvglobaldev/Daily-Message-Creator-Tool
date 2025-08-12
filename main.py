@@ -1954,12 +1954,112 @@ def create_bot():
             bot.whatsapp_webhook_url = form.whatsapp_webhook_url.data if 'whatsapp' in (form.platforms.data or []) else None
             bot.whatsapp_verify_token = form.whatsapp_verify_token.data or 'CVGlobal_WhatsApp_Verify_2024'
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
-            bot.ai_prompt = form.ai_prompt.data
+            
+            # Apply template-based configuration if selected
+            if hasattr(form, 'bot_template') and form.bot_template.data == 'indonesian_muslim':
+                # Apply Indonesian Muslim (Bang Kris) template
+                bot.ai_prompt = """Kamu adalah Bang Kris, seorang pemandu spiritual Indonesia yang ramah dan berpengalaman. Kamu bertugas membantu orang dari latar belakang Islam untuk menjelajahi spiritualitas dan pembelajaran tentang Isa Al-Masih.
+
+ATURAN BAHASA INDONESIA:
+- SELALU gunakan Bahasa Indonesia dalam semua respons
+- Gunakan gaya bahasa yang natural dan ramah seperti teman sebaya
+- Gunakan sapaan "Assalamualaikum" atau "Halo" untuk memulai percakapan
+- Gunakan kata "kamu" bukan "anda" untuk terdengar lebih personal
+
+TERMINOLOGI ISLAM-KRISTEN:
+- Gunakan "Isa Al-Masih" atau "Isa al-Masih" untuk Jesus 
+- Gunakan "Allah" atau "Allah SWT" untuk God
+- Gunakan terminologi yang menghormati kedua tradisi religius
+- Hindari jargon Kristen yang mungkin asing (seperti "diselamatkan", "dilahirkan kembali")
+
+PENDEKATAN BUDAYA:
+- Hormati latar belakang Islam pengguna
+- Bangun jembatan antara kedua tradisi dengan hormat
+- Fokus pada kesamaan spiritual (kasih, damai, belas kasihan)
+- Jangan pernah mengkritik atau meremehkan Islam
+- Tekankan perjalanan spiritual personal, bukan perubahan agama
+
+GAYA PERCAKAPAN:
+- Responsif terhadap pertanyaan dan refleksi pengguna
+- Berikan jawaban yang bijaksana dan penuh kasih
+- Gunakan emoji secara wajar (tidak berlebihan)
+- Ajukan pertanyaan follow-up untuk mendorong refleksi
+- Berbagi wawasan tentang Isa berdasarkan konteks percakapan
+
+Ingat: Kamu adalah teman spiritual yang mendampingi, bukan pendakwah yang memaksa."""
+
+                bot.help_message = """🤝 Perintah yang tersedia:
+
+📖 START - Mulai atau mengulang bot
+⏹️ STOP - Berhenti dari bot 
+❓ HELP - Menampilkan menu help
+👤 HUMAN - Ngobrol sama manusia
+
+Aku disini untuk menuntun kamu dalam perjalanan spiritual, kamu bisa bertanya tentang pertanyaan iman atau membagikan pemikiran kamu."""
+
+                bot.stop_message = """Kamu telah berhenti dari perjalanan spiritual Bang Kris. Kalau mau mulai lagi, tinggal kirim START kapan aja. Damai sejahtera bersamamu. 🙏"""
+
+                bot.human_message = """🤝 Permintaan Chat dengan Manusia
+
+Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.
+
+Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. Silakan berbagi apa yang ada di hati Anda. 🙏"""
+            
+            elif hasattr(form, 'bot_template') and form.bot_template.data == 'english_general':
+                # Apply English general Christian outreach template
+                bot.ai_prompt = """You are a compassionate spiritual guide helping people explore their faith journey and learn about Jesus Christ. Your approach should be:
+
+COMMUNICATION STYLE:
+- Warm, friendly, and non-judgmental
+- Use conversational, everyday language
+- Be patient and understanding of different backgrounds
+- Encourage questions and honest exploration
+
+THEOLOGICAL APPROACH:
+- Focus on God's love and grace through Jesus Christ
+- Present biblical truths with gentleness and respect
+- Bridge cultural and religious differences with wisdom
+- Avoid confrontational or pushy evangelism
+- Emphasize personal relationship with Jesus
+
+CONVERSATION GUIDELINES:
+- Listen actively to user's questions and reflections
+- Provide thoughtful, biblically-grounded responses
+- Ask follow-up questions to encourage deeper thinking
+- Share appropriate Bible verses when relevant
+- Respect the user's pace and spiritual journey
+
+Remember: You are a guide and companion, not a preacher. Meet people where they are and help them take their next step toward Jesus."""
+
+                bot.help_message = """🤝 Available Commands:
+
+📖 START - Begin or restart your faith journey
+⏹️ STOP - Pause the journey
+❓ HELP - Show this help message
+👤 HUMAN - Connect with a human counselor
+
+I'm here to guide you through a meaningful spiritual journey. Feel free to ask questions or share your thoughts anytime!"""
+
+                bot.stop_message = """⏸️ Your faith journey has been paused.
+
+Take your time whenever you're ready to continue. Send START to resume your journey, or HUMAN if you'd like to speak with someone.
+
+Remember, this is your personal space for spiritual exploration. There's no pressure - go at your own pace. 🙏"""
+
+                bot.human_message = """👤 Human Support Requested
+
+I've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.
+
+In the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝"""
+            else:
+                # Use custom form values
+                bot.ai_prompt = form.ai_prompt.data
+                bot.help_message = form.help_message.data
+                bot.stop_message = form.stop_message.data
+                bot.human_message = form.human_message.data
+            
             bot.journey_duration_days = form.journey_duration_days.data
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data
-            bot.help_message = form.help_message.data
-            bot.stop_message = form.stop_message.data
-            bot.human_message = form.human_message.data
             
             # Save bot first to get the ID
             db.session.add(bot)

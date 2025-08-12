@@ -74,11 +74,30 @@ class CreateBotForm(FlaskForm):
         validators=[Optional()]
     )
     
+    # Language and Cultural Templates
+    bot_template = SelectField(
+        'Bot Template',
+        choices=[
+            ('english_general', 'English - General Christian Outreach'),
+            ('indonesian_muslim', 'Indonesian - Muslim Background (Bang Kris Style)'),
+            ('custom', 'Custom - Define your own prompts')
+        ],
+        default='custom',
+        description="Pre-configured templates with culturally appropriate language and messaging"
+    )
+    
     # Audience and Content Customization
     target_audience = StringField('Target Audience', validators=[Optional(), Length(max=200)], 
                                  description="e.g., Young Muslim adults, Christian seekers, etc.")
-    audience_language = StringField('Audience Language', validators=[Optional(), Length(max=50)], 
-                                   default="English", description="Primary language for content")
+    audience_language = SelectField('Audience Language', 
+                                   choices=[
+                                       ('English', 'English'),
+                                       ('Indonesian', 'Bahasa Indonesia'),
+                                       ('Spanish', 'Spanish'),
+                                       ('Other', 'Other (specify in content prompt)')
+                                   ],
+                                   default="English", 
+                                   description="Primary language for bot responses and content")
     audience_religion = StringField('Current Religion/Background', validators=[Optional(), Length(max=100)], 
                                    description="e.g., Islam, Christianity, Hindu, Secular, etc.")
     audience_age_group = StringField('Age Group', validators=[Optional(), Length(max=50)], 
@@ -115,6 +134,18 @@ class EditBotForm(FlaskForm):
     # Telegram configuration
     telegram_bot_token = StringField('Telegram Bot Token', validators=[Optional(), Length(max=500)])
     telegram_webhook_url = StringField('Telegram Webhook URL', validators=[Optional(), Length(max=500)])
+    
+    # Language and Cultural Templates
+    bot_template = SelectField(
+        'Bot Template',
+        choices=[
+            ('english_general', 'English - General Christian Outreach'),
+            ('indonesian_muslim', 'Indonesian - Muslim Background (Bang Kris Style)'),
+            ('custom', 'Custom - Define your own prompts')
+        ],
+        default='custom',
+        description="Pre-configured templates with culturally appropriate language and messaging"
+    )
     
     # Bot behavior
     ai_prompt = TextAreaField(

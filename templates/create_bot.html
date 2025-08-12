@@ -184,6 +184,18 @@
                             <h5><i class="fas fa-brain me-2 cv-text-primary"></i>AI Behavior</h5>
                         </div>
 
+                        <!-- Bot Template Selection -->
+                        <div class="mb-4">
+                            {{ form.bot_template.label(class="form-label") }}
+                            {{ form.bot_template(class="form-select" + (" is-invalid" if form.bot_template.errors else ""), id="bot-template-selector") }}
+                            {% if form.bot_template.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.bot_template.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">{{ form.bot_template.description }}</div>
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 {{ form.journey_duration_days.label(class="form-label") }}
@@ -199,7 +211,7 @@
 
                         <div class="mb-4">
                             {{ form.ai_prompt.label(class="form-label") }}
-                            {{ form.ai_prompt(class="form-control" + (" is-invalid" if form.ai_prompt.errors else ""), rows="5") }}
+                            {{ form.ai_prompt(class="form-control" + (" is-invalid" if form.ai_prompt.errors else ""), rows="5", id="ai-prompt-field") }}
                             {% if form.ai_prompt.errors %}
                                 <div class="invalid-feedback">
                                     {% for error in form.ai_prompt.errors %}{{ error }}{% endfor %}
@@ -215,7 +227,7 @@
 
                         <div class="mb-3">
                             {{ form.help_message.label(class="form-label") }}
-                            {{ form.help_message(class="form-control" + (" is-invalid" if form.help_message.errors else ""), rows="4") }}
+                            {{ form.help_message(class="form-control" + (" is-invalid" if form.help_message.errors else ""), rows="4", id="help_message") }}
                             {% if form.help_message.errors %}
                                 <div class="invalid-feedback">
                                     {% for error in form.help_message.errors %}{{ error }}{% endfor %}
@@ -226,7 +238,7 @@
 
                         <div class="mb-3">
                             {{ form.stop_message.label(class="form-label") }}
-                            {{ form.stop_message(class="form-control" + (" is-invalid" if form.stop_message.errors else ""), rows="4") }}
+                            {{ form.stop_message(class="form-control" + (" is-invalid" if form.stop_message.errors else ""), rows="4", id="stop_message") }}
                             {% if form.stop_message.errors %}
                                 <div class="invalid-feedback">
                                     {% for error in form.stop_message.errors %}{{ error }}{% endfor %}
@@ -237,7 +249,7 @@
 
                         <div class="mb-4">
                             {{ form.human_message.label(class="form-label") }}
-                            {{ form.human_message(class="form-control" + (" is-invalid" if form.human_message.errors else ""), rows="4") }}
+                            {{ form.human_message(class="form-control" + (" is-invalid" if form.human_message.errors else ""), rows="4", id="human_message") }}
                             {% if form.human_message.errors %}
                                 <div class="invalid-feedback">
                                     {% for error in form.human_message.errors %}{{ error }}{% endfor %}
@@ -394,23 +406,133 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // AI Content Generation toggle
-    enableAiContent.addEventListener('change', function() {
-        aiContentConfig.style.display = this.checked ? 'block' : 'none';
-        
-        // Auto-sync journey duration when AI content is enabled
-        if (this.checked) {
-            const contentDuration = document.getElementById('content_generation_duration');
-            const journeyDuration = document.getElementById('journey_duration_days');
-            
-            // Set journey duration to match content generation duration
-            journeyDuration.value = contentDuration.value;
-            
-            // Keep them synced
-            contentDuration.addEventListener('change', function() {
-                journeyDuration.value = this.value;
-            });
+    // Bot Template handling
+    const templateSelector = document.getElementById('bot-template-selector');
+    const aiPromptField = document.getElementById('ai-prompt-field');
+    const helpMessageField = document.getElementById('help_message');
+    const stopMessageField = document.getElementById('stop_message');
+    const humanMessageField = document.getElementById('human_message');
+    
+    templateSelector.addEventListener('change', function() {
+        if (this.value === 'indonesian_muslim') {
+            // Indonesian Bang Kris template
+            aiPromptField.value = `Kamu adalah Bang Kris, seorang pemandu spiritual Indonesia yang ramah dan berpengalaman. Kamu bertugas membantu orang dari latar belakang Islam untuk menjelajahi spiritualitas dan pembelajaran tentang Isa Al-Masih.
+
+ATURAN BAHASA INDONESIA:
+- SELALU gunakan Bahasa Indonesia dalam semua respons
+- Gunakan gaya bahasa yang natural dan ramah seperti teman sebaya
+- Gunakan sapaan "Assalamualaikum" atau "Halo" untuk memulai percakapan
+- Gunakan kata "kamu" bukan "anda" untuk terdengar lebih personal
+
+TERMINOLOGI ISLAM-KRISTEN:
+- Gunakan "Isa Al-Masih" atau "Isa al-Masih" untuk Jesus 
+- Gunakan "Allah" atau "Allah SWT" untuk God
+- Gunakan terminologi yang menghormati kedua tradisi religius
+- Hindari jargon Kristen yang mungkin asing (seperti "diselamatkan", "dilahirkan kembali")
+
+PENDEKATAN BUDAYA:
+- Hormati latar belakang Islam pengguna
+- Bangun jembatan antara kedua tradisi dengan hormat
+- Fokus pada kesamaan spiritual (kasih, damai, belas kasihan)
+- Jangan pernah mengkritik atau meremehkan Islam
+- Tekankan perjalanan spiritual personal, bukan perubahan agama
+
+GAYA PERCAKAPAN:
+- Responsif terhadap pertanyaan dan refleksi pengguna
+- Berikan jawaban yang bijaksana dan penuh kasih
+- Gunakan emoji secara wajar (tidak berlebihan)
+- Ajukan pertanyaan follow-up untuk mendorong refleksi
+- Berbagi wawasan tentang Isa berdasarkan konteks percakapan
+
+Ingat: Kamu adalah teman spiritual yang mendampingi, bukan pendakwah yang memaksa.`;
+
+            helpMessageField.value = `🤝 Perintah yang tersedia:
+
+📖 START - Mulai atau mengulang bot
+⏹️ STOP - Berhenti dari bot 
+❓ HELP - Menampilkan menu help
+👤 HUMAN - Ngobrol sama manusia
+
+Aku disini untuk menuntun kamu dalam perjalanan spiritual, kamu bisa bertanya tentang pertanyaan iman atau membagikan pemikiran kamu.`;
+
+            stopMessageField.value = `Kamu telah berhenti dari perjalanan spiritual Bang Kris. Kalau mau mulai lagi, tinggal kirim START kapan aja. Damai sejahtera bersamamu. 🙏`;
+
+            humanMessageField.value = `🤝 Permintaan Chat dengan Manusia
+
+Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.
+
+Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. Silakan berbagi apa yang ada di hati Anda. 🙏`;
+
+        } else if (this.value === 'english_general') {
+            // English general template
+            aiPromptField.value = `You are a compassionate spiritual guide helping people explore their faith journey and learn about Jesus Christ. Your approach should be:
+
+COMMUNICATION STYLE:
+- Warm, friendly, and non-judgmental
+- Use conversational, everyday language
+- Be patient and understanding of different backgrounds
+- Encourage questions and honest exploration
+
+THEOLOGICAL APPROACH:
+- Focus on God's love and grace through Jesus Christ
+- Present biblical truths with gentleness and respect
+- Bridge cultural and religious differences with wisdom
+- Avoid confrontational or pushy evangelism
+- Emphasize personal relationship with Jesus
+
+CONVERSATION GUIDELINES:
+- Listen actively to user's questions and reflections
+- Provide thoughtful, biblically-grounded responses
+- Ask follow-up questions to encourage deeper thinking
+- Share appropriate Bible verses when relevant
+- Respect the user's pace and spiritual journey
+
+Remember: You are a guide and companion, not a preacher. Meet people where they are and help them take their next step toward Jesus.`;
+
+            helpMessageField.value = `🤝 Available Commands:
+
+📖 START - Begin or restart your faith journey
+⏹️ STOP - Pause the journey
+❓ HELP - Show this help message
+👤 HUMAN - Connect with a human counselor
+
+I'm here to guide you through a meaningful spiritual journey. Feel free to ask questions or share your thoughts anytime!`;
+
+            stopMessageField.value = `⏸️ Your faith journey has been paused.
+
+Take your time whenever you're ready to continue. Send START to resume your journey, or HUMAN if you'd like to speak with someone.
+
+Remember, this is your personal space for spiritual exploration. There's no pressure - go at your own pace. 🙏`;
+
+            humanMessageField.value = `👤 Human Support Requested
+
+I've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.
+
+In the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝`;
         }
+        // For 'custom', leave fields as they are for user to customize
+    });
+
+    // AI Content Generation toggle
+    if (enableAiContent) {
+        enableAiContent.addEventListener('change', function() {
+            aiContentConfig.style.display = this.checked ? 'block' : 'none';
+            
+            // Auto-sync journey duration when AI content is enabled
+            if (this.checked) {
+                const contentDuration = document.getElementById('content_generation_duration');
+                const journeyDuration = document.getElementById('journey_duration_days');
+                
+                // Set journey duration to match content generation duration
+                journeyDuration.value = contentDuration.value;
+                
+                // Keep them synced
+                contentDuration.addEventListener('change', function() {
+                    journeyDuration.value = this.value;
+                });
+            }
+        });
+    }
     });
 
     // Show initial state
