@@ -381,12 +381,27 @@ def whatsapp_webhook(bot_id=1):
                                         contacts_data = value.get('contacts', [])
                                         whatsapp_user_data = extract_whatsapp_user_data(message_data, contacts_data, client_ip)
                                         logger.info(f"🔥 DEBUG: Extracted WhatsApp user data: {whatsapp_user_data}")
+                                        logger.info(f"🔥 DEBUG: Contacts array length: {len(contacts_data) if contacts_data else 0}")
                                         
                                         # Debug the extracted WhatsApp user data before processing
                                         logger.info(f"🔥 DEBUG: Final WhatsApp user data being passed: {whatsapp_user_data}")
                                         
-                                        process_incoming_message(phone_number, message_text, platform="whatsapp", 
-                                                               user_data=whatsapp_user_data, request_ip=client_ip, bot_id=bot_id)
+                                        # Enhanced error handling: ensure message processing always continues
+                                        try:
+                                            process_incoming_message(phone_number, message_text, platform="whatsapp", 
+                                                                   user_data=whatsapp_user_data, request_ip=client_ip, bot_id=bot_id)
+                                            logger.info(f"✅ Successfully processed WhatsApp message from {phone_number}")
+                                        except Exception as processing_error:
+                                            logger.error(f"❌ Error processing WhatsApp message from {phone_number}: {processing_error}")
+                                            # Send error response to user
+                                            try:
+                                                bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                                                bot_whatsapp_service.send_message(
+                                                    phone_number, 
+                                                    "Sorry, there was a temporary error. Please try sending your message again."
+                                                )
+                                            except:
+                                                logger.error(f"❌ Failed to send error message to {phone_number}")
         
         # Handle legacy format for other providers
         elif 'messages' in data:
@@ -479,6 +494,11 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
                 logger.info(f"Day 1 user {phone_number} sending general message, using bot-specific AI response")
                 handle_general_conversation(phone_number, message_text, platform, bot_id)
                 return
+            else:
+                # Update user with any new WhatsApp data if available
+                if user_data and (user_data.get('whatsapp_formatted_name') or user_data.get('whatsapp_contact_name')):
+                    logger.info(f"Updating existing user {phone_number} with new WhatsApp data")
+                    db_manager.update_user(phone_number, **user_data)
         
         # Handle commands - support both slash commands (Telegram) and keyword commands (WhatsApp)
         if message_lower in ['start', '/start'] or 'start' in message_lower:
