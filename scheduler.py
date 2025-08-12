@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 from typing import List
 from db_manager import DatabaseManager
@@ -169,9 +170,26 @@ class ContentScheduler:
         try:
             media_type = content.get('media_type', 'text')
             content_text = content.get('content', '')  # Updated to match our Content model
-            media_url = content.get('media_url')
             day = content.get('day_number', 0)  # Updated to match our Content model
             title = content.get('title', 'Faith Journey')  # Add title
+            
+            # Construct proper media URL from filenames
+            media_url = None
+            if media_type == 'image' and content.get('image_filename'):
+                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                if not base_url.startswith('http'):
+                    base_url = f"https://{base_url}"
+                media_url = f"{base_url}/static/uploads/images/{content.get('image_filename')}"
+            elif media_type == 'video' and content.get('video_filename'):
+                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                if not base_url.startswith('http'):
+                    base_url = f"https://{base_url}"
+                media_url = f"{base_url}/static/uploads/videos/{content.get('video_filename')}"
+            elif media_type == 'audio' and content.get('audio_filename'):
+                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                if not base_url.startswith('http'):
+                    base_url = f"https://{base_url}"
+                media_url = f"{base_url}/static/uploads/audio/{content.get('audio_filename')}"
             
             # Add day header with title and reflection question
             reflection_question = content.get('reflection_question', '')

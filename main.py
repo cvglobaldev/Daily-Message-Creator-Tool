@@ -1779,9 +1779,9 @@ def send_admin_message():
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
             
-        # Determine platform and send message
+        # Determine platform and send message with bot-specific service
         platform = 'telegram' if user.phone_number.startswith('tg_') else 'whatsapp'
-        success = send_message_to_platform(user.phone_number, platform, message)
+        success = send_message_to_platform(user.phone_number, platform, message, bot_id=user.bot_id)
         
         if success:
             # Log the message with admin tags
