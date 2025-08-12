@@ -95,11 +95,10 @@ class ContentScheduler:
                 setting.value = datetime.datetime.utcnow().isoformat()
                 setting.updated_at = datetime.datetime.utcnow()
             else:
-                setting = SystemSettings(
-                    key=key,
-                    value=datetime.datetime.utcnow().isoformat(),
-                    description=f"Last content delivery time for bot {bot_id}"
-                )
+                setting = SystemSettings()
+                setting.key = key
+                setting.value = datetime.datetime.utcnow().isoformat()
+                setting.description = f"Last content delivery time for bot {bot_id}"
                 db.session.add(setting)
             
             db.session.commit()
@@ -246,25 +245,33 @@ class ContentScheduler:
                 else:
                     return telegram_service.send_message(chat_id, message)
             else:
-                # WhatsApp user (default)
+                # WhatsApp user - use bot-specific service
+                user = self.db.get_user_by_phone(phone_number)
+                if user and user.bot_id:
+                    from main import get_whatsapp_service_for_bot
+                    whatsapp_service = get_whatsapp_service_for_bot(user.bot_id)
+                    logger.info(f"Using bot-specific WhatsApp service for bot_id {user.bot_id}")
+                else:
+                    whatsapp_service = self.whatsapp_service
+                
                 if media_type == 'text' or not media_url:
-                    return self.whatsapp_service.send_message(phone_number, message)
+                    return whatsapp_service.send_message(phone_number, message)
                 elif media_type in ['image', 'video', 'audio']:
-                    # For WhatsApp, send media first (simulated), then text content
+                    # For WhatsApp, send media first, then text content
                     media_sent = False
                     if media_url:
                         if media_type == 'image':
-                            # Send image via WhatsApp simulation (media delivery is simulated)
-                            logger.info(f"WhatsApp image delivery simulated for {phone_number}: {media_url}")
-                            media_sent = True
+                            # Send image via WhatsApp API
+                            media_sent = whatsapp_service.send_media_message(phone_number, 'image', media_url)
+                            logger.info(f"WhatsApp image sent to {phone_number}: {media_url}")
                         elif media_type == 'video':
-                            # Send video via WhatsApp simulation
-                            logger.info(f"WhatsApp video delivery simulated for {phone_number}: {media_url}")
-                            media_sent = True
+                            # Send video via WhatsApp API
+                            media_sent = whatsapp_service.send_video(phone_number, media_url)
+                            logger.info(f"WhatsApp video sent to {phone_number}: {media_url}")
                         elif media_type == 'audio':
-                            # Send audio via WhatsApp simulation
-                            logger.info(f"WhatsApp audio delivery simulated for {phone_number}: {media_url}")
-                            media_sent = True
+                            # Send audio via WhatsApp API
+                            media_sent = whatsapp_service.send_media_message(phone_number, 'audio', media_url)
+                            logger.info(f"WhatsApp audio sent to {phone_number}: {media_url}")
                         else:
                             # For other media types, log but don't implement yet
                             logger.info(f"Media content delivery to WhatsApp user {phone_number} - {media_type} not yet implemented, media URL: {media_url}")
@@ -272,13 +279,13 @@ class ContentScheduler:
                     # Now send text content after media
                     if media_sent:
                         time.sleep(1)
-                        text_sent = self.whatsapp_service.send_message(phone_number, message)
+                        text_sent = whatsapp_service.send_message(phone_number, message)
                         return text_sent
                     else:
                         # If media failed, still send text
-                        return self.whatsapp_service.send_message(phone_number, message)
+                        return whatsapp_service.send_message(phone_number, message)
                 else:
-                    return self.whatsapp_service.send_message(phone_number, message)
+                    return whatsapp_service.send_message(phone_number, message)
                 
         except Exception as e:
             logger.error(f"Error delivering content: {e}")

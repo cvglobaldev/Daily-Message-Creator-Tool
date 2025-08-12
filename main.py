@@ -64,6 +64,38 @@ scheduler_started = False
 
 # Cache for bot-specific services
 bot_telegram_services = {}
+bot_whatsapp_services = {}
+
+def get_whatsapp_service_for_bot(bot_id):
+    """Get bot-specific WhatsApp service"""
+    logger.info(f"🔥 DEBUG: Getting WhatsApp service for bot_id {bot_id}")
+    try:
+        if bot_id not in bot_whatsapp_services:
+            with app.app_context():  # Ensure database context
+                # Get bot configuration from database
+                bot = Bot.query.get(bot_id)
+                logger.info(f"🔥 DEBUG: Bot found: {bot.name if bot else 'None'}, has WhatsApp token: {bool(bot and bot.whatsapp_access_token)}")
+                if bot and bot.whatsapp_access_token and bot.whatsapp_phone_number_id:
+                    bot_whatsapp_services[bot_id] = WhatsAppService(bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
+                    logger.info(f"🔥 DEBUG: Created new WhatsAppService for bot_id {bot_id}")
+                else:
+                    # Fallback to default service
+                    bot_whatsapp_services[bot_id] = whatsapp_service
+                    logger.info(f"🔥 DEBUG: Using default WhatsAppService for bot_id {bot_id}")
+        else:
+            logger.info(f"🔥 DEBUG: Using cached WhatsAppService for bot_id {bot_id}")
+        return bot_whatsapp_services[bot_id]
+    except Exception as e:
+        logger.error(f"🔥 ERROR: Failed to get WhatsApp service for bot_id {bot_id}: {e}")
+        return whatsapp_service  # Fallback to default
+
+def invalidate_bot_service_cache(bot_id):
+    """Invalidate cached services for a bot when its configuration changes"""
+    logger.info(f"Invalidating service cache for bot_id {bot_id}")
+    if bot_id in bot_telegram_services:
+        del bot_telegram_services[bot_id]
+    if bot_id in bot_whatsapp_services:
+        del bot_whatsapp_services[bot_id]
 
 def get_telegram_service_for_bot(bot_id):
     """Get bot-specific Telegram service"""
@@ -395,8 +427,9 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                 logger.error(f"Invalid Telegram chat_id format: {phone_number}")
                 return False
         else:
-            # Default to WhatsApp (enhanced features not yet implemented)
-            return whatsapp_service.send_message(phone_number, message)
+            # Default to WhatsApp - use bot-specific service
+            bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+            return bot_whatsapp_service.send_message(phone_number, message)
     except Exception as e:
         logger.error(f"Error sending message to {platform}: {e}")
         return False
@@ -1652,6 +1685,9 @@ def create_bot():
             db.session.add(bot)
             db.session.commit()
             
+            # Invalidate service cache for this bot
+            invalidate_bot_service_cache(bot.id)
+            
             # Handle AI Content Generation if enabled
             content_generation_status = []
             if form.enable_ai_content_generation.data:
@@ -1840,6 +1876,9 @@ def edit_bot(bot_id):
                 bot.whatsapp_webhook_url = None
             
             db.session.commit()
+            
+            # Invalidate service cache for this bot when credentials change
+            invalidate_bot_service_cache(bot.id)
             
             success_message = f'Bot "{bot.name}" updated successfully!'
             if webhook_messages:
