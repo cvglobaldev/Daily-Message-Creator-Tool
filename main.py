@@ -379,6 +379,26 @@ def send_test_message():
         logger.error(f"Error sending test message: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/debug_whatsapp', methods=['GET'])
+def debug_whatsapp():
+    """Debug WhatsApp configuration and test API access"""
+    try:
+        access_token = os.environ.get('WHATSAPP_ACCESS_TOKEN')
+        phone_id = os.environ.get('WHATSAPP_PHONE_NUMBER_ID')
+        
+        debug_info = {
+            "access_token_length": len(access_token) if access_token else 0,
+            "phone_number_id": phone_id,
+            "has_token": bool(access_token),
+            "has_phone_id": bool(phone_id)
+        }
+        
+        return jsonify(debug_info), 200
+        
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
+
 def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Process incoming message from user"""
     try:
