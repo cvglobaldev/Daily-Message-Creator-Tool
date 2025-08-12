@@ -44,6 +44,11 @@ class DatabaseManager:
             user.language_code = kwargs.get('language_code')
             user.is_premium = kwargs.get('is_premium')
             
+            # WhatsApp-specific fields
+            user.whatsapp_contact_name = kwargs.get('whatsapp_contact_name')
+            user.whatsapp_formatted_name = kwargs.get('whatsapp_formatted_name')
+            user.whatsapp_phone = kwargs.get('whatsapp_phone')
+            
             # Location fields
             user.country = kwargs.get('country')
             user.region = kwargs.get('region')

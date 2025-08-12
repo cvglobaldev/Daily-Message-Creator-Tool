@@ -163,6 +163,7 @@ class User(db.Model):
     
     # WhatsApp-specific fields
     whatsapp_contact_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    whatsapp_formatted_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     whatsapp_phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     
     # Location data
@@ -197,6 +198,9 @@ class User(db.Model):
             'last_name': self.last_name,
             'language_code': self.language_code,
             'is_premium': self.is_premium,
+            'whatsapp_contact_name': self.whatsapp_contact_name,
+            'whatsapp_formatted_name': self.whatsapp_formatted_name,
+            'whatsapp_phone': self.whatsapp_phone,
             'country': self.country,
             'region': self.region,
             'city': self.city,

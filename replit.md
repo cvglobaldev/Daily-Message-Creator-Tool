@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
+### ✅ COMPLETED: WhatsApp Formatted Name Capture (August 12, 2025)
+- **Enhanced Contact Extraction**: System now captures `formatted_name` from WhatsApp API contacts array in addition to profile name
+- **Priority-Based Naming**: Uses WhatsApp `formatted_name` as first choice, then profile `name`, then fallback to default
+- **Database Storage**: Added `whatsapp_formatted_name` field to User model for better contact information storage
+- **Improved User Profiles**: Chat management interface will now display the user's actual WhatsApp display name
+- **Debug Logging**: Added comprehensive logging for WhatsApp contact data extraction and processing
+- **Database Migration**: Successfully added new field to existing user table structure
+
 ### ✅ COMPLETED: Daily Message Template Cleanup (August 12, 2025)
 - **Template Formatting**: Removed "💭 Reflection Question:" and "Take your time to think about it and share your thoughts when you're ready." from all message templates
 - **Scheduler Updates**: Updated scheduler.py to deliver cleaner message formats across all bots

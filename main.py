@@ -575,16 +575,21 @@ def extract_whatsapp_user_data(message_data: dict, contacts_data: list = None, r
         
         # Try to get contact name from contacts array (if available in webhook)
         contact_name = ''
+        formatted_name = ''
         if contacts_data:
             for contact in contacts_data:
                 if contact.get('wa_id') == phone_number:
                     profile = contact.get('profile', {})
                     contact_name = profile.get('name', '')
+                    formatted_name = contact.get('formatted_name', '')
+                    logger.info(f"🔥 DEBUG: WhatsApp contact data - wa_id: {contact.get('wa_id')}, profile name: '{contact_name}', formatted_name: '{formatted_name}'")
                     break
         
-        # Set name from contact info or default
-        enhanced_data['name'] = contact_name if contact_name else f'WhatsApp User {phone_number[-4:]}'
+        # Prefer formatted_name over profile name, fallback to default
+        display_name = formatted_name or contact_name or f'WhatsApp User {phone_number[-4:]}'
+        enhanced_data['name'] = display_name
         enhanced_data['whatsapp_contact_name'] = contact_name
+        enhanced_data['whatsapp_formatted_name'] = formatted_name
         
     if request_ip:
         enhanced_data['ip_address'] = request_ip
