@@ -213,6 +213,13 @@ def start_scheduler():
     logger.info("Background scheduler started")
 
 @app.route('/')
+def index():
+    """Public landing page that redirects to dashboard if logged in, otherwise to login"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    else:
+        return redirect(url_for('login'))
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -468,7 +475,7 @@ def debug_whatsapp():
         logger.error(f"Error in debug endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
-def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
+def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = "", bot_id: int = 1):
     """Process incoming message from user"""
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
@@ -585,7 +592,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
 
 
 
-def extract_whatsapp_user_data(message_data: dict, contacts_data: list = None, request_ip: str = None) -> dict:
+def extract_whatsapp_user_data(message_data: dict, contacts_data: list = None, request_ip: str = "") -> dict:
     """Extract enhanced user data from WhatsApp message payload"""
     enhanced_data = {}
     
@@ -896,7 +903,7 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
             )
         
         # Log the outgoing stop response if successful
-        if success:
+        if success and user:
             db_manager.log_message(
                 user=user,
                 direction='outgoing',
@@ -950,16 +957,17 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
         success = send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
         logger.info(f"🔥 DEBUG: Help message send result: {success}")
         
-        # Log the help request
-        db_manager.log_message(
-            user=user,
-            direction='incoming',
-            raw_text=f'/help' if platform == 'telegram' else 'HELP',
-            sentiment='neutral',
-            tags=['HELP']
-        )
+        # Log the help request  
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=f'/help' if platform == 'telegram' else 'HELP',
+                sentiment='neutral',
+                tags=['HELP']
+            )
         
-        if success:
+        if success and user:
             # Log the outgoing help response
             db_manager.log_message(
                 user=user,
@@ -990,15 +998,16 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
             db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Log the human command for chat management visibility
-        db_manager.log_message(
-            user=user,
-            direction='incoming',
-            raw_text=f'/human' if platform == 'telegram' else 'HUMAN',
-            sentiment='neutral',
-            tags=['HUMAN_COMMAND', 'DIRECT_CHAT', 'PRIORITY'],
-            is_human_handoff=True,
-            confidence=1.0
-        )
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=f'/human' if platform == 'telegram' else 'HUMAN',
+                sentiment='neutral',
+                tags=['HUMAN_COMMAND', 'DIRECT_CHAT', 'PRIORITY'],
+                is_human_handoff=True,
+                confidence=1.0
+            )
         
         # Get bot configuration for custom human message
         from models import Bot
@@ -1022,7 +1031,7 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
         
         success = send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
         
-        if success:
+        if success and user:
             # Log the outgoing human response
             db_manager.log_message(
                 user=user,
@@ -1075,7 +1084,7 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
-def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
+def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = "", bot_id: int = 1):
     """Handle first message from WhatsApp user with welcome flow: greeting → 10 sec delay → Day 1 content"""
     try:
         from datetime import datetime
@@ -1230,8 +1239,10 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
             logger.error(f"Exception details: {str(ai_error)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            # Ultimate fallback - still use bot-specific language if available
-            if bot and "indonesia" in bot.name.lower():
+                # Ultimate fallback - still use bot-specific language if available
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if bot and bot.name and "indonesia" in bot.name.lower():
                 contextual_response = "Terima kasih sudah mengirim pesan. Saya Bang Kris di sini untuk membantu Anda belajar tentang Isa Al-Masih. Ada yang ingin Anda tanyakan?"
             else:
                 contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
@@ -1240,14 +1251,15 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
         send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
         
         # Log the outgoing response
-        db_manager.log_message(
-            user=user,
-            direction='outgoing',
-            raw_text=contextual_response,
-            sentiment='positive',
-            tags=['AI_Response', 'General_Conversation'],
-            confidence=0.9
-        )
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=contextual_response,
+                sentiment='positive',
+                tags=['AI_Response', 'General_Conversation'],
+                confidence=0.9
+            )
         
         logger.info(f"Processed general conversation from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
         
@@ -1272,18 +1284,19 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
             db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Log the response
-        db_manager.log_message(
-            user=user,
-            direction='incoming',
-            raw_text=message_text,
-            sentiment=analysis['sentiment'],
-            tags=analysis['tags'],
-            confidence=analysis.get('confidence')
-        )
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=message_text,
+                sentiment=analysis['sentiment'],
+                tags=analysis['tags'],
+                confidence=analysis.get('confidence')
+            )
         
         # Get current day content for contextual response
-        current_day = user.current_day - 1  # User was advanced after receiving content, so subtract 1 for the content they just reflected on
-        content = db_manager.get_content_by_day(current_day, bot_id=user.bot_id) if current_day > 0 else None
+        current_day = user.current_day - 1 if user else 1  # User was advanced after receiving content, so subtract 1 for the content they just reflected on
+        content = db_manager.get_content_by_day(current_day, bot_id=user.bot_id if user else bot_id) if current_day > 0 else None
         
         # Generate bot-specific AI response using the bot's prompt and user's message
         try:
@@ -1314,8 +1327,10 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             # Ultimate fallback - still use bot-specific language if available
-            if bot and "indonesia" in bot.name.lower():
-                contextual_response = "Terima kasih sudah berbagi refleksi Anda. Keterbukaan Anda menunjukkan hati yang tulus mencari kebenaran."
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if bot and bot.name and "indonesia" in bot.name.lower():
+                contextual_response = "Terima kasih sudah berbagi refleksi Anda. Keterbukaan Anda menunjukkan hati yang tulus mencari kebenaan."
             else:
                 contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
         
@@ -1323,14 +1338,15 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
         send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
         
         # Log the outgoing contextual response
-        db_manager.log_message(
-            user=user,
-            direction='outgoing',
-            raw_text=contextual_response,
-            sentiment='positive',
-            tags=['AI_Response', 'Contextual'],
-            confidence=0.9
-        )
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=contextual_response,
+                sentiment='positive',
+                tags=['AI_Response', 'Contextual'],
+                confidence=0.9
+            )
         
         logger.info(f"Processed reflection from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
         
@@ -1799,11 +1815,11 @@ def upload_video(bot_id=None):
         
         # Check file extension
         allowed_extensions = {'mp4', 'mov', 'avi', 'mkv', 'webm'}
-        if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+        if not file.filename or '.' not in file.filename or not (file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
             return jsonify({'success': False, 'error': 'Invalid file type. Allowed: mp4, mov, avi, mkv, webm'}), 400
         
         # Generate secure filename with bot isolation
-        filename = secure_filename(file.filename)
+        filename = secure_filename(file.filename or "")
         if bot_id:
             # Bot-specific filename to prevent conflicts between bots
             unique_filename = f"bot{bot_id}_{uuid.uuid4()}_{filename}"
@@ -1840,11 +1856,11 @@ def upload_image(bot_id=None):
         
         # Check file extension
         allowed_extensions = {'jpg', 'jpeg', 'png', 'gif'}
-        if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+        if not file.filename or '.' not in file.filename or not (file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
             return jsonify({'success': False, 'error': 'Invalid file type. Allowed: jpg, jpeg, png, gif'}), 400
         
         # Generate secure filename with bot isolation
-        filename = secure_filename(file.filename)
+        filename = secure_filename(file.filename or "")
         if bot_id:
             # Bot-specific filename to prevent conflicts between bots
             unique_filename = f"bot{bot_id}_{uuid.uuid4()}_{filename}"
@@ -1881,11 +1897,11 @@ def upload_audio(bot_id=None):
         
         # Check file extension
         allowed_extensions = {'mp3', 'wav', 'ogg', 'm4a'}
-        if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+        if not file.filename or '.' not in file.filename or not (file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
             return jsonify({'success': False, 'error': 'Invalid file type. Allowed: mp3, wav, ogg, m4a'}), 400
         
         # Generate secure filename with bot isolation
-        filename = secure_filename(file.filename)
+        filename = secure_filename(file.filename or "")
         if bot_id:
             # Bot-specific filename to prevent conflicts between bots
             unique_filename = f"bot{bot_id}_{uuid.uuid4()}_{filename}"
@@ -2151,7 +2167,7 @@ def create_bot():
     if form.validate_on_submit():
         try:
             bot = Bot()
-            bot.name = form.name.data
+            bot.name = form.name.data or ""
             bot.description = form.description.data
             bot.platforms = form.platforms.data or []
             bot.whatsapp_access_token = form.whatsapp_access_token.data if 'whatsapp' in (form.platforms.data or []) else None
@@ -2258,13 +2274,13 @@ I've flagged your conversation for our human counselors who will respond as soon
 In the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝"""
             else:
                 # Use custom form values
-                bot.ai_prompt = form.ai_prompt.data
-                bot.help_message = form.help_message.data
-                bot.stop_message = form.stop_message.data
-                bot.human_message = form.human_message.data
+                bot.ai_prompt = form.ai_prompt.data or ""
+                bot.help_message = form.help_message.data or ""
+                bot.stop_message = form.stop_message.data or ""
+                bot.human_message = form.human_message.data or ""
             
-            bot.journey_duration_days = form.journey_duration_days.data
-            bot.delivery_interval_minutes = form.delivery_interval_minutes.data
+            bot.journey_duration_days = form.journey_duration_days.data or 30
+            bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
             
             # Save bot first to get the ID
             db.session.add(bot)
@@ -2274,7 +2290,7 @@ In the meantime, feel free to continue sharing your thoughts or questions. Every
             invalidate_bot_service_cache(bot.id)
             
             # Create initial test users for the new bot
-            create_initial_test_users(bot.id, bot.name)
+            create_initial_test_users(bot.id, bot.name or "")
             
             # Handle AI Content Generation if enabled
             content_generation_status = []
@@ -2790,7 +2806,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = AdminUser.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data) and user.is_active:
+        if user and user.check_password(form.password.data) and user.active:
             login_user(user, remember=form.remember_me.data)
             user.last_login = datetime.utcnow()
             db.session.commit()
@@ -2860,7 +2876,7 @@ def edit_user(user_id):
         user.email = form.email.data
         user.full_name = form.full_name.data
         user.role = form.role.data
-        user.is_active = form.is_active.data
+        user.active = form.active.data
         db.session.commit()
         flash(f'User {user.username} has been updated successfully!', 'success')
         return redirect(url_for('user_management'))
