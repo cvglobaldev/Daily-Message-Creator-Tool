@@ -10,6 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
+### ✅ COMPLETED: Bot 2 Indonesian Language Fix (August 12, 2025)
+- **Critical Bug Fix**: Resolved Bot 2 responding in English instead of Indonesian despite being designed for Indonesian audience
+- **Root Cause**: AI prompt lacked specific Indonesian language instructions and Day 1 users were incorrectly routed through reflection handler
+- **Technical Solution**: Updated Bot 2 AI prompt with comprehensive Indonesian language rules and cultural sensitivity guidelines
+- **Message Routing Fix**: Added `handle_general_conversation` function and proper Day 1 user routing logic to avoid reflection handler
+- **Language Enhancement**: Bot now consistently responds in Bahasa Indonesia with Islamic-friendly terminology (Isa Al-Masih, Allah, etc.)
+- **Cultural Adaptation**: Responses now use culturally appropriate Indonesian expressions and respectful Islamic context
+- **Identity Confirmation**: Bot properly identifies as "Bang Kris" and maintains Indonesian spiritual guide persona
+- **Testing Verified**: Comprehensive testing confirms natural Indonesian conversations with proper theological bridge-building
+
 ### ✅ COMPLETED: WhatsApp User Profile Enhancement (August 12, 2025)
 - **Profile Data Extraction**: Added comprehensive WhatsApp user data extraction from webhook contact information
 - **Database Enhancement**: Added WhatsApp-specific fields (whatsapp_contact_name, whatsapp_phone, location_data) to User model

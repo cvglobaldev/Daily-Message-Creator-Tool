@@ -420,6 +420,11 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
                 logger.info(f"New WhatsApp user {phone_number}, sending welcome message for any first message: '{message_text}'")
                 handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
                 return
+            elif existing_user.current_day == 1 and message_lower not in ['start', '/start', 'stop', '/stop', 'help', '/help', 'human', '/human']:
+                # User on Day 1 sending non-command messages should get bot response (not reflection)
+                logger.info(f"Day 1 user {phone_number} sending general message, using bot-specific AI response")
+                handle_general_conversation(phone_number, message_text, platform, bot_id)
+                return
         
         # Handle commands
         if message_lower == 'start' or message_lower == '/start':
@@ -937,6 +942,80 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
+def handle_general_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+    """Handle general conversation using bot-specific AI prompt without reflection context"""
+    try:
+        # Analyze the response with Gemini
+        analysis = gemini_service.analyze_response(message_text)
+        
+        # Get or create user with bot_id
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user(phone_number, bot_id=bot_id)
+        
+        # Log the incoming message
+        db_manager.log_message(
+            user=user,
+            direction='incoming',
+            raw_text=message_text,
+            sentiment=analysis['sentiment'],
+            tags=analysis['tags'],
+            confidence=analysis.get('confidence')
+        )
+        
+        # Generate bot-specific AI response using the bot's prompt
+        try:
+            # Get the bot's configuration for AI prompt
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            ai_prompt = bot.ai_prompt if bot else "You are a helpful spiritual guide chatbot."
+            
+            logger.info(f"Generating general conversation response for {phone_number} using bot AI prompt")
+            
+            # Generate response using bot-specific AI prompt (no content context for general conversation)
+            contextual_response = gemini_service.generate_bot_response(
+                user_message=message_text,
+                ai_prompt=ai_prompt,
+                content_context=None
+            )
+            
+            logger.info(f"Generated general conversation response for {phone_number} using bot AI prompt")
+                
+        except Exception as ai_error:
+            logger.error(f"Failed to generate AI response for {phone_number}: {ai_error}")
+            logger.error(f"Exception details: {str(ai_error)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Ultimate fallback - still use bot-specific language if available
+            if bot and "indonesia" in bot.name.lower():
+                contextual_response = "Terima kasih sudah mengirim pesan. Saya Bang Kris di sini untuk membantu Anda belajar tentang Isa Al-Masih. Ada yang ingin Anda tanyakan?"
+            else:
+                contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
+        
+        # Send the contextual response
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
+        
+        # Log the outgoing response
+        db_manager.log_message(
+            user=user,
+            direction='outgoing',
+            raw_text=contextual_response,
+            sentiment='positive',
+            tags=['AI_Response', 'General_Conversation'],
+            confidence=0.9
+        )
+        
+        logger.info(f"Processed general conversation from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
+        
+    except Exception as e:
+        logger.error(f"Error handling general conversation from {phone_number}: {e}")
+        # Still acknowledge the user's message with fallback
+        fallback_response = "Thank you for your message. How can I help you today?"
+        send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
+
 def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle user's reflection response with contextual AI response"""
     try:
@@ -965,21 +1044,39 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
         current_day = user.current_day - 1  # User was advanced after receiving content, so subtract 1 for the content they just reflected on
         content = db_manager.get_content_by_day(current_day, bot_id=user.bot_id) if current_day > 0 else None
         
-        if content:
-            # Generate contextual response based on current day's content
-            contextual_response = gemini_service.generate_contextual_response(
-                user_reflection=message_text,
-                day_number=content.day_number,
-                content_title=content.title,
-                content_text=content.content,
-                reflection_question=content.reflection_question
+        # Generate bot-specific AI response using the bot's prompt and user's message
+        try:
+            # Get the bot's configuration for AI prompt
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            ai_prompt = bot.ai_prompt if bot else "You are a helpful spiritual guide chatbot."
+            
+            logger.info(f"Generating contextual response for {phone_number} using bot AI prompt")
+            
+            # Generate response using bot-specific AI prompt
+            contextual_response = gemini_service.generate_bot_response(
+                user_message=message_text,
+                ai_prompt=ai_prompt,
+                content_context=content
             )
             
-            logger.info(f"Generated contextual response for {phone_number} (Day {content.day_number})")
-        else:
-            # Fallback acknowledgment if no content found
-            contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
-            logger.warning(f"No content found for contextual response to {phone_number}")
+
+            
+            if content:
+                logger.info(f"Generated contextual response for {phone_number} (Day {content.day_number}) using bot AI prompt")
+            else:
+                logger.info(f"Generated general response for {phone_number} using bot AI prompt")
+                
+        except Exception as ai_error:
+            logger.error(f"Failed to generate AI response for {phone_number}: {ai_error}")
+            logger.error(f"Exception details: {str(ai_error)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Ultimate fallback - still use bot-specific language if available
+            if bot and "indonesia" in bot.name.lower():
+                contextual_response = "Terima kasih sudah berbagi refleksi Anda. Keterbukaan Anda menunjukkan hati yang tulus mencari kebenaran."
+            else:
+                contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
         
         # Send the contextual response
         send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)

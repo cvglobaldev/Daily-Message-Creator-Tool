@@ -833,6 +833,55 @@ class GeminiService:
         import random
         return random.choice(responses)
     
+    def generate_bot_response(self, user_message: str, ai_prompt: str, content_context=None) -> str:
+        """Generate a bot-specific response using the bot's AI prompt and optional content context"""
+        try:
+            if not self.client:
+                # Fallback response if Gemini is not available
+                return self._get_fallback_contextual_response(user_message)
+            
+            # Build the context-aware prompt
+            system_instruction = ai_prompt
+            
+            # Add content context if available
+            if content_context:
+                context_addition = f"""
+                
+Current journey context:
+- Day: {content_context.day_number}
+- Topic: {content_context.title}
+- Content: {content_context.content[:200]}...
+- Reflection Question: {content_context.reflection_question}
+
+Please respond in a way that acknowledges their current journey stage and the content they're reflecting on.
+"""
+                system_instruction += context_addition
+            
+            # Generate response using the bot's specific AI prompt
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    types.Content(role="user", parts=[types.Part(text=user_message)])
+                ],
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.7,
+                    max_output_tokens=500
+                )
+            )
+            
+            if response.text:
+                # Clean up the response
+                bot_response = response.text.strip()
+                logger.info(f"Generated bot-specific response (length: {len(bot_response)})")
+                return bot_response
+            else:
+                return self._get_fallback_contextual_response(user_message)
+                
+        except Exception as e:
+            logger.error(f"Error generating bot response: {e}")
+            return self._get_fallback_contextual_response(user_message)
+    
     def should_trigger_human_handoff(self, user_message: str) -> bool:
         """Determine if a message should trigger human handoff"""
         if not self.client:
