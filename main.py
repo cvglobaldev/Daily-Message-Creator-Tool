@@ -323,8 +323,16 @@ def whatsapp_webhook(bot_id=1):
                                         if client_ip and ',' in client_ip:
                                             client_ip = client_ip.split(',')[0].strip()
                                         
+                                        # Extract WhatsApp user data from contacts (if available)
+                                        contacts_data = value.get('contacts', [])
+                                        whatsapp_user_data = extract_whatsapp_user_data(message_data, contacts_data, client_ip)
+                                        logger.info(f"🔥 DEBUG: Extracted WhatsApp user data: {whatsapp_user_data}")
+                                        
+                                        # Debug the extracted WhatsApp user data before processing
+                                        logger.info(f"🔥 DEBUG: Final WhatsApp user data being passed: {whatsapp_user_data}")
+                                        
                                         process_incoming_message(phone_number, message_text, platform="whatsapp", 
-                                                               request_ip=client_ip, bot_id=bot_id)
+                                                               user_data=whatsapp_user_data, request_ip=client_ip, bot_id=bot_id)
         
         # Handle legacy format for other providers
         elif 'messages' in data:
@@ -362,6 +370,7 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         # Handle commands
         if message_lower == 'start' or message_lower == '/start':
+            logger.info(f"🔥 DEBUG: Calling handle_start_command with user_data: {user_data}")
             handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
             return
         
@@ -436,6 +445,64 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
 
 
 
+def extract_whatsapp_user_data(message_data: dict, contacts_data: list = None, request_ip: str = None) -> dict:
+    """Extract enhanced user data from WhatsApp message payload"""
+    enhanced_data = {}
+    
+    if message_data:
+        phone_number = message_data.get('from', '')
+        enhanced_data['whatsapp_phone'] = phone_number
+        
+        # Try to get contact name from contacts array (if available in webhook)
+        contact_name = ''
+        if contacts_data:
+            for contact in contacts_data:
+                if contact.get('wa_id') == phone_number:
+                    profile = contact.get('profile', {})
+                    contact_name = profile.get('name', '')
+                    break
+        
+        # Set name from contact info or default
+        enhanced_data['name'] = contact_name if contact_name else f'WhatsApp User {phone_number[-4:]}'
+        enhanced_data['whatsapp_contact_name'] = contact_name
+        
+    if request_ip:
+        enhanced_data['ip_address'] = request_ip
+        # Simple location stub - can be enhanced with IP geolocation service
+        enhanced_data['location_data'] = {'country': 'Unknown', 'region': 'Unknown', 'city': 'Unknown'}
+    
+    return enhanced_data
+
+def extract_telegram_user_data(user_data: dict, request_ip: str = None) -> dict:
+    """Extract enhanced user data from Telegram"""
+    enhanced_data = {}
+    
+    if user_data:
+        # Extract Telegram specific fields
+        enhanced_data['telegram_user_id'] = str(user_data.get('id', ''))
+        enhanced_data['telegram_username'] = user_data.get('username', '')
+        enhanced_data['telegram_first_name'] = user_data.get('first_name', '')
+        enhanced_data['telegram_last_name'] = user_data.get('last_name', '')
+        enhanced_data['telegram_language_code'] = user_data.get('language_code', '')
+        enhanced_data['telegram_is_premium'] = user_data.get('is_premium', False)
+        
+        # Create display name from available data
+        name_parts = []
+        if enhanced_data['telegram_first_name']:
+            name_parts.append(enhanced_data['telegram_first_name'])
+        if enhanced_data['telegram_last_name']:
+            name_parts.append(enhanced_data['telegram_last_name'])
+        if not name_parts and enhanced_data['telegram_username']:
+            name_parts.append(f"@{enhanced_data['telegram_username']}")
+        
+        enhanced_data['name'] = ' '.join(name_parts) if name_parts else 'Telegram User'
+        
+    if request_ip:
+        enhanced_data['ip_address'] = request_ip
+        enhanced_data['location_data'] = get_location_from_ip(request_ip)
+    
+    return enhanced_data
+
 def handle_start_command(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Handle START command - onboard new user"""
     try:
@@ -450,8 +517,11 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 update_kwargs.update(enhanced_data)
+            elif user_data and platform == "whatsapp":
+                # Use WhatsApp user data
+                update_kwargs.update(user_data)
             elif user_data:
-                user_name = user_data.get('first_name') or user_data.get('username')
+                user_name = user_data.get('first_name') or user_data.get('username') or user_data.get('name')
                 if user_name:
                     update_kwargs['name'] = user_name
             db_manager.update_user(phone_number, **update_kwargs)
@@ -530,8 +600,11 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 update_kwargs.update(enhanced_data)
+            elif user_data and platform == "whatsapp":
+                # Use WhatsApp user data
+                update_kwargs.update(user_data)
             elif user_data:
-                user_name = user_data.get('first_name') or user_data.get('username')
+                user_name = user_data.get('first_name') or user_data.get('username') or user_data.get('name')
                 if user_name:
                     update_kwargs['name'] = user_name
             db_manager.update_user(phone_number, **update_kwargs)
@@ -540,8 +613,11 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 create_kwargs.update(enhanced_data)
+            elif user_data and platform == "whatsapp":
+                # Use WhatsApp user data
+                create_kwargs.update(user_data)
             elif user_data:
-                user_name = user_data.get('first_name') or user_data.get('username')
+                user_name = user_data.get('first_name') or user_data.get('username') or user_data.get('name')
                 if user_name:
                     create_kwargs['name'] = user_name
             db_manager.create_user(phone_number, **create_kwargs)

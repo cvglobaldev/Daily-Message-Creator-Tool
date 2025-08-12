@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
+### ✅ COMPLETED: WhatsApp User Profile Enhancement (August 12, 2025)
+- **Profile Data Extraction**: Added comprehensive WhatsApp user data extraction from webhook contact information
+- **Database Enhancement**: Added WhatsApp-specific fields (whatsapp_contact_name, whatsapp_phone, location_data) to User model
+- **Contact Information Capture**: System now captures user names and contact details from WhatsApp API contacts array
+- **Profile Display Integration**: WhatsApp user profiles now display in chat management interface similar to Telegram users
+- **Location Data Support**: Added IP-based location detection and storage for enhanced user profiling
+- **Debug Logging**: Implemented comprehensive logging for WhatsApp user data processing and troubleshooting
+
 ### ✅ COMPLETED: Bot-Specific WhatsApp Service Implementation (August 12, 2025)
 - **Bot Isolation**: Implemented bot-specific WhatsApp services using credentials stored in bot configuration
 - **Dynamic Service Creation**: Each bot now uses its own WhatsApp access token and phone number ID from database

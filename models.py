@@ -161,12 +161,17 @@ class User(db.Model):
     language_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     is_premium: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     
+    # WhatsApp-specific fields
+    whatsapp_contact_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    whatsapp_phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    
     # Location data
     country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     region: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     timezone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    location_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     
     status: Mapped[str] = mapped_column(String(20), nullable=False, default='active')
     current_day: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
