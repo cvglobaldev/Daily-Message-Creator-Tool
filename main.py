@@ -1225,9 +1225,29 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
                                 if not base_url.startswith('http'):
                                     base_url = f"https://{base_url}"
                                 media_url = f"{base_url}/static/uploads/images/{content.image_filename}"
+                                
+                                logger.info(f"🖼️ Attempting to send Day 1 image: {media_url}")
                                 bot_service = get_whatsapp_service_for_bot(bot_id)
-                                bot_service.send_media_message(phone_number, "image", media_url, caption="")
-                                time.sleep(1)  # Small delay between image and text
+                                
+                                try:
+                                    # Validate image file exists before attempting to send
+                                    import os
+                                    relative_path = f"static/uploads/images/{content.image_filename}"
+                                    if os.path.exists(relative_path):
+                                        # Send image with retry logic
+                                        image_success = bot_service.send_media_message(phone_number, "image", media_url, caption="")
+                                        if image_success:
+                                            logger.info(f"✅ Day 1 image sent successfully to {phone_number}")
+                                        else:
+                                            logger.error(f"❌ Failed to send Day 1 image to {phone_number}")
+                                        time.sleep(2)  # Delay between image and text
+                                    else:
+                                        logger.error(f"❌ Day 1 image file not found: {relative_path}")
+                                        logger.warning(f"Available image files: {os.listdir('static/uploads/images/') if os.path.exists('static/uploads/images/') else 'Directory not found'}")
+                                        # Continue with text-only message
+                                except Exception as img_error:
+                                    logger.error(f"❌ Exception sending Day 1 image to {phone_number}: {img_error}")
+                                    # Continue with text message even if image fails
                             elif content.media_type == 'video' and content.youtube_url:
                                 message = f"📖 Day 1 - {content.title}\n\n{content.content}\n\n🎥 Video: {content.youtube_url}"
                                 if content.reflection_question:

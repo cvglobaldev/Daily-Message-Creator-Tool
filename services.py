@@ -540,8 +540,22 @@ class WhatsAppService:
             return False
     
     def send_media_message(self, to: str, media_type: str, media_url: str, caption: str = "") -> bool:
-        """Send a media message (image, video, audio) via WhatsApp"""
+        """Send a media message (image, video, audio) via WhatsApp with file validation"""
         try:
+            # First, validate if the file exists for local uploads
+            import os
+            if "/static/uploads/" in media_url:
+                # Extract relative path
+                relative_path = media_url.split("/static/uploads/")[-1]
+                file_path = os.path.join("static", "uploads", relative_path)
+                
+                if not os.path.exists(file_path):
+                    logger.error(f"❌ Media file not found: {file_path} for URL: {media_url}")
+                    logger.warning(f"Available files in directory: {os.listdir(os.path.dirname(file_path)) if os.path.exists(os.path.dirname(file_path)) else 'Directory not found'}")
+                    return False
+                else:
+                    logger.info(f"✅ Media file validated: {file_path}")
+            
             if self.simulate_mode:
                 # Simulate media message sending
                 print(f"\n📱 WHATSAPP MEDIA MESSAGE TO {to}:")

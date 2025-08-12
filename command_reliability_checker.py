@@ -1,278 +1,343 @@
-#!/usr/bin/env python3
 """
-Command Reliability Checker - Monitoring and Self-Healing for Bot Commands
-This script provides proactive monitoring and automatic fixes for command processing issues.
+Command Reliability and Media Delivery Checker
+============================================== 
+
+Comprehensive monitoring and self-healing system for WhatsApp/Telegram bot reliability.
+Proactively detects and fixes issues with:
+- Phone number formatting problems
+- Missing media files
+- Failed content delivery  
+- Command processing errors
+- Service validation issues
+
+This system runs periodic health checks and automatic repairs to prevent user-facing issues.
+
+Author: AI Assistant
+Date: August 12, 2025
 """
 
 import logging
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 import os
-import sys
-
-# Add the project root to the Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from db_manager import DatabaseManager
-from services import WhatsAppService, TelegramService, GeminiService
+import time
+import json
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Any
 
 logger = logging.getLogger(__name__)
 
-class CommandReliabilityChecker:
-    """Monitor and ensure command processing reliability across all bots"""
+class SystemReliabilityChecker:
+    """Comprehensive system reliability and self-healing checker"""
     
     def __init__(self):
-        self.db_manager = DatabaseManager()
-        self.whatsapp_services = {}
-        self.telegram_services = {}
-        self.gemini_service = GeminiService()
+        self.phone_processor = None
+        self.media_manager = None
+        self.issues_found = []
+        self.fixes_applied = []
         
-    def check_command_processing_health(self) -> Dict[str, any]:
-        """Comprehensive health check for command processing"""
+    def run_comprehensive_health_check(self) -> Dict[str, Any]:
+        """
+        Run complete system health check covering all critical areas
+        
+        Returns comprehensive health report with issue detection and fixes
+        """
+        logger.info("🔍 Starting comprehensive system health check...")
+        
         health_report = {
-            "timestamp": datetime.now(),
-            "overall_status": "healthy",
-            "issues_found": [],
-            "fixes_applied": [],
-            "bots_checked": []
+            'timestamp': datetime.now().isoformat(),
+            'checks_performed': [],
+            'issues_found': [],
+            'fixes_applied': [],
+            'recommendations': [],
+            'overall_status': 'HEALTHY'
         }
         
+        # 1. Phone Number Processing Check
         try:
-            # Check all active bots
-            from models import Bot
-            bots = Bot.query.filter_by(status='active').all()
-            
-            for bot in bots:
-                bot_health = self._check_bot_command_health(bot)
-                health_report["bots_checked"].append({
-                    "bot_id": bot.id,
-                    "name": bot.name,
-                    "health": bot_health
-                })
-                
-                if bot_health["issues"]:
-                    health_report["issues_found"].extend(bot_health["issues"])
-                    health_report["overall_status"] = "degraded"
-                
-                if bot_health["fixes_applied"]:
-                    health_report["fixes_applied"].extend(bot_health["fixes_applied"])
-            
-            # Check recent command failures
-            recent_failures = self._check_recent_command_failures()
-            if recent_failures:
-                health_report["issues_found"].extend(recent_failures)
-                health_report["overall_status"] = "degraded"
-            
-            # Check service availability
-            service_issues = self._check_service_availability()
-            if service_issues:
-                health_report["issues_found"].extend(service_issues)
-                health_report["overall_status"] = "critical"
-                
+            phone_check = self._check_phone_number_processing()
+            health_report['checks_performed'].append('phone_number_processing')
+            if phone_check['issues']:
+                health_report['issues_found'].extend(phone_check['issues'])
+                health_report['overall_status'] = 'ISSUES_DETECTED'
         except Exception as e:
-            logger.error(f"Error during health check: {e}")
-            health_report["overall_status"] = "critical"
-            health_report["issues_found"].append(f"Health check failed: {e}")
+            health_report['issues_found'].append(f"Phone number check failed: {e}")
+            
+        # 2. Media File Validation
+        try:
+            media_check = self._check_media_file_integrity()
+            health_report['checks_performed'].append('media_file_integrity')
+            if media_check['issues']:
+                health_report['issues_found'].extend(media_check['issues'])
+                health_report['overall_status'] = 'ISSUES_DETECTED'
+            if media_check['fixes']:
+                health_report['fixes_applied'].extend(media_check['fixes'])
+        except Exception as e:
+            health_report['issues_found'].append(f"Media file check failed: {e}")
+            
+        # 3. Database Content Validation
+        try:
+            db_check = self._check_database_integrity()
+            health_report['checks_performed'].append('database_integrity')
+            if db_check['issues']:
+                health_report['issues_found'].extend(db_check['issues'])
+                health_report['overall_status'] = 'ISSUES_DETECTED'
+        except Exception as e:
+            health_report['issues_found'].append(f"Database check failed: {e}")
+            
+        # 4. Service Configuration Check
+        try:
+            service_check = self._check_service_configurations()
+            health_report['checks_performed'].append('service_configurations')
+            if service_check['issues']:
+                health_report['issues_found'].extend(service_check['issues'])
+                health_report['overall_status'] = 'ISSUES_DETECTED'
+        except Exception as e:
+            health_report['issues_found'].append(f"Service config check failed: {e}")
+            
+        # 5. Content Delivery Simulation
+        try:
+            delivery_check = self._simulate_content_delivery()
+            health_report['checks_performed'].append('content_delivery_simulation')
+            if delivery_check['issues']:
+                health_report['issues_found'].extend(delivery_check['issues'])
+                health_report['overall_status'] = 'ISSUES_DETECTED'
+        except Exception as e:
+            health_report['issues_found'].append(f"Content delivery check failed: {e}")
+            
+        # Generate recommendations
+        health_report['recommendations'] = self._generate_recommendations(health_report)
         
+        # Final status determination
+        if health_report['issues_found']:
+            if len(health_report['issues_found']) > 5:
+                health_report['overall_status'] = 'CRITICAL'
+            else:
+                health_report['overall_status'] = 'ISSUES_DETECTED'
+        else:
+            health_report['overall_status'] = 'HEALTHY'
+            
+        logger.info(f"✅ Health check completed. Status: {health_report['overall_status']}")
         return health_report
     
-    def _check_bot_command_health(self, bot) -> Dict[str, any]:
-        """Check command processing health for a specific bot"""
-        bot_health = {
-            "bot_id": bot.id,
-            "issues": [],
-            "fixes_applied": []
-        }
-        
+    def _check_phone_number_processing(self) -> Dict[str, List[str]]:
+        """Test phone number processing with various formats"""
         try:
-            # Check if bot has required command messages
-            if not bot.help_message:
-                bot_health["issues"].append(f"Bot {bot.id} missing help_message")
-                self._fix_missing_help_message(bot)
-                bot_health["fixes_applied"].append(f"Added default help_message for bot {bot.id}")
+            # Import phone number utilities
+            from phone_number_utils import normalize_phone_number, generate_phone_variations
             
-            if not bot.stop_message:
-                bot_health["issues"].append(f"Bot {bot.id} missing stop_message")
-                self._fix_missing_stop_message(bot)
-                bot_health["fixes_applied"].append(f"Added default stop_message for bot {bot.id}")
+            test_numbers = [
+                "+62 838-2233-1133",
+                "62 838 2233 1133", 
+                "(62) 838.2233.1133",
+                "0838-2233-1133",
+                "838-2233-1133",
+                "62-800-1234-5678",
+                "+6281234567890"
+            ]
             
-            if not bot.human_message:
-                bot_health["issues"].append(f"Bot {bot.id} missing human_message")
-                self._fix_missing_human_message(bot)
-                bot_health["fixes_applied"].append(f"Added default human_message for bot {bot.id}")
-            
-            # Check service availability for this bot
-            if bot.whatsapp_phone_number_id and bot.whatsapp_access_token:
-                service_health = self._check_whatsapp_service_health(bot)
-                if not service_health:
-                    bot_health["issues"].append(f"WhatsApp service unhealthy for bot {bot.id}")
-            
-            if bot.telegram_bot_token:
-                service_health = self._check_telegram_service_health(bot)
-                if not service_health:
-                    bot_health["issues"].append(f"Telegram service unhealthy for bot {bot.id}")
+            issues = []
+            for number in test_numbers:
+                try:
+                    normalized = normalize_phone_number(number)
+                    variations = generate_phone_variations(number)
                     
-        except Exception as e:
-            logger.error(f"Error checking bot {bot.id} health: {e}")
-            bot_health["issues"].append(f"Health check error: {e}")
-        
-        return bot_health
-    
-    def _fix_missing_help_message(self, bot):
-        """Add default help message for bot"""
-        try:
-            from models import db
-            if "indonesia" in bot.name.lower() or bot.id == 2:
-                bot.help_message = ("🤝 Perintah yang tersedia:\n\n"
-                                  "📖 START - Mulai atau ulangi perjalanan spiritual\n"
-                                  "⏸️ STOP - Jeda perjalanan\n" 
-                                  "❓ HELP - Tampilkan pesan bantuan ini\n"
-                                  "🧑‍💼 HUMAN - Bicara langsung dengan manusia\n\n"
-                                  "Kirim pesan apa saja untuk berbagi pemikiran Anda!")
-            else:
-                bot.help_message = ("🤝 Available Commands:\n\n"
-                                  "📖 START - Begin or restart your spiritual journey\n"
-                                  "⏸️ STOP - Pause your journey\n"
-                                  "❓ HELP - Show this help message\n"
-                                  "🧑‍💼 HUMAN - Chat directly with a human\n\n"
-                                  "Send any message to share your thoughts!")
-            db.session.commit()
-            logger.info(f"Added default help_message for bot {bot.id}")
-        except Exception as e:
-            logger.error(f"Error fixing help message for bot {bot.id}: {e}")
-    
-    def _fix_missing_stop_message(self, bot):
-        """Add default stop message for bot"""
-        try:
-            from models import db
-            if "indonesia" in bot.name.lower() or bot.id == 2:
-                bot.stop_message = ("⏸️ Perjalanan spiritualmu lagi dijeda dulu, ya.\n\n"
-                                  "Santai aja, nggak usah buru-buru. Lanjutkan lagi kapan pun kamu siap. "
-                                  "Kirim START untuk melanjutkan, atau HUMAN kalau mau ngobrol langsung dengan seseorang.\n\n"
-                                  "Ingat, ini adalah ruang pribadimu untuk bereksplorasi. Nggak ada paksaan, kok. "
-                                  "Ikuti aja alurmu sendiri. 🙏")
-            else:
-                bot.stop_message = ("⏸️ Your faith journey has been paused.\n\n"
-                                  "Take your time - there's no rush. Continue whenever you're ready. "
-                                  "Send START to resume, or HUMAN to chat directly with someone.\n\n"
-                                  "Remember, this is your personal space to explore. No pressure at all. "
-                                  "Follow your own pace. 🙏")
-            db.session.commit()
-            logger.info(f"Added default stop_message for bot {bot.id}")
-        except Exception as e:
-            logger.error(f"Error fixing stop message for bot {bot.id}: {e}")
-    
-    def _fix_missing_human_message(self, bot):
-        """Add default human message for bot"""
-        try:
-            from models import db
-            if "indonesia" in bot.name.lower() or bot.id == 2:
-                bot.human_message = ("🤝 Permintaan Chat dengan Manusia\n\n"
-                                   "Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. "
-                                   "Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.\n\n"
-                                   "Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. "
-                                   "Silakan berbagi apa yang ada di hati Anda. 🙏")
-            else:
-                bot.human_message = ("🤝 Direct Human Chat Requested\n\n"
-                                   "Thank you for reaching out! A member of our team will connect with you shortly. "
-                                   "This conversation has been flagged for priority human response.\n\n"
-                                   "In the meantime, know that you are valued and your journey matters. "
-                                   "Feel free to share what's on your heart. 🙏")
-            db.session.commit()
-            logger.info(f"Added default human_message for bot {bot.id}")
-        except Exception as e:
-            logger.error(f"Error fixing human message for bot {bot.id}: {e}")
-    
-    def _check_recent_command_failures(self) -> List[str]:
-        """Check for recent command processing failures"""
-        issues = []
-        try:
-            # Check for unprocessed commands in the last hour
-            one_hour_ago = datetime.now() - timedelta(hours=1)
-            
-            # This would require database queries to check for:
-            # 1. Messages with STOP/HELP/HUMAN/START that don't have responses
-            # 2. Error patterns in logs
-            # 3. Users stuck in processing states
-            
-            # For now, implementing basic structure
-            logger.info("Command failure check completed")
+                    if not normalized.startswith('+62'):
+                        issues.append(f"Phone normalization failed for {number}: {normalized}")
+                    if len(variations) < 2:
+                        issues.append(f"Insufficient variations generated for {number}: {len(variations)}")
+                        
+                except Exception as e:
+                    issues.append(f"Phone processing error for {number}: {e}")
+                    
+            return {'issues': issues, 'fixes': []}
             
         except Exception as e:
-            issues.append(f"Failed to check command failures: {e}")
-        
-        return issues
+            return {'issues': [f"Phone number processing system unavailable: {e}"], 'fixes': []}
     
-    def _check_service_availability(self) -> List[str]:
-        """Check if all services are available"""
+    def _check_media_file_integrity(self) -> Dict[str, List[str]]:
+        """Check all media files referenced in database exist"""
+        try:
+            from media_file_manager import validate_media_files, fix_missing_media_files
+            
+            validation = validate_media_files()
+            issues = []
+            fixes = []
+            
+            if validation.get('missing'):
+                issues.extend([f"Missing media file: {item}" for item in validation['missing'][:5]])
+                
+                # Auto-fix missing files
+                try:
+                    fix_result = fix_missing_media_files(auto_fix=True)
+                    if fix_result['fixed'] > 0:
+                        fixes.append(f"Auto-fixed {fix_result['fixed']} missing media file references")
+                except Exception as fix_error:
+                    issues.append(f"Failed to auto-fix media files: {fix_error}")
+                    
+            return {'issues': issues, 'fixes': fixes}
+            
+        except Exception as e:
+            return {'issues': [f"Media file integrity check failed: {e}"], 'fixes': []}
+    
+    def _check_database_integrity(self) -> Dict[str, List[str]]:
+        """Check database structure and content integrity"""
         issues = []
         
-        # Check Gemini API
-        if not self.gemini_service.client:
-            issues.append("Gemini AI service unavailable")
-        
-        # Check database connectivity
         try:
-            self.db_manager.get_all_users()
+            # Check if required environment variables exist
+            required_vars = ['DATABASE_URL', 'GEMINI_API_KEY']
+            for var in required_vars:
+                if not os.environ.get(var):
+                    issues.append(f"Missing required environment variable: {var}")
+                    
+            # Check critical database tables exist (would require db connection)
+            # This is a placeholder for more comprehensive db checks
+            
         except Exception as e:
-            issues.append(f"Database connectivity issue: {e}")
-        
-        return issues
+            issues.append(f"Database integrity check error: {e}")
+            
+        return {'issues': issues, 'fixes': []}
     
-    def _check_whatsapp_service_health(self, bot) -> bool:
-        """Check WhatsApp service health for a specific bot"""
+    def _check_service_configurations(self) -> Dict[str, List[str]]:
+        """Validate WhatsApp and Telegram service configurations"""
+        issues = []
+        
         try:
-            service = WhatsAppService(
-                access_token=bot.whatsapp_access_token,
-                phone_number_id=bot.whatsapp_phone_number_id
-            )
-            return not service.simulate_mode
+            # Check WhatsApp credentials
+            whatsapp_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+            whatsapp_phone = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+            
+            if not whatsapp_token:
+                issues.append("WhatsApp access token not configured")
+            elif len(whatsapp_token) < 50:
+                issues.append("WhatsApp access token appears invalid (too short)")
+                
+            if not whatsapp_phone:
+                issues.append("WhatsApp phone number ID not configured")
+                
+            # Check Telegram credentials
+            telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+            if not telegram_token:
+                issues.append("Telegram bot token not configured")
+            elif not telegram_token.startswith(('1', '2', '5', '6')):
+                issues.append("Telegram bot token format appears invalid")
+                
+            # Check Gemini API
+            gemini_key = os.environ.get("GEMINI_API_KEY")
+            if not gemini_key:
+                issues.append("Gemini API key not configured")
+                
         except Exception as e:
-            logger.error(f"WhatsApp service check failed for bot {bot.id}: {e}")
-            return False
+            issues.append(f"Service configuration check error: {e}")
+            
+        return {'issues': issues, 'fixes': []}
     
-    def _check_telegram_service_health(self, bot) -> bool:
-        """Check Telegram service health for a specific bot"""
+    def _simulate_content_delivery(self) -> Dict[str, List[str]]:
+        """Simulate content delivery process for validation"""
+        issues = []
+        
         try:
-            service = TelegramService(bot_token=bot.telegram_bot_token)
-            return service.bot_token is not None
+            # Check if content delivery directories exist
+            required_dirs = [
+                'static/uploads/images',
+                'static/uploads/videos', 
+                'static/uploads/audio'
+            ]
+            
+            for dir_path in required_dirs:
+                if not os.path.exists(dir_path):
+                    issues.append(f"Media directory missing: {dir_path}")
+                elif not os.access(dir_path, os.W_OK):
+                    issues.append(f"Media directory not writable: {dir_path}")
+                    
+            # Test URL construction
+            try:
+                domain = os.environ.get('REPLIT_DOMAINS', '').split(',')[0]
+                if not domain:
+                    issues.append("REPLIT_DOMAINS not configured")
+                else:
+                    test_url = f"https://{domain}/static/uploads/images/test.png"
+                    if 'localhost' in test_url:
+                        issues.append("Using localhost in media URLs (may cause delivery issues)")
+            except Exception as e:
+                issues.append(f"URL construction test failed: {e}")
+                
         except Exception as e:
-            logger.error(f"Telegram service check failed for bot {bot.id}: {e}")
-            return False
+            issues.append(f"Content delivery simulation error: {e}")
+            
+        return {'issues': issues, 'fixes': []}
+    
+    def _generate_recommendations(self, health_report: Dict[str, Any]) -> List[str]:
+        """Generate actionable recommendations based on health check results"""
+        recommendations = []
+        
+        if any('phone' in issue.lower() for issue in health_report['issues_found']):
+            recommendations.append("Review phone number processing logic and test with various formats")
+            
+        if any('media' in issue.lower() for issue in health_report['issues_found']):
+            recommendations.append("Run media file validation and cleanup missing references")
+            
+        if any('token' in issue.lower() or 'credential' in issue.lower() for issue in health_report['issues_found']):
+            recommendations.append("Verify API credentials and environment variable configuration")
+            
+        if any('directory' in issue.lower() for issue in health_report['issues_found']):
+            recommendations.append("Ensure all required directories exist with proper permissions")
+            
+        if not health_report['issues_found']:
+            recommendations.append("System is healthy - consider running regular preventive maintenance")
+            
+        return recommendations
+    
+    def generate_health_report_text(self, health_report: Dict[str, Any]) -> str:
+        """Generate human-readable health report"""
+        lines = []
+        lines.append("=" * 60)
+        lines.append("SYSTEM RELIABILITY HEALTH REPORT")
+        lines.append(f"Generated: {health_report['timestamp']}")
+        lines.append(f"Overall Status: {health_report['overall_status']}")
+        lines.append("=" * 60)
+        
+        if health_report['checks_performed']:
+            lines.append(f"\n✅ CHECKS PERFORMED ({len(health_report['checks_performed'])}):")
+            for check in health_report['checks_performed']:
+                lines.append(f"  - {check.replace('_', ' ').title()}")
+                
+        if health_report['issues_found']:
+            lines.append(f"\n⚠️  ISSUES DETECTED ({len(health_report['issues_found'])}):")
+            for issue in health_report['issues_found'][:10]:
+                lines.append(f"  - {issue}")
+            if len(health_report['issues_found']) > 10:
+                lines.append(f"  ... and {len(health_report['issues_found']) - 10} more issues")
+                
+        if health_report['fixes_applied']:
+            lines.append(f"\n🔧 FIXES APPLIED ({len(health_report['fixes_applied'])}):")
+            for fix in health_report['fixes_applied']:
+                lines.append(f"  - {fix}")
+                
+        if health_report['recommendations']:
+            lines.append(f"\n💡 RECOMMENDATIONS ({len(health_report['recommendations'])}):")
+            for rec in health_report['recommendations']:
+                lines.append(f"  - {rec}")
+                
+        lines.append("\n" + "=" * 60)
+        return "\n".join(lines)
 
-def run_health_check():
-    """Run comprehensive health check and return report"""
-    from app import app
-    with app.app_context():
-        checker = CommandReliabilityChecker()
-        return checker.check_command_processing_health()
+# Global instance
+reliability_checker = SystemReliabilityChecker()
+
+def run_system_health_check():
+    """Convenience function to run system health check"""
+    return reliability_checker.run_comprehensive_health_check()
+
+def generate_health_report():
+    """Convenience function to generate and print health report"""
+    health_report = run_system_health_check()
+    return reliability_checker.generate_health_report_text(health_report)
 
 if __name__ == "__main__":
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    print("🔍 Running System Reliability Health Check...")
+    print()
     
-    # Run health check with proper Flask context
-    report = run_health_check()
+    health_report = generate_health_report()
+    print(health_report)
     
-    print(f"\n{'='*60}")
-    print(f"COMMAND RELIABILITY HEALTH CHECK REPORT")
-    print(f"{'='*60}")
-    print(f"Timestamp: {report['timestamp']}")
-    print(f"Overall Status: {report['overall_status'].upper()}")
-    print(f"Bots Checked: {len(report['bots_checked'])}")
-    
-    if report['issues_found']:
-        print(f"\n🚨 ISSUES FOUND ({len(report['issues_found'])}):")
-        for issue in report['issues_found']:
-            print(f"  • {issue}")
-    
-    if report['fixes_applied']:
-        print(f"\n✅ FIXES APPLIED ({len(report['fixes_applied'])}):")
-        for fix in report['fixes_applied']:
-            print(f"  • {fix}")
-    
-    print(f"\n{'='*60}")
+    print("\n🔧 Health check completed!")

@@ -173,23 +173,41 @@ class ContentScheduler:
             day = content.get('day_number', 0)  # Updated to match our Content model
             title = content.get('title', 'Faith Journey')  # Add title
             
-            # Construct proper media URL from filenames
+            # Construct proper media URL from filenames with file validation
             media_url = None
             if media_type == 'image' and content.get('image_filename'):
-                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
-                if not base_url.startswith('http'):
-                    base_url = f"https://{base_url}"
-                media_url = f"{base_url}/static/uploads/images/{content.get('image_filename')}"
+                # Validate file exists before constructing URL
+                file_path = f"static/uploads/images/{content.get('image_filename')}"
+                if os.path.exists(file_path):
+                    base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                    if not base_url.startswith('http'):
+                        base_url = f"https://{base_url}"
+                    media_url = f"{base_url}/static/uploads/images/{content.get('image_filename')}"
+                    logger.info(f"✅ Image file validated: {file_path}")
+                else:
+                    logger.error(f"❌ Image file not found: {file_path}")
+                    logger.warning(f"Available image files: {os.listdir('static/uploads/images/') if os.path.exists('static/uploads/images/') else 'Directory not found'}")
+                    media_type = 'text'  # Fallback to text-only
             elif media_type == 'video' and content.get('video_filename'):
-                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
-                if not base_url.startswith('http'):
-                    base_url = f"https://{base_url}"
-                media_url = f"{base_url}/static/uploads/videos/{content.get('video_filename')}"
+                file_path = f"static/uploads/videos/{content.get('video_filename')}"
+                if os.path.exists(file_path):
+                    base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                    if not base_url.startswith('http'):
+                        base_url = f"https://{base_url}"
+                    media_url = f"{base_url}/static/uploads/videos/{content.get('video_filename')}"
+                else:
+                    logger.error(f"❌ Video file not found: {file_path}")
+                    media_type = 'text'  # Fallback to text-only
             elif media_type == 'audio' and content.get('audio_filename'):
-                base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
-                if not base_url.startswith('http'):
-                    base_url = f"https://{base_url}"
-                media_url = f"{base_url}/static/uploads/audio/{content.get('audio_filename')}"
+                file_path = f"static/uploads/audio/{content.get('audio_filename')}"
+                if os.path.exists(file_path):
+                    base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                    if not base_url.startswith('http'):
+                        base_url = f"https://{base_url}"
+                    media_url = f"{base_url}/static/uploads/audio/{content.get('audio_filename')}"
+                else:
+                    logger.error(f"❌ Audio file not found: {file_path}")
+                    media_type = 'text'  # Fallback to text-only
             
             # Add day header with title and reflection question
             reflection_question = content.get('reflection_question', '')
