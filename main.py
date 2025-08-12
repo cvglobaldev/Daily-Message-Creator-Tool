@@ -3194,6 +3194,33 @@ def serve_uploaded_file(subfolder, filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_subfolder)
     return send_from_directory(file_path, safe_filename)
 
+@app.route('/api/media/browse')
+@login_required
+def api_media_browse():
+    """API endpoint to browse available media files"""
+    try:
+        from media_file_browser import get_available_media_files
+        
+        # Get query parameters
+        media_type = request.args.get('media_type', None)
+        bot_id = request.args.get('bot_id', None, type=int)
+        
+        # Get available files
+        files = get_available_media_files(media_type=media_type, bot_id=bot_id)
+        
+        return jsonify({
+            'success': True,
+            'files': files,
+            'total': len(files)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error browsing media files: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # File upload helper functions
 def allowed_file(filename, allowed_extensions):
     return '.' in filename and \
@@ -3235,39 +3262,63 @@ def cms_content_create():
         audio_filename = None
         youtube_url = None
         
-        if form.media_type.data == 'image' and form.image_file.data:
-            # Get bot_id from form if available (for new bot content creation)
-            bot_id = getattr(form, 'bot_id', None)
-            if hasattr(form.bot_id, 'data'):
-                bot_id = form.bot_id.data
-            
-            # Use universal prevention system for upload validation
-            from universal_media_prevention_system import validate_and_upload_with_prevention
-            upload_result = validate_and_upload_with_prevention(form.image_file.data, 'image', bot_id or 1)
-            
-            if upload_result['success']:
-                image_filename = upload_result['filename']
-                logger.info(f"✅ New content image upload successful: {image_filename}")
-            else:
-                logger.error(f"❌ New content image upload failed: {upload_result['errors']}")
-                flash(f"Image upload failed: {'; '.join(upload_result['errors'])}", 'danger')
+        if form.media_type.data == 'image':
+            # Check if using existing file or uploading new
+            existing_image = request.form.get('existing_image_file')
+            if existing_image:
+                # Validate existing file exists
+                from media_file_browser import validate_media_file_exists
+                if validate_media_file_exists(existing_image, 'image'):
+                    image_filename = existing_image
+                    logger.info(f"✅ Using existing image file: {image_filename}")
+                else:
+                    logger.error(f"❌ Selected existing image file not found: {existing_image}")
+                    flash("Selected image file not found. Please choose another or upload new.", 'danger')
+            elif form.image_file.data:
+                # Get bot_id from form if available (for new bot content creation)
+                bot_id = getattr(form, 'bot_id', None)
+                if hasattr(form.bot_id, 'data'):
+                    bot_id = form.bot_id.data
+                
+                # Use universal prevention system for upload validation
+                from universal_media_prevention_system import validate_and_upload_with_prevention
+                upload_result = validate_and_upload_with_prevention(form.image_file.data, 'image', bot_id or 1)
+                
+                if upload_result['success']:
+                    image_filename = upload_result['filename']
+                    logger.info(f"✅ New content image upload successful: {image_filename}")
+                else:
+                    logger.error(f"❌ New content image upload failed: {upload_result['errors']}")
+                    flash(f"Image upload failed: {'; '.join(upload_result['errors'])}", 'danger')
         
-        if form.media_type.data == 'audio' and form.audio_file.data:
-            # Get bot_id from form if available (for new bot content creation)
-            bot_id = getattr(form, 'bot_id', None)
-            if hasattr(form.bot_id, 'data'):
-                bot_id = form.bot_id.data
-            
-            # Use universal prevention system for upload validation
-            from universal_media_prevention_system import validate_and_upload_with_prevention
-            upload_result = validate_and_upload_with_prevention(form.audio_file.data, 'audio', bot_id or 1)
-            
-            if upload_result['success']:
-                audio_filename = upload_result['filename']
-                logger.info(f"✅ New content audio upload successful: {audio_filename}")
-            else:
-                logger.error(f"❌ New content audio upload failed: {upload_result['errors']}")
-                flash(f"Audio upload failed: {'; '.join(upload_result['errors'])}", 'danger')
+        if form.media_type.data == 'audio':
+            # Check if using existing file or uploading new
+            existing_audio = request.form.get('existing_audio_file')
+            if existing_audio:
+                # Validate existing file exists
+                from media_file_browser import validate_media_file_exists
+                if validate_media_file_exists(existing_audio, 'audio'):
+                    audio_filename = existing_audio
+                    logger.info(f"✅ Using existing audio file: {audio_filename}")
+                else:
+                    logger.error(f"❌ Selected existing audio file not found: {existing_audio}")
+                    flash("Selected audio file not found. Please choose another or upload new.", 'danger')
+            elif form.audio_file.data:
+                # Get bot_id from form if available (for new bot content creation)
+                bot_id = getattr(form, 'bot_id', None)
+                if hasattr(form.bot_id, 'data'):
+                    bot_id = form.bot_id.data
+                
+                # Use universal prevention system for upload validation
+                from universal_media_prevention_system import validate_and_upload_with_prevention
+                upload_result = validate_and_upload_with_prevention(form.audio_file.data, 'audio', bot_id or 1)
+                
+                if upload_result['success']:
+                    audio_filename = upload_result['filename']
+                    logger.info(f"✅ New content audio upload successful: {audio_filename}")
+                else:
+                    logger.error(f"❌ New content audio upload failed: {upload_result['errors']}")
+                    flash(f"Audio upload failed: {'; '.join(upload_result['errors'])}", 'danger')
         
         if form.media_type.data == 'video' and form.youtube_url.data:
             youtube_url = form.youtube_url.data.strip()
@@ -3340,54 +3391,75 @@ def cms_content_edit(content_id):
             except:
                 tags = []
             
-            # Handle file uploads with comprehensive validation
-            if media_type == 'image' and 'image_file' in request.files:
-                file = request.files['image_file']
-                if file and file.filename:
-                    # Use universal prevention system for upload validation
-                    from universal_media_prevention_system import validate_and_upload_with_prevention
-                    upload_result = validate_and_upload_with_prevention(file, 'image', content.bot_id)
-                    
-                    if upload_result['success']:
-                        # Remove old image file if upload successful
-                        if image_filename and image_filename != upload_result['filename']:
-                            old_path = os.path.join('static/uploads/images', image_filename)
-                            try:
-                                if os.path.exists(old_path):
-                                    os.remove(old_path)
-                                    logger.info(f"Removed old image: {image_filename}")
-                            except Exception as e:
-                                logger.warning(f"Could not remove old image: {e}")
-                        
-                        image_filename = upload_result['filename']
-                        logger.info(f"✅ Image upload successful for Bot {content.bot_id}: {image_filename}")
+            # Handle image files - check if using existing or uploading new
+            if media_type == 'image':
+                existing_image = request.form.get('existing_image_file')
+                if existing_image:
+                    # Use existing file
+                    from media_file_browser import validate_media_file_exists
+                    if validate_media_file_exists(existing_image, 'image'):
+                        image_filename = existing_image
+                        logger.info(f"✅ Using existing image file: {image_filename}")
                     else:
-                        logger.error(f"❌ Image upload failed for Bot {content.bot_id}: {upload_result['errors']}")
-                        # Keep existing filename if upload fails
+                        logger.error(f"❌ Selected existing image file not found: {existing_image}")
+                elif 'image_file' in request.files:
+                    file = request.files['image_file']
+                    if file and file.filename:
+                        # Use universal prevention system for upload validation
+                        from universal_media_prevention_system import validate_and_upload_with_prevention
+                        upload_result = validate_and_upload_with_prevention(file, 'image', content.bot_id)
+                        
+                        if upload_result['success']:
+                            # Remove old image file if upload successful
+                            if image_filename and image_filename != upload_result['filename']:
+                                old_path = os.path.join('static/uploads/images', image_filename)
+                                try:
+                                    if os.path.exists(old_path):
+                                        os.remove(old_path)
+                                        logger.info(f"Removed old image: {image_filename}")
+                                except Exception as e:
+                                    logger.warning(f"Could not remove old image: {e}")
+                            
+                            image_filename = upload_result['filename']
+                            logger.info(f"✅ Image upload successful for Bot {content.bot_id}: {image_filename}")
+                        else:
+                            logger.error(f"❌ Image upload failed for Bot {content.bot_id}: {upload_result['errors']}")
+                            # Keep existing filename if upload fails
             
-            if media_type == 'audio' and 'audio_file' in request.files:
-                file = request.files['audio_file']
-                if file and file.filename:
-                    # Use universal prevention system for upload validation
-                    from universal_media_prevention_system import validate_and_upload_with_prevention
-                    upload_result = validate_and_upload_with_prevention(file, 'audio', content.bot_id)
-                    
-                    if upload_result['success']:
-                        # Remove old audio file if upload successful
-                        if audio_filename and audio_filename != upload_result['filename']:
-                            old_path = os.path.join('static/uploads/audio', audio_filename)
-                            try:
-                                if os.path.exists(old_path):
-                                    os.remove(old_path)
-                                    logger.info(f"Removed old audio: {audio_filename}")
-                            except Exception as e:
-                                logger.warning(f"Could not remove old audio: {e}")
-                        
-                        audio_filename = upload_result['filename']
-                        logger.info(f"✅ Audio upload successful for Bot {content.bot_id}: {audio_filename}")
+            # Handle audio files - check if using existing or uploading new
+            if media_type == 'audio':
+                existing_audio = request.form.get('existing_audio_file')
+                if existing_audio:
+                    # Use existing file
+                    from media_file_browser import validate_media_file_exists
+                    if validate_media_file_exists(existing_audio, 'audio'):
+                        audio_filename = existing_audio
+                        logger.info(f"✅ Using existing audio file: {audio_filename}")
                     else:
-                        logger.error(f"❌ Audio upload failed for Bot {content.bot_id}: {upload_result['errors']}")
-                        # Keep existing filename if upload fails
+                        logger.error(f"❌ Selected existing audio file not found: {existing_audio}")
+                elif 'audio_file' in request.files:
+                    file = request.files['audio_file']
+                    if file and file.filename:
+                        # Use universal prevention system for upload validation
+                        from universal_media_prevention_system import validate_and_upload_with_prevention
+                        upload_result = validate_and_upload_with_prevention(file, 'audio', content.bot_id)
+                        
+                        if upload_result['success']:
+                            # Remove old audio file if upload successful
+                            if audio_filename and audio_filename != upload_result['filename']:
+                                old_path = os.path.join('static/uploads/audio', audio_filename)
+                                try:
+                                    if os.path.exists(old_path):
+                                        os.remove(old_path)
+                                        logger.info(f"Removed old audio: {audio_filename}")
+                                except Exception as e:
+                                    logger.warning(f"Could not remove old audio: {e}")
+                            
+                            audio_filename = upload_result['filename']
+                            logger.info(f"✅ Audio upload successful for Bot {content.bot_id}: {audio_filename}")
+                        else:
+                            logger.error(f"❌ Audio upload failed for Bot {content.bot_id}: {upload_result['errors']}")
+                            # Keep existing filename if upload fails
             
             if media_type == 'video':
                 youtube_url = request.form.get('youtube_url', '').strip() or None
