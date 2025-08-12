@@ -182,11 +182,7 @@ CONTENT_TEMPLATES = {
 }
 
 REFLECTION_QUESTION_TEMPLATE = """
-💭 **Reflection Question for Day {day}:**
-
 {reflection_question}
-
-Take your time to think about it. When you're ready, share your thoughts - there are no right or wrong answers, just your honest reflection.
 """
 
 # Sample content for testing (culturally contextualized)

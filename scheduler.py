@@ -179,7 +179,7 @@ class ContentScheduler:
             
             # Add reflection question to the same message
             if reflection_question:
-                message += f"\n\n💭 Reflection Question:\n{reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
+                message += f"\n\n{reflection_question}"
             
             # Determine platform and service based on phone_number and user's bot_id
             if phone_number.startswith('tg_'):

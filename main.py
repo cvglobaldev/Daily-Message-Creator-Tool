@@ -684,7 +684,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                         # Format the message
                         message = f"📖 Day 1 - {content.title}\n\n{content.content}"
                         if content.reflection_question:
-                            message += f"\n\n💭 Reflection Question:\n{content.reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
+                            message += f"\n\n{content.reflection_question}"
                         
                         # Send directly to the platform
                         success = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
@@ -788,7 +788,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                     # Format the message
                     message = f"📖 Day 1 - {content.title}\n\n{content.content}"
                     if content.reflection_question:
-                        message += f"\n\n💭 Reflection Question:\n{content.reflection_question}\n\nTake your time to think about it and share your thoughts when you're ready."
+                        message += f"\n\n{content.reflection_question}"
                     
                     # Send directly to the platform
                     logger.info(f"🔥 DEBUG: About to send message to {phone_number} on {platform} with bot_id {user.bot_id}")
