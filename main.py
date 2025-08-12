@@ -3240,18 +3240,34 @@ def cms_content_create():
             bot_id = getattr(form, 'bot_id', None)
             if hasattr(form.bot_id, 'data'):
                 bot_id = form.bot_id.data
-            image_filename = save_uploaded_file(
-                form.image_file.data, 'images', ['jpg', 'jpeg', 'png', 'gif'], bot_id
-            )
+            
+            # Use comprehensive media upload validator
+            from media_upload_validator import validate_and_upload_media
+            upload_result = validate_and_upload_media(form.image_file.data, 'image', bot_id or 1)
+            
+            if upload_result['success']:
+                image_filename = upload_result['filename']
+                logger.info(f"✅ New content image upload successful: {image_filename}")
+            else:
+                logger.error(f"❌ New content image upload failed: {upload_result['errors']}")
+                flash(f"Image upload failed: {'; '.join(upload_result['errors'])}", 'danger')
         
         if form.media_type.data == 'audio' and form.audio_file.data:
             # Get bot_id from form if available (for new bot content creation)
             bot_id = getattr(form, 'bot_id', None)
             if hasattr(form.bot_id, 'data'):
                 bot_id = form.bot_id.data
-            audio_filename = save_uploaded_file(
-                form.audio_file.data, 'audio', ['mp3', 'wav', 'ogg', 'm4a'], bot_id
-            )
+            
+            # Use comprehensive media upload validator
+            from media_upload_validator import validate_and_upload_media
+            upload_result = validate_and_upload_media(form.audio_file.data, 'audio', bot_id or 1)
+            
+            if upload_result['success']:
+                audio_filename = upload_result['filename']
+                logger.info(f"✅ New content audio upload successful: {audio_filename}")
+            else:
+                logger.error(f"❌ New content audio upload failed: {upload_result['errors']}")
+                flash(f"Audio upload failed: {'; '.join(upload_result['errors'])}", 'danger')
         
         if form.media_type.data == 'video' and form.youtube_url.data:
             youtube_url = form.youtube_url.data.strip()
@@ -3296,6 +3312,21 @@ def cms_content_edit(content_id):
             
             # Get form data
             media_type = request.form.get('media_type', 'text')
+            
+            # Validate existing media files and clean up broken references
+            if media_type == 'image' and image_filename:
+                image_path = os.path.join('static/uploads/images', image_filename)
+                if not os.path.exists(image_path):
+                    logger.warning(f"Existing image file not found: {image_path}, resetting to text-only")
+                    image_filename = None
+                    media_type = 'text'
+                    
+            if media_type == 'audio' and audio_filename:
+                audio_path = os.path.join('static/uploads/audio', audio_filename)
+                if not os.path.exists(audio_path):
+                    logger.warning(f"Existing audio file not found: {audio_path}, resetting to text-only")
+                    audio_filename = None
+                    media_type = 'text'
             title = request.form.get('title', '')
             content_text = request.form.get('content', '')
             reflection_question = request.form.get('reflection_question', '')
@@ -3309,22 +3340,54 @@ def cms_content_edit(content_id):
             except:
                 tags = []
             
-            # Handle file uploads with bot isolation
+            # Handle file uploads with comprehensive validation
             if media_type == 'image' and 'image_file' in request.files:
                 file = request.files['image_file']
                 if file and file.filename:
-                    # Use existing content's bot_id for proper isolation
-                    image_filename = save_uploaded_file(
-                        file, 'images', ['jpg', 'jpeg', 'png', 'gif'], content.bot_id
-                    )
+                    # Use comprehensive media upload validator
+                    from media_upload_validator import validate_and_upload_media
+                    upload_result = validate_and_upload_media(file, 'image', content.bot_id)
+                    
+                    if upload_result['success']:
+                        # Remove old image file if upload successful
+                        if image_filename and image_filename != upload_result['filename']:
+                            old_path = os.path.join('static/uploads/images', image_filename)
+                            try:
+                                if os.path.exists(old_path):
+                                    os.remove(old_path)
+                                    logger.info(f"Removed old image: {image_filename}")
+                            except Exception as e:
+                                logger.warning(f"Could not remove old image: {e}")
+                        
+                        image_filename = upload_result['filename']
+                        logger.info(f"✅ Image upload successful for Bot {content.bot_id}: {image_filename}")
+                    else:
+                        logger.error(f"❌ Image upload failed for Bot {content.bot_id}: {upload_result['errors']}")
+                        # Keep existing filename if upload fails
             
             if media_type == 'audio' and 'audio_file' in request.files:
                 file = request.files['audio_file']
                 if file and file.filename:
-                    # Use existing content's bot_id for proper isolation
-                    audio_filename = save_uploaded_file(
-                        file, 'audio', ['mp3', 'wav', 'ogg', 'm4a'], content.bot_id
-                    )
+                    # Use comprehensive media upload validator
+                    from media_upload_validator import validate_and_upload_media
+                    upload_result = validate_and_upload_media(file, 'audio', content.bot_id)
+                    
+                    if upload_result['success']:
+                        # Remove old audio file if upload successful
+                        if audio_filename and audio_filename != upload_result['filename']:
+                            old_path = os.path.join('static/uploads/audio', audio_filename)
+                            try:
+                                if os.path.exists(old_path):
+                                    os.remove(old_path)
+                                    logger.info(f"Removed old audio: {audio_filename}")
+                            except Exception as e:
+                                logger.warning(f"Could not remove old audio: {e}")
+                        
+                        audio_filename = upload_result['filename']
+                        logger.info(f"✅ Audio upload successful for Bot {content.bot_id}: {audio_filename}")
+                    else:
+                        logger.error(f"❌ Audio upload failed for Bot {content.bot_id}: {upload_result['errors']}")
+                        # Keep existing filename if upload fails
             
             if media_type == 'video':
                 youtube_url = request.form.get('youtube_url', '').strip() or None
