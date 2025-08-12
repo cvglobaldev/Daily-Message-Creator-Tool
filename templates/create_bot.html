@@ -246,6 +246,74 @@
                             <div class="form-text">Message sent when users type /human or HUMAN</div>
                         </div>
 
+                        <!-- AI Content Generation -->
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-magic me-2 cv-text-primary"></i>AI Content Generation</h5>
+                        </div>
+
+                        <div class="ai-content-section p-3 mb-4" style="background-color: var(--bs-secondary); border-radius: 0.5rem; border: 1px solid var(--bs-border-color);">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.enable_ai_content_generation(class="form-check-input", id="enableAiContent") }}
+                                {{ form.enable_ai_content_generation.label(class="form-check-label", for="enableAiContent") }}
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Enable this to automatically generate content for your journey using AI. Configure the settings below to customize the content.
+                                </div>
+                            </div>
+
+                            <div id="ai-content-config" style="display: none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.content_generation_duration.label(class="form-label") }}
+                                        {{ form.content_generation_duration(class="form-select") }}
+                                        <div class="form-text">Choose how many days of content to generate</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.audience_language.label(class="form-label") }}
+                                        {{ form.audience_language(class="form-control") }}
+                                        <div class="form-text">{{ form.audience_language.description }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.target_audience.label(class="form-label") }}
+                                        {{ form.target_audience(class="form-control", placeholder="Young Muslim adults seeking spiritual guidance") }}
+                                        <div class="form-text">{{ form.target_audience.description }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.audience_age_group.label(class="form-label") }}
+                                        {{ form.audience_age_group(class="form-control", placeholder="18-25") }}
+                                        <div class="form-text">{{ form.audience_age_group.description }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.audience_religion.label(class="form-label") }}
+                                    {{ form.audience_religion(class="form-control", placeholder="Islam") }}
+                                    <div class="form-text">{{ form.audience_religion.description }}</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.content_generation_prompt.label(class="form-label") }}
+                                    {{ form.content_generation_prompt(class="form-control", rows="4", placeholder="Create a gentle, respectful faith journey that introduces Christian concepts...") }}
+                                    <div class="form-text">{{ form.content_generation_prompt.description }}</div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    <strong>Content Generation Tips:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Be specific about your target audience's background and needs</li>
+                                        <li>Describe the tone you want (gentle, encouraging, respectful, etc.)</li>
+                                        <li>Mention any specific topics or themes to focus on</li>
+                                        <li>Consider cultural sensitivities and religious backgrounds</li>
+                                        <li>Content will include daily messages with reflection questions</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Form Actions -->
                         <div class="d-flex justify-content-between">
                             <a href="/bots" class="btn btn-secondary">
@@ -312,7 +380,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const platformCheckboxes = document.querySelectorAll('.platform-checkbox');
     const whatsappConfig = document.getElementById('whatsapp-config');
     const telegramConfig = document.getElementById('telegram-config');
+    const enableAiContent = document.getElementById('enableAiContent');
+    const aiContentConfig = document.getElementById('ai-content-config');
 
+    // Platform configuration toggle
     platformCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             if (this.value === 'whatsapp') {
@@ -322,6 +393,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // AI Content Generation toggle
+    enableAiContent.addEventListener('change', function() {
+        aiContentConfig.style.display = this.checked ? 'block' : 'none';
+        
+        // Auto-sync journey duration when AI content is enabled
+        if (this.checked) {
+            const contentDuration = document.getElementById('content_generation_duration');
+            const journeyDuration = document.getElementById('journey_duration_days');
+            
+            // Set journey duration to match content generation duration
+            journeyDuration.value = contentDuration.value;
+            
+            // Keep them synced
+            contentDuration.addEventListener('change', function() {
+                journeyDuration.value = this.value;
+            });
+        }
+    });
+
+    // Show initial state
+    if (enableAiContent.checked) {
+        aiContentConfig.style.display = 'block';
+    }
 });
 </script>
 

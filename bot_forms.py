@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectMultipleField, IntegerField, SubmitField, BooleanField
+from wtforms import StringField, TextAreaField, SelectMultipleField, IntegerField, SubmitField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 from wtforms.widgets import CheckboxInput, ListWidget
 
@@ -63,6 +63,33 @@ class CreateBotForm(FlaskForm):
         'Human Command Message',
         validators=[DataRequired(), Length(min=10, max=1000)],
         default="👤 Human Support Requested\n\nI've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.\n\nIn the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝"
+    )
+    
+    # AI Content Generation Settings
+    enable_ai_content_generation = BooleanField('Enable AI Content Generation', default=False)
+    content_generation_duration = SelectField(
+        'Content Duration',
+        choices=[('10', '10 Days'), ('30', '30 Days'), ('90', '90 Days')],
+        default='30',
+        validators=[Optional()]
+    )
+    
+    # Audience and Content Customization
+    target_audience = StringField('Target Audience', validators=[Optional(), Length(max=200)], 
+                                 description="e.g., Young Muslim adults, Christian seekers, etc.")
+    audience_language = StringField('Audience Language', validators=[Optional(), Length(max=50)], 
+                                   default="English", description="Primary language for content")
+    audience_religion = StringField('Current Religion/Background', validators=[Optional(), Length(max=100)], 
+                                   description="e.g., Islam, Christianity, Hindu, Secular, etc.")
+    audience_age_group = StringField('Age Group', validators=[Optional(), Length(max=50)], 
+                                    description="e.g., 18-25, 25-35, Adults, etc.")
+    
+    # Content Generation Prompt
+    content_generation_prompt = TextAreaField(
+        'Content Generation Prompt',
+        validators=[Optional(), Length(max=2000)],
+        default="Create a gentle, respectful faith journey that introduces Christian concepts to someone from a Muslim background. Focus on love, compassion, and spiritual growth. Include reflection questions that encourage personal spiritual exploration.",
+        description="Describe the type of content you want to generate. Be specific about tone, topics, and approach."
     )
     
     submit = SubmitField('Create Bot')

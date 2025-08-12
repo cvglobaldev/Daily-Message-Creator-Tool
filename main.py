@@ -1652,6 +1652,53 @@ def create_bot():
             db.session.add(bot)
             db.session.commit()
             
+            # Handle AI Content Generation if enabled
+            content_generation_status = []
+            if form.enable_ai_content_generation.data:
+                try:
+                    from ai_content_generator import AIContentGenerator, ContentGenerationRequest
+                    
+                    # Create content generation request
+                    request = ContentGenerationRequest(
+                        target_audience=form.target_audience.data or "General spiritual seekers",
+                        audience_language=form.audience_language.data or "English",
+                        audience_religion=form.audience_religion.data or "Mixed backgrounds",
+                        audience_age_group=form.audience_age_group.data or "Adults",
+                        content_prompt=form.content_generation_prompt.data,
+                        journey_duration=int(form.content_generation_duration.data)
+                    )
+                    
+                    # Generate content using AI
+                    logger.info(f"Starting AI content generation for bot {bot.id}")
+                    generator = AIContentGenerator()
+                    daily_contents = generator.generate_journey_content(request)
+                    
+                    # Validate generated content
+                    if generator.validate_generated_content(daily_contents, request.journey_duration):
+                        # Save generated content to database
+                        for daily_content in daily_contents:
+                            content = Content()
+                            content.bot_id = bot.id
+                            content.day_number = daily_content.day_number
+                            content.content = daily_content.content
+                            content.media_type = 'text'
+                            content.media_url = None
+                            content.reflection_question = daily_content.reflection_question
+                            content.title = daily_content.title
+                            
+                            db.session.add(content)
+                        
+                        db.session.commit()
+                        content_generation_status.append(f"✅ AI generated {len(daily_contents)} days of content successfully")
+                        logger.info(f"Successfully saved {len(daily_contents)} days of AI-generated content for bot {bot.id}")
+                    else:
+                        content_generation_status.append("⚠️ AI content validation failed - please review and add content manually")
+                        
+                except Exception as e:
+                    logger.error(f"AI content generation failed for bot {bot.id}: {e}")
+                    content_generation_status.append(f"❌ AI content generation failed: {str(e)}")
+                    # Continue with bot creation even if content generation fails
+            
             # Auto-setup webhooks for enabled platforms
             webhook_messages = []
             
@@ -1716,6 +1763,8 @@ def create_bot():
             success_message = f'Bot "{bot.name}" created successfully!'
             if webhook_messages:
                 success_message += " " + " ".join(webhook_messages)
+            if content_generation_status:
+                success_message += " " + " ".join(content_generation_status)
             
             flash(success_message, 'success')
             return redirect('/bots')
