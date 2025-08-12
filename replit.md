@@ -2,13 +2,22 @@
 
 ## Overview
 
-This project is a WhatsApp-based chatbot designed to guide young adults (18-24) from Muslim backgrounds on a spiritual journey to learn about Jesus. The system delivers daily drip content, collects user reflections, and uses AI to analyze user responses for engagement tracking and insights. Its core purpose is to facilitate a culturally sensitive 30-day spiritual exploration, enabling users to engage with Christian teachings at their own pace.
+This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide people from diverse non-Christian backgrounds on a spiritual journey to learn about Jesus. The system delivers daily drip content, collects user reflections, and uses AI to analyze user responses for engagement tracking and insights. Its core purpose is to facilitate a culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users from any religious or secular background to engage with Christian teachings at their own pace.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
+
+### ✅ COMPLETED: AI Content Generation Feature (August 12, 2025)
+- **New Feature**: AI-powered content generation for bot creation using Google Gemini 2.5 Pro
+- **Audience Targeting**: Comprehensive audience customization (language, religion, age group, cultural background)
+- **Duration Options**: Flexible journey durations (10, 30, 90 days) with automatic content generation
+- **Cultural Sensitivity**: Built-in prompts ensure respectful content for diverse religious backgrounds
+- **Toggle Activation**: User-friendly form toggle with validation and error handling
+- **Multi-Background Support**: Expanded from Muslim-specific to any non-Christian background (Islam, Hindu, Buddhist, Secular, etc.)
+- **Content Quality**: AI generates culturally appropriate daily content with reflection questions and spiritual milestones
 
 ### ✅ COMPLETED: Full Telegram Bot System Fix (August 7, 2025)
 - **Root Cause**: Flask app context was not available during bot service creation, causing webhook processing to fail silently
@@ -31,17 +40,18 @@ The system is built as a Flask web application in Python, designed for scalabili
 - **Messaging Integration**: Primarily uses the WhatsApp Business API, with a robust fallback simulation mode for development. Telegram Bot API is also integrated for multi-platform support, allowing bots to operate independently across different messaging channels.
 - **Scheduling**: A background thread-based scheduler manages daily content delivery, user progression through the journey, and rate limiting. This avoids external cron job dependencies, simplifying deployment in environments like Replit.
 - **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, and full CRUD operations. It supports configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags for content categorization.
+- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro with audience-specific customization for different religious and cultural backgrounds. Users can generate complete journeys (10-90 days) with culturally sensitive content tailored to their target demographic.
 - **Chat Management System**: Provides a comprehensive interface for viewing consolidated user conversations, sending messages, and detecting human handoff requests. It includes real-time analytics and user profile displays.
 - **Authentication**: Implements a production-ready Flask-Login system with secure password hashing, session management, and role-based access control for administrative users.
 - **UI/UX**: Applies a consistent "CV Global" design theme across all management interfaces (dashboard, bot management, CMS, chat management) with professional branding, consistent color schemes, and enhanced navigation.
 
 ### Feature Specifications
 - **Multi-Bot System**: Enables the creation and management of multiple independent bots, each with its own content, user base, AI prompts, and platform configurations (WhatsApp, Telegram).
-- **Culturally Sensitive Content**: Content is designed specifically for Muslim backgrounds, using appropriate terminology and a progressive journey structure to introduce Christian concepts.
+- **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds (Muslim, Hindu, Buddhist, Secular, etc.), using culturally appropriate terminology and progressive journey structures to respectfully introduce Christian concepts.
 - **AI Response Analysis**: AI analyzes user reflections for sentiment (positive/negative/neutral) and tags them with predefined spiritual milestones (e.g., Introduction to Jesus, Gospel Presentation, Salvation Prayer).
 - **Multimedia Support**: The system supports the delivery and management of various media types (images, audio, video) directly through the CMS, including a comprehensive live preview system.
 - **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN" (for priority human intervention), with customizable responses per bot.
-- **User Progression**: Tracks user progress through the 30-day journey, ensuring sequential content delivery and managing journey completion.
+- **User Progression**: Tracks user progress through customizable journey durations (10-90 days), ensuring sequential content delivery and managing journey completion.
 - **Error Handling & Simulation**: Includes robust error handling, user deactivation for inactive chats, and development-friendly simulation modes for API dependencies.
 
 ## External Dependencies

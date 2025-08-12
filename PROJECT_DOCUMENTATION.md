@@ -2,11 +2,11 @@
 
 ## Overview
 
-The Faith Journey Drip Content Chatbot is an advanced AI-powered spiritual guidance system designed to guide young adults (18-24) from Muslim backgrounds through a structured 30-day journey to learn about Jesus Christ. The system supports both WhatsApp and Telegram platforms with configurable automated content delivery, multi-bot management, and comprehensive analytics.
+The Faith Journey Drip Content Chatbot is an advanced AI-powered spiritual guidance system designed to guide people from diverse non-Christian backgrounds through a structured spiritual journey to learn about Jesus Christ. The system supports both WhatsApp and Telegram platforms with configurable automated content delivery (10-90 days), AI-powered content generation, multi-bot management, and comprehensive analytics.
 
 ## Project Goals
 
-- Provide culturally sensitive spiritual guidance for Muslim-to-Christian faith exploration
+- Provide culturally sensitive spiritual guidance for people from any non-Christian background (Muslim, Hindu, Buddhist, Secular, etc.)
 - Deliver structured daily content over configurable periods (10-90 days, default 30)
 - Support multiple languages and cultural contexts through multi-bot architecture
 - Track spiritual journey milestones through AI-powered analysis
@@ -31,10 +31,11 @@ The Faith Journey Drip Content Chatbot is an advanced AI-powered spiritual guida
 - **Contextual Responses**: AI uses bot-specific daily content for personalized user interactions
 
 ### Multi-Bot Management
-- **Bot Isolation**: Complete separation between different bots (Bot 1: English, Bot 2: Indonesian)
+- **Bot Isolation**: Complete separation between different bots for different audiences and languages
 - **Platform Configuration**: Independent WhatsApp/Telegram setup per bot
 - **Content Isolation**: Each bot has its own content library and user base
 - **Token Management**: Separate API tokens for each bot's messaging services
+- **AI Content Generation**: Automated content creation with audience-specific customization for different cultural and religious backgrounds
 
 ## Key Features
 
@@ -49,6 +50,7 @@ The Faith Journey Drip Content Chatbot is an advanced AI-powered spiritual guida
 - **Media Upload**: Support for images, videos, audio files with preview functionality
 - **Faith Journey Tags**: Predefined tags for content categorization and milestone tracking
 - **Bot-Specific Content**: Each bot maintains its own content library
+- **AI Content Generation**: Automated creation of complete journey content (10-90 days) using Google Gemini 2.5 Pro with audience-specific prompts for different cultural and religious backgrounds
 
 ### 3. User Management
 - **User Registration**: Automatic user creation on first interaction
@@ -73,6 +75,15 @@ The Faith Journey Drip Content Chatbot is an advanced AI-powered spiritual guida
 - **Message Analytics**: Comprehensive message flow and sentiment tracking
 - **Bot Management**: Multi-bot configuration and status monitoring
 - **Human Handoff Queue**: Priority queue for messages requiring human attention
+
+### 7. AI Content Generation System
+- **Automated Content Creation**: Generate complete spiritual journeys (10-90 days) using Google Gemini 2.5 Pro
+- **Audience Customization**: Target specific demographics with cultural and religious background considerations
+- **Language Support**: Create content in multiple languages for diverse audiences
+- **Cultural Sensitivity**: Built-in prompts ensure respectful content for different faith backgrounds (Muslim, Hindu, Buddhist, Secular, etc.)
+- **Content Quality**: AI generates daily messages with reflection questions, spiritual themes, and progressive journey structure
+- **Toggle Activation**: User-friendly form interface with validation and error handling
+- **Flexible Duration**: Support for 10, 30, or 90-day journey durations with appropriate content depth
 
 ## Technical Implementation
 
