@@ -420,27 +420,26 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
                 logger.info(f"New WhatsApp user {phone_number}, sending welcome message for any first message: '{message_text}'")
                 handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
                 return
-            elif existing_user.current_day == 1 and message_lower not in ['start', '/start', 'stop', '/stop', 'help', '/help', 'human', '/human']:
+            elif existing_user.current_day == 1 and not any(cmd in message_lower for cmd in ['start', 'stop', 'help', 'human']):
                 # User on Day 1 sending non-command messages should get bot response (not reflection)
                 logger.info(f"Day 1 user {phone_number} sending general message, using bot-specific AI response")
                 handle_general_conversation(phone_number, message_text, platform, bot_id)
                 return
         
-        # Handle commands
-        if message_lower == 'start' or message_lower == '/start':
-            logger.info(f"🔥 DEBUG: Calling handle_start_command with user_data: {user_data}")
+        # Handle commands - support both slash commands (Telegram) and keyword commands (WhatsApp)
+        if message_lower in ['start', '/start'] or 'start' in message_lower:
             handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
             return
         
-        elif message_lower == 'stop' or message_lower == '/stop':
+        elif message_lower in ['stop', '/stop'] or 'stop' in message_lower:
             handle_stop_command(phone_number, platform, bot_id)
             return
         
-        elif message_lower == 'help' or message_lower == '/help':
+        elif message_lower in ['help', '/help'] or 'help' in message_lower:
             handle_help_command(phone_number, platform, bot_id)
             return
         
-        elif message_lower == 'human' or message_lower == '/human':
+        elif message_lower in ['human', '/human'] or 'human' in message_lower:
             handle_human_command(phone_number, platform, bot_id)
             return
         
@@ -449,8 +448,17 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             handle_human_handoff(phone_number, message_text, platform, bot_id)
             return
         
-        # Handle regular response (likely to a reflection question)
-        handle_reflection_response(phone_number, message_text, platform, bot_id)
+        # Check if user is beyond Day 1 but still having general conversation
+        user = db_manager.get_user_by_phone(phone_number)
+        if user and user.current_day > 1:
+            # For users beyond Day 1, check if they're responding to reflection or having general conversation
+            # If they haven't received today's content yet or seem to be asking questions, use general conversation
+            logger.info(f"User {phone_number} (Day {user.current_day}) sending message, routing to reflection handler")
+            handle_reflection_response(phone_number, message_text, platform, bot_id)
+        else:
+            # Fallback to general conversation
+            logger.info(f"User {phone_number} message routing to general conversation")
+            handle_general_conversation(phone_number, message_text, platform, bot_id)
         
     except Exception as e:
         logger.error(f"Error processing message from {phone_number}: {e}")
@@ -768,23 +776,35 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
 def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle STOP command - deactivate user"""
     try:
+        logger.info(f"🔥 DEBUG: Processing STOP command for {phone_number} on {platform} with bot_id {bot_id}")
         user = db_manager.get_user_by_phone(phone_number)
         if user:
             db_manager.update_user(phone_number, status='inactive')
             
             # Get bot configuration for custom stop message
+            from models import Bot
             bot = Bot.query.get(bot_id)
             if bot and bot.stop_message:
                 message = bot.stop_message
             else:
-                # Fallback message
-                message = ("You have been unsubscribed from the Faith Journey. "
-                          "If you'd like to restart your journey, simply send START anytime. "
-                          "Peace be with you. 🙏")
+                # Fallback message with Indonesian support for Bot 2
+                if bot_id == 2:
+                    message = ("Kamu telah berhenti dari perjalanan spiritual Bang Kris. "
+                              "Kalau mau mulai lagi, tinggal kirim START kapan aja. "
+                              "Damai sejahtera bersamamu. 🙏")
+                else:
+                    message = ("You have been unsubscribed from the Faith Journey. "
+                              "If you'd like to restart your journey, simply send START anytime. "
+                              "Peace be with you. 🙏")
         else:
-            message = "You weren't subscribed to any journey. Send START to begin your faith journey."
+            if bot_id == 2:
+                message = "Kamu belum berlangganan perjalanan apapun. Kirim START untuk mulai perjalanan spiritual kamu."
+            else:
+                message = "You weren't subscribed to any journey. Send START to begin your faith journey."
         
-        send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+        logger.info(f"🔥 DEBUG: Sending STOP response: {message}")
+        success = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+        logger.info(f"🔥 DEBUG: STOP message send result: {success}")
         
         # Log the stop request
         if user:
@@ -795,6 +815,20 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                 sentiment='neutral',
                 tags=['STOP']
             )
+        
+        # Log the outgoing stop response if successful
+        if success:
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=message,
+                sentiment='neutral',
+                tags=['STOP_RESPONSE'],
+                confidence=1.0
+            )
+            logger.info(f"✅ STOP command processed successfully for {phone_number}")
+        else:
+            logger.error(f"❌ STOP command failed to send for {phone_number}")
         
         logger.info(f"User {phone_number} unsubscribed")
         
@@ -816,6 +850,7 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
             db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Get bot configuration for custom help message
+        from models import Bot
         bot = Bot.query.get(bot_id)
         if bot and bot.help_message:
             help_message = bot.help_message
@@ -887,18 +922,37 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
         )
         
         # Get bot configuration for custom human message
+        from models import Bot
         bot = Bot.query.get(bot_id)
         if bot and bot.human_message:
             response_message = bot.human_message
         else:
-            # Fallback message
-            response_message = ("🤝 Direct Human Chat Requested\n\n"
-                              "Thank you for reaching out! A member of our team will connect with you shortly. "
-                              "This conversation has been flagged for priority human response.\n\n"
-                              "In the meantime, know that you are valued and your journey matters. "
-                              "Feel free to share what's on your heart. 🙏")
+            # Fallback message in Indonesian for Bot 2
+            if bot_id == 2:
+                response_message = ("🤝 Permintaan Chat dengan Manusia\n\n"
+                                  "Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. "
+                                  "Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.\n\n"
+                                  "Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. "
+                                  "Silakan berbagi apa yang ada di hati Anda. 🙏")
+            else:
+                response_message = ("🤝 Direct Human Chat Requested\n\n"
+                                  "Thank you for reaching out! A member of our team will connect with you shortly. "
+                                  "This conversation has been flagged for priority human response.\n\n"
+                                  "In the meantime, know that you are valued and your journey matters. "
+                                  "Feel free to share what's on your heart. 🙏")
         
-        send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
+        success = send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
+        
+        if success:
+            # Log the outgoing human response
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=response_message,
+                sentiment='positive',
+                tags=['HUMAN_RESPONSE'],
+                confidence=1.0
+            )
         
         logger.warning(f"HUMAN COMMAND - Direct chat requested by {phone_number} on {platform}")
         
