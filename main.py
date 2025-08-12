@@ -354,6 +354,31 @@ def whatsapp_webhook(bot_id=1):
         logger.error(f"Error processing WhatsApp webhook for bot {bot_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/send_test_message', methods=['POST'])
+def send_test_message():
+    """Send a test WhatsApp message to verify system is working"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        message = data.get('message', 'Test message from WhatsApp bot system')
+        bot_id = data.get('bot_id', 1)
+        
+        if not phone_number:
+            return jsonify({"error": "phone_number required"}), 400
+        
+        # Send message using WhatsApp service
+        logger.info(f"🔥 TEST: Sending test message to {phone_number}")
+        result = send_message_to_platform(phone_number, "whatsapp", message, bot_id=bot_id)
+        
+        if result:
+            return jsonify({"status": "success", "message": "Test message sent successfully"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Failed to send test message"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error sending test message: {e}")
+        return jsonify({"error": str(e)}), 500
+
 def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Process incoming message from user"""
     try:
