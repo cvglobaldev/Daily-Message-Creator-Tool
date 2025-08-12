@@ -368,6 +368,14 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         message_lower = message_text.lower().strip()
         
+        # For WhatsApp: Check if user is new and send welcome message for any first message
+        if platform == "whatsapp":
+            existing_user = db_manager.get_user_by_phone(phone_number)
+            if not existing_user:
+                logger.info(f"New WhatsApp user {phone_number}, sending welcome message for any first message: '{message_text}'")
+                handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
+                return
+        
         # Handle commands
         if message_lower == 'start' or message_lower == '/start':
             logger.info(f"🔥 DEBUG: Calling handle_start_command with user_data: {user_data}")
