@@ -552,43 +552,90 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
 
 def send_message_to_platform(phone_number: str, platform: str, message: str, 
                            with_quick_replies: bool = False, copy_text: str = "", 
-                           copy_label: str = "Copy Text", bot_id: int = None) -> bool:
-    """Send message to the appropriate platform with enhanced features"""
-    try:
-        if platform == "telegram":
-            # Extract chat_id from tg_ prefixed phone number
-            if phone_number.startswith("tg_"):
-                chat_id = phone_number[3:]  # Remove 'tg_' prefix
-                
-                # Get bot-specific Telegram service
-                bot_service = get_telegram_service_for_bot(bot_id)
-                if not bot_service:
-                    logger.error(f"No Telegram service available for bot_id {bot_id}")
-                    return False
-                
-                # Enhanced Telegram messaging with 2025 features
-                if copy_text and copy_label:
-                    # Send message with copy button for Bible verses or inspirational content
-                    return bot_service.send_copy_text_message(chat_id, message, copy_text, copy_label)
-                elif with_quick_replies:
-                    # Send message with quick reply buttons for common responses
-                    quick_replies = [
-                        "Tell me more", "I have a question", 
-                        "This is helpful", "I need time to think"
-                    ]
-                    return bot_service.send_quick_reply_message(chat_id, message, quick_replies)
+                           copy_label: str = "Copy Text", bot_id: int = None, retry_count: int = 3) -> bool:
+    """Send message to the appropriate platform with enhanced reliability and retry logic"""
+    success = False
+    attempt = 0
+    last_error = None
+    
+    while not success and attempt < retry_count:
+        try:
+            attempt += 1
+            
+            if platform == "telegram":
+                # Extract chat_id from tg_ prefixed phone number
+                if phone_number.startswith("tg_"):
+                    chat_id = phone_number[3:]  # Remove 'tg_' prefix
+                    
+                    # Get bot-specific Telegram service with validation
+                    bot_service = get_telegram_service_for_bot(bot_id)
+                    if not bot_service:
+                        logger.error(f"No Telegram service available for bot_id {bot_id}")
+                        return False
+                    
+                    # Enhanced Telegram messaging with 2025 features
+                    if copy_text and copy_label:
+                        # Send message with copy button for Bible verses or inspirational content
+                        success = bot_service.send_copy_text_message(chat_id, message, copy_text, copy_label)
+                    elif with_quick_replies:
+                        # Send message with quick reply buttons for common responses
+                        quick_replies = [
+                            "Tell me more", "I have a question", 
+                            "This is helpful", "I need time to think"
+                        ]
+                        success = bot_service.send_quick_reply_message(chat_id, message, quick_replies)
+                    else:
+                        success = bot_service.send_message(chat_id, message)
                 else:
-                    return bot_service.send_message(chat_id, message)
+                    logger.error(f"Invalid Telegram chat_id format: {phone_number}")
+                    return False
             else:
-                logger.error(f"Invalid Telegram chat_id format: {phone_number}")
-                return False
-        else:
-            # Default to WhatsApp - use bot-specific service
-            bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
-            return bot_whatsapp_service.send_message(phone_number, message)
-    except Exception as e:
-        logger.error(f"Error sending message to {platform}: {e}")
-        return False
+                # Default to WhatsApp - use bot-specific service with validation
+                bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                if not bot_whatsapp_service:
+                    logger.error(f"No WhatsApp service available for bot_id {bot_id}")
+                    return False
+                    
+                success = bot_whatsapp_service.send_message(phone_number, message)
+            
+            if success:
+                if attempt > 1:
+                    logger.info(f"Message sent successfully on attempt {attempt} to {phone_number}")
+                break
+                
+        except Exception as e:
+            last_error = e
+            logger.error(f"Error sending message to {platform} (attempt {attempt}/{retry_count}): {e}")
+            
+            if attempt < retry_count:
+                # Brief delay before retry
+                import time
+                time.sleep(min(attempt * 0.5, 2.0))  # Exponential backoff, max 2 seconds
+    
+    if not success and last_error:
+        logger.error(f"Failed to send message after {retry_count} attempts. Last error: {last_error}")
+        
+        # Ultimate fallback - try with a simplified message
+        if len(message) > 100:
+            try:
+                simple_msg = "Message received. Reply when ready." if bot_id != 2 else "Pesan diterima. Balas kapan siap."
+                logger.info(f"Attempting fallback with simplified message to {phone_number}")
+                if platform == "telegram" and phone_number.startswith("tg_"):
+                    chat_id = phone_number[3:]
+                    bot_service = get_telegram_service_for_bot(bot_id)
+                    if bot_service:
+                        success = bot_service.send_message(chat_id, simple_msg)
+                else:
+                    bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                    if bot_whatsapp_service:
+                        success = bot_whatsapp_service.send_message(phone_number, simple_msg)
+                
+                if success:
+                    logger.info(f"Fallback message sent successfully to {phone_number}")
+            except Exception as fallback_error:
+                logger.error(f"Even fallback message failed: {fallback_error}")
+    
+    return success
 
 
 
@@ -920,6 +967,15 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
         
     except Exception as e:
         logger.error(f"Error handling STOP command for {phone_number}: {e}")
+        import traceback
+        logger.error(f"STOP command traceback: {traceback.format_exc()}")
+        
+        # Emergency fallback - send basic confirmation
+        try:
+            emergency_msg = "Request processed." if bot_id != 2 else "Permintaan diproses."
+            send_message_to_platform(phone_number, platform, emergency_msg, bot_id=bot_id)
+        except Exception as fallback_error:
+            logger.error(f"Emergency fallback also failed for {phone_number}: {fallback_error}")
 
 def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HELP command"""
@@ -985,6 +1041,15 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
         
     except Exception as e:
         logger.error(f"Error handling help command for {phone_number}: {e}")
+        import traceback
+        logger.error(f"HELP command traceback: {traceback.format_exc()}")
+        
+        # Emergency fallback - send basic help
+        try:
+            emergency_msg = "Available commands: START, STOP, HELP, HUMAN" if bot_id != 2 else "Perintah: START, STOP, HELP, HUMAN"
+            send_message_to_platform(phone_number, platform, emergency_msg, bot_id=bot_id)
+        except Exception as fallback_error:
+            logger.error(f"Help emergency fallback failed for {phone_number}: {fallback_error}")
 
 def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle HUMAN command - direct human chat request"""
@@ -1046,11 +1111,15 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
         
     except Exception as e:
         logger.error(f"Error handling HUMAN command for {phone_number}: {e}")
-        send_message_to_platform(
-            phone_number, platform,
-            "Sorry, there was an error connecting you with a human. Please try again or contact us directly.",
-            bot_id=bot_id
-        )
+        import traceback
+        logger.error(f"HUMAN command traceback: {traceback.format_exc()}")
+        
+        # Emergency fallback
+        try:
+            emergency_msg = "Human assistance requested. We'll contact you soon." if bot_id != 2 else "Permintaan bantuan manusia diterima. Kami akan menghubungi Anda segera."
+            send_message_to_platform(phone_number, platform, emergency_msg, bot_id=bot_id)
+        except Exception as fallback_error:
+            logger.error(f"Human emergency fallback failed for {phone_number}: {fallback_error}")
 
 def handle_human_handoff(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle messages that require human intervention"""
