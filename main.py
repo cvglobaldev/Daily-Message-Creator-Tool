@@ -480,9 +480,12 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
         
-        # Normalize phone number for WhatsApp, keep Telegram chat IDs as-is
-        if platform == "whatsapp" and not phone_number.startswith('+'):
-            phone_number = '+' + phone_number
+        # Enhanced phone number normalization using centralized utility
+        if platform == "whatsapp":
+            from phone_number_utils import normalize_phone_number
+            original_number = phone_number
+            phone_number = normalize_phone_number(phone_number, platform)
+            logger.info(f"🔥 DEBUG: Normalized phone number from '{original_number}' to '{phone_number}'")
         elif platform == "telegram" and phone_number.startswith('+tg_'):
             # Remove incorrect '+' prefix from Telegram IDs
             phone_number = phone_number[1:]

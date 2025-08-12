@@ -16,12 +16,71 @@ class DatabaseManager:
     
     # User Management Methods
     def get_user_by_phone(self, phone_number: str) -> Optional[User]:
-        """Get user by phone number"""
+        """Get user by phone number with enhanced normalization"""
         try:
-            return User.query.filter_by(phone_number=phone_number).first()
+            # First try exact match
+            user = User.query.filter_by(phone_number=phone_number).first()
+            if user:
+                return user
+                
+            # If no exact match, try normalized format for phone numbers
+            normalized_number = self._normalize_phone_number(phone_number)
+            if normalized_number != phone_number:
+                user = User.query.filter_by(phone_number=normalized_number).first()
+                if user:
+                    return user
+                    
+            # Try searching by variations (with/without + and country codes)
+            variations = self._generate_phone_variations(phone_number)
+            for variation in variations:
+                user = User.query.filter_by(phone_number=variation).first()
+                if user:
+                    logger.info(f"Found user with phone variation: {variation} for input {phone_number}")
+                    return user
+                    
+            return None
         except SQLAlchemyError as e:
             logger.error(f"Error getting user {phone_number}: {e}")
             return None
+    
+    def _normalize_phone_number(self, phone_number: str) -> str:
+        """Normalize phone number by removing formatting characters"""
+        if not phone_number:
+            return phone_number
+            
+        # Skip Telegram chat IDs
+        if phone_number.startswith('tg_'):
+            return phone_number
+            
+        # Remove formatting characters
+        clean_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('.', '')
+        
+        # Add + prefix if missing
+        if not clean_number.startswith('+'):
+            clean_number = '+' + clean_number
+            
+        return clean_number
+    
+    def _generate_phone_variations(self, phone_number: str) -> List[str]:
+        """Generate common phone number format variations for lookup"""
+        if not phone_number or phone_number.startswith('tg_'):
+            return []
+            
+        variations = []
+        base_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('.', '').replace('+', '')
+        
+        # Add common variations
+        variations.append(f"+{base_number}")
+        variations.append(base_number)
+        
+        # For Indonesian numbers, try with/without country code
+        if base_number.startswith('62'):
+            variations.append(f"+62{base_number[2:]}")
+            variations.append(f"0{base_number[2:]}")  # Local format
+        elif base_number.startswith('0') and len(base_number) > 10:
+            variations.append(f"+62{base_number[1:]}")  # Convert 0xxx to +62xxx
+            
+        return list(set(variations))  # Remove duplicates
     
     def create_user(self, phone_number: str, **kwargs) -> Optional[User]:
         """Create a new user with enhanced fields"""
