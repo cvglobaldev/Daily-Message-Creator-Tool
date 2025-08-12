@@ -3241,9 +3241,9 @@ def cms_content_create():
             if hasattr(form.bot_id, 'data'):
                 bot_id = form.bot_id.data
             
-            # Use comprehensive media upload validator
-            from media_upload_validator import validate_and_upload_media
-            upload_result = validate_and_upload_media(form.image_file.data, 'image', bot_id or 1)
+            # Use universal prevention system for upload validation
+            from universal_media_prevention_system import validate_and_upload_with_prevention
+            upload_result = validate_and_upload_with_prevention(form.image_file.data, 'image', bot_id or 1)
             
             if upload_result['success']:
                 image_filename = upload_result['filename']
@@ -3258,9 +3258,9 @@ def cms_content_create():
             if hasattr(form.bot_id, 'data'):
                 bot_id = form.bot_id.data
             
-            # Use comprehensive media upload validator
-            from media_upload_validator import validate_and_upload_media
-            upload_result = validate_and_upload_media(form.audio_file.data, 'audio', bot_id or 1)
+            # Use universal prevention system for upload validation
+            from universal_media_prevention_system import validate_and_upload_with_prevention
+            upload_result = validate_and_upload_with_prevention(form.audio_file.data, 'audio', bot_id or 1)
             
             if upload_result['success']:
                 audio_filename = upload_result['filename']
@@ -3344,9 +3344,9 @@ def cms_content_edit(content_id):
             if media_type == 'image' and 'image_file' in request.files:
                 file = request.files['image_file']
                 if file and file.filename:
-                    # Use comprehensive media upload validator
-                    from media_upload_validator import validate_and_upload_media
-                    upload_result = validate_and_upload_media(file, 'image', content.bot_id)
+                    # Use universal prevention system for upload validation
+                    from universal_media_prevention_system import validate_and_upload_with_prevention
+                    upload_result = validate_and_upload_with_prevention(file, 'image', content.bot_id)
                     
                     if upload_result['success']:
                         # Remove old image file if upload successful
@@ -3368,9 +3368,9 @@ def cms_content_edit(content_id):
             if media_type == 'audio' and 'audio_file' in request.files:
                 file = request.files['audio_file']
                 if file and file.filename:
-                    # Use comprehensive media upload validator
-                    from media_upload_validator import validate_and_upload_media
-                    upload_result = validate_and_upload_media(file, 'audio', content.bot_id)
+                    # Use universal prevention system for upload validation
+                    from universal_media_prevention_system import validate_and_upload_with_prevention
+                    upload_result = validate_and_upload_with_prevention(file, 'audio', content.bot_id)
                     
                     if upload_result['success']:
                         # Remove old audio file if upload successful
@@ -3490,6 +3490,14 @@ with app.app_context():
     
     # Initialize database with sample content
     db_manager.initialize_sample_content()
+    
+    # Initialize Universal Media Prevention System
+    try:
+        from universal_media_prevention_system import initialize_prevention_system
+        prevention_system = initialize_prevention_system(app)
+        logger.info("✅ Universal Media Prevention System initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize prevention system: {e}")
     
     # Create default super admin if no users exist
     if AdminUser.query.count() == 0:
