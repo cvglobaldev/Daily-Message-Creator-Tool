@@ -103,12 +103,28 @@ class UniversalMediaPreventionSystem:
             config = self.media_configs[media_type]
             file_path = os.path.join(self.upload_folder, config['folder'], secure_name)
             
-            # Save with error handling
+            # Save file with enhanced verification
             try:
+                # Save the file
                 file.save(file_path)
-                logger.info(f"✅ File saved: {file_path}")
+                
+                # Immediate verification that file was saved properly
+                if not os.path.exists(file_path):
+                    raise Exception("File was not saved to filesystem")
+                
+                file_size = os.path.getsize(file_path)
+                if file_size == 0:
+                    raise Exception("Saved file is empty")
+                    
+                logger.info(f"✅ File saved and verified: {file_path} ({file_size} bytes)")
             except Exception as save_error:
                 result['errors'].append(f"File save failed: {save_error}")
+                # Clean up any partial file
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except:
+                    pass
                 return result
             
             # Post-upload validation
@@ -213,12 +229,12 @@ class UniversalMediaPreventionSystem:
             else:
                 name, ext = clean_name, ''
             
-            # Generate bot-specific unique filename
-            unique_id = uuid.uuid4().hex[:12]
+            # Generate bot-specific unique filename with UUID
+            unique_id = str(uuid.uuid4())
             if ext:
-                return f"bot{bot_id}_{unique_id}_{name}.{ext}"
+                return f"{unique_id}_{name}.{ext}"
             else:
-                return f"bot{bot_id}_{unique_id}_{name}"
+                return f"{unique_id}_{name}"
                 
         except Exception as e:
             logger.error(f"Filename generation failed: {e}")
