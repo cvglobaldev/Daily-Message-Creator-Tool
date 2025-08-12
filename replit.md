@@ -1,148 +1,58 @@
 # Faith Journey Drip Content - WhatsApp Chatbot
 
 ## Overview
-
-This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide people from diverse non-Christian backgrounds on a spiritual journey to learn about Jesus. The system delivers daily drip content, collects user reflections, and uses AI to analyze user responses for engagement tracking and insights. Its core purpose is to facilitate a culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users from any religious or secular background to engage with Christian teachings at their own pace.
+This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide individuals from diverse non-Christian backgrounds through a spiritual journey to learn about Jesus. It delivers daily drip content, collects user reflections, and uses AI to analyze responses for engagement tracking and insights. The system aims to facilitate culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users to engage with Christian teachings at their own pace.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
-
-## Recent Updates
-
-### ✅ COMPLETED: WhatsApp Formatted Name Capture (August 12, 2025)
-- **Enhanced Contact Extraction**: System now captures `formatted_name` from WhatsApp API contacts array in addition to profile name
-- **Priority-Based Naming**: Uses WhatsApp `formatted_name` as first choice, then profile `name`, then fallback to default
-- **Database Storage**: Added `whatsapp_formatted_name` field to User model for better contact information storage
-- **Improved User Profiles**: Chat management interface will now display the user's actual WhatsApp display name
-- **Debug Logging**: Added comprehensive logging for WhatsApp contact data extraction and processing
-- **Database Migration**: Successfully added new field to existing user table structure
-
-### ✅ COMPLETED: Daily Message Template Cleanup (August 12, 2025)
-- **Template Formatting**: Removed "💭 Reflection Question:" and "Take your time to think about it and share your thoughts when you're ready." from all message templates
-- **Scheduler Updates**: Updated scheduler.py to deliver cleaner message formats across all bots
-- **Content Delivery**: Modified main.py direct delivery functions to use simplified reflection question formatting
-- **AI Prompts**: Updated prompts.py templates to remove formatting bloat for future content generation
-- **Database Content**: All existing content now uses clean reflection question format without extra instructional text
-- **Cross-Platform**: Changes apply to both WhatsApp and Telegram message delivery for all current and future bots
-
-### ✅ COMPLETED: Automatic Test User Creation for New Bots (August 12, 2025)
-- **Automatic User Generation**: All newly created bots automatically get test users for immediate testing
-- **Platform-Specific Test Users**: Creates both WhatsApp and Telegram test users with bot-specific identifiers
-- **Smart Duplication Prevention**: Checks for existing test users to avoid creating duplicates
-- **Environment Control**: Configurable via `CREATE_TEST_USERS` environment variable (default: enabled)
-- **Bot Isolation**: Test users are properly assigned to their specific bot_id for complete isolation
-- **Development Efficiency**: New bots are immediately ready for testing without manual user setup
-
-### ✅ COMPLETED: Bot-Specific Media File Isolation System (August 12, 2025)
-- **Media File Isolation**: Implemented comprehensive bot-specific media file isolation for all future bots
-- **Filename Prefixing**: All new media uploads (images, audio, video) automatically get `bot{id}_` prefix to prevent cross-bot conflicts
-- **Upload API Enhancement**: Modified `/api/upload-image`, `/api/upload-audio`, and `/api/upload-video` endpoints to support bot_id parameter
-- **CMS Integration**: Updated ContentForm and CMS routes to automatically apply bot-specific isolation during content creation and editing
-- **Backward Compatibility**: Maintained support for existing legacy files without bot prefixes
-- **Scheduler Routing**: Verified media delivery works correctly with bot-specific WhatsApp and Telegram services
-- **Future-Proof**: All new bots will automatically have isolated media libraries, preventing image/audio/video conflicts between different bot instances
-
-### ✅ COMPLETED: Enhanced Bot Creation with Indonesian Language Templates (August 12, 2025)
-- **Template System**: Added comprehensive bot template selection with Indonesian Muslim (Bang Kris) and English General options
-- **Indonesian Language Enhancement**: All new Indonesian bots automatically receive proper Bahasa Indonesia AI prompts and command messages
-- **Improved Bot Isolation**: Enhanced cache invalidation system ensures each bot uses its own WhatsApp credentials when created or edited
-- **JavaScript Template Handler**: Added dynamic form updates that populate AI prompts and command messages based on template selection
-- **Cultural Sensitivity**: Indonesian template includes Islamic-friendly terminology (Isa Al-Masih, Allah SWT) and respectful bridging language
-- **Seamless Integration**: Both CreateBotForm and EditBotForm now support template-based configuration with proper backend processing
-- **Service Cache Management**: Improved bot service isolation with proper cache invalidation on bot creation and updates
-
-### ✅ COMPLETED: Bot 2 Indonesian Language Fix (August 12, 2025)
-- **Critical Bug Fix**: Resolved Bot 2 responding in English instead of Indonesian despite being designed for Indonesian audience
-- **Root Cause**: AI prompt lacked specific Indonesian language instructions and Day 1 users were incorrectly routed through reflection handler
-- **Technical Solution**: Updated Bot 2 AI prompt with comprehensive Indonesian language rules and cultural sensitivity guidelines
-- **Message Routing Fix**: Added `handle_general_conversation` function and proper Day 1 user routing logic to avoid reflection handler
-- **Language Enhancement**: Bot now consistently responds in Bahasa Indonesia with Islamic-friendly terminology (Isa Al-Masih, Allah, etc.)
-- **Cultural Adaptation**: Responses now use culturally appropriate Indonesian expressions and respectful Islamic context
-- **Identity Confirmation**: Bot properly identifies as "Bang Kris" and maintains Indonesian spiritual guide persona
-- **Testing Verified**: Comprehensive testing confirms natural Indonesian conversations with proper theological bridge-building
-
-### ✅ COMPLETED: WhatsApp User Profile Enhancement (August 12, 2025)
-- **Profile Data Extraction**: Added comprehensive WhatsApp user data extraction from webhook contact information
-- **Database Enhancement**: Added WhatsApp-specific fields (whatsapp_contact_name, whatsapp_phone, location_data) to User model
-- **Contact Information Capture**: System now captures user names and contact details from WhatsApp API contacts array
-- **Profile Display Integration**: WhatsApp user profiles now display in chat management interface similar to Telegram users
-- **Location Data Support**: Added IP-based location detection and storage for enhanced user profiling
-- **Debug Logging**: Implemented comprehensive logging for WhatsApp user data processing and troubleshooting
-
-### ✅ COMPLETED: Bot-Specific WhatsApp Service Implementation (August 12, 2025)
-- **Bot Isolation**: Implemented bot-specific WhatsApp services using credentials stored in bot configuration
-- **Dynamic Service Creation**: Each bot now uses its own WhatsApp access token and phone number ID from database
-- **Cache Management**: Added intelligent caching system with automatic invalidation when bot credentials are updated
-- **Real Messaging**: System now automatically uses bot-specific WhatsApp credentials instead of global simulation mode
-- **Multi-Bot Support**: Scheduler and message handlers updated to route messages through correct bot-specific WhatsApp services
-- **Seamless Integration**: Bot edit forms automatically deploy new WhatsApp connections when credentials are updated
-
-### ✅ COMPLETED: AI Content Generation Feature (August 12, 2025)
-- **New Feature**: AI-powered content generation for bot creation using Google Gemini 2.5 Pro
-- **Audience Targeting**: Comprehensive audience customization (language, religion, age group, cultural background)
-- **Duration Options**: Flexible journey durations (10, 30, 90 days) with automatic content generation
-- **Cultural Sensitivity**: Built-in prompts ensure respectful content for diverse religious backgrounds
-- **Toggle Activation**: User-friendly form toggle with validation and error handling
-- **Multi-Background Support**: Expanded from Muslim-specific to any non-Christian background (Islam, Hindu, Buddhist, Secular, etc.)
-- **Content Quality**: AI generates culturally appropriate daily content with reflection questions and spiritual milestones
-
-### ✅ COMPLETED: Full Telegram Bot System Fix (August 7, 2025)
-- **Root Cause**: Flask app context was not available during bot service creation, causing webhook processing to fail silently
-- **Solution**: Added proper Flask app context management in `get_telegram_service_for_bot` function
-- **Database Fix**: Corrected user assignment for Bot 5 routing to ensure proper message flow
-- **Testing**: Verified Fun-Meaningful-Transformation-Bot now successfully processes commands and delivers Day 1 content automatically
-- **Automatic Content Delivery**: Fixed direct content delivery system with proper bot-specific service routing
-- **Multi-Bot Support**: All bots now use their specific tokens for message sending with proper context management
-- **Quality Assurance**: Implemented comprehensive debug logging and error handling for reliable bot operations
 
 ## System Architecture
 
 ### Core Design Principles
-The system is built as a Flask web application in Python, designed for scalability and maintainability. A key decision was migrating from a key-value store to a full PostgreSQL relational database for robust data management, schema integrity, and complex querying capabilities. The architecture supports multi-bot instances, allowing independent content, users, and configurations for different spiritual journeys or languages.
+The system is a scalable and maintainable Flask web application in Python. A key decision was migrating to a PostgreSQL relational database for robust data management, schema integrity, and complex querying. The architecture supports multiple independent bot instances, each with its own content, users, and configurations.
 
 ### Technical Implementation
 - **Backend**: Flask web application with Python.
-- **Database**: PostgreSQL for all data storage, including users, content, message logs, and system settings. It features comprehensive relational schemas with foreign keys and indexing for performance.
-- **AI Integration**: Leverages the Google Gemini API for sentiment analysis and keyword tagging of user responses, providing insights into user engagement and spiritual milestones.
-- **Messaging Integration**: Primarily uses the WhatsApp Business API, with a robust fallback simulation mode for development. Telegram Bot API is also integrated for multi-platform support, allowing bots to operate independently across different messaging channels.
-- **Scheduling**: A background thread-based scheduler manages daily content delivery, user progression through the journey, and rate limiting. This avoids external cron job dependencies, simplifying deployment in environments like Replit.
-- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, and full CRUD operations. It supports configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags for content categorization.
-- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro with audience-specific customization for different religious and cultural backgrounds. Users can generate complete journeys (10-90 days) with culturally sensitive content tailored to their target demographic.
-- **Chat Management System**: Provides a comprehensive interface for viewing consolidated user conversations, sending messages, and detecting human handoff requests. It includes real-time analytics and user profile displays.
-- **Authentication**: Implements a production-ready Flask-Login system with secure password hashing, session management, and role-based access control for administrative users.
+- **Database**: PostgreSQL for all data storage, including users, content, message logs, and system settings, featuring relational schemas with foreign keys and indexing.
+- **AI Integration**: Leverages Google Gemini API for sentiment analysis, keyword tagging of user responses, and AI-powered content generation for bot creation.
+- **Messaging Integration**: Integrates with the WhatsApp Business API and Telegram Bot API for multi-platform support, allowing bots to operate independently across different messaging channels. A robust fallback simulation mode is available for development.
+- **Scheduling**: A background thread-based scheduler manages daily content delivery, user progression, and rate limiting, simplifying deployment.
+- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, and support for configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags.
+- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro, offering audience customization (language, religion, age group, cultural background) and flexible journey durations with culturally sensitive content.
+- **Chat Management System**: Provides an interface for consolidated user conversations, message sending, and human handoff detection, including real-time analytics and user profiles.
+- **Authentication**: Implements Flask-Login for secure password hashing, session management, and role-based access control.
 - **UI/UX**: Applies a consistent "CV Global" design theme across all management interfaces (dashboard, bot management, CMS, chat management) with professional branding, consistent color schemes, and enhanced navigation.
 
 ### Feature Specifications
-- **Multi-Bot System**: Enables the creation and management of multiple independent bots, each with its own content, user base, AI prompts, and platform configurations (WhatsApp, Telegram).
-- **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds (Muslim, Hindu, Buddhist, Secular, etc.), using culturally appropriate terminology and progressive journey structures to respectfully introduce Christian concepts.
-- **AI Response Analysis**: AI analyzes user reflections for sentiment (positive/negative/neutral) and tags them with predefined spiritual milestones (e.g., Introduction to Jesus, Gospel Presentation, Salvation Prayer).
-- **Multimedia Support**: The system supports the delivery and management of various media types (images, audio, video) directly through the CMS, including a comprehensive live preview system.
-- **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN" (for priority human intervention), with customizable responses per bot.
-- **User Progression**: Tracks user progress through customizable journey durations (10-90 days), ensuring sequential content delivery and managing journey completion.
-- **Error Handling & Simulation**: Includes robust error handling, user deactivation for inactive chats, and development-friendly simulation modes for API dependencies.
+- **Multi-Bot System**: Enables creation and management of independent bots, each with its own content, user base, AI prompts, and platform configurations.
+- **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds, using appropriate terminology and progressive structures.
+- **AI Response Analysis**: AI analyzes user reflections for sentiment and tags them with spiritual milestones.
+- **Multimedia Support**: Supports delivery and management of various media types (images, audio, video) directly through the CMS with live preview.
+- **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN" with customizable responses.
+- **User Progression**: Tracks user progress through customizable journey durations (10-90 days).
+- **Error Handling & Simulation**: Includes robust error handling, user deactivation for inactive chats, and development-friendly API simulation modes.
 
 ## External Dependencies
 
 ### APIs
-- **WhatsApp Business API**: For primary message sending and receiving.
-- **Google Gemini API**: For AI-powered sentiment analysis and keyword tagging of user responses.
-- **Telegram Bot API**: For multi-platform messaging support.
+- WhatsApp Business API
+- Google Gemini API
+- Telegram Bot API
 
 ### Environment Variables
-- `WHATSAPP_ACCESS_TOKEN`: WhatsApp API authentication.
-- `WHATSAPP_PHONE_NUMBER_ID`: WhatsApp business phone number ID.
-- `GEMINI_API_KEY`: Google Gemini API key.
-- `SESSION_SECRET`: Flask session security key.
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `GEMINI_API_KEY`
+- `SESSION_SECRET`
 
 ### Python Packages
-- `flask`: Web framework.
-- `google-genai`: Google Gemini API client.
-- `requests`: HTTP client for API calls.
-- `replit`: For database access within the Replit environment.
-- `psycopg2-binary`: PostgreSQL adapter for Python.
-- `Flask-Login`: User session management.
-- `Flask-WTF`: Form handling.
-- `passlib`: Password hashing.
-- `python-dotenv`: Environment variable management.
-- `python-telegram-bot`: Telegram Bot API wrapper.
+- `flask`
+- `google-genai`
+- `requests`
+- `replit`
+- `psycopg2-binary`
+- `Flask-Login`
+- `Flask-WTF`
+- `passlib`
+- `python-dotenv`
+- `python-telegram-bot`
