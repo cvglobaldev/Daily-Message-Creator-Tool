@@ -56,3 +56,13 @@ The system is a scalable and maintainable Flask web application in Python. A key
 - `passlib`
 - `python-dotenv`
 - `python-telegram-bot`
+
+## Recent Changes
+
+### ✅ COMPLETED: WhatsApp First Message Welcome Flow (August 12, 2025)
+- **Standardized Welcome Flow**: All WhatsApp bots now follow: first message → welcome message from CMS → Day 1 content after 10 seconds
+- **CMS Integration**: Welcome messages are pulled from bot-specific greeting content stored in CMS
+- **Delayed Delivery**: Implemented threaded 10-second delay for Day 1 content delivery after welcome message
+- **Media Support**: Day 1 content supports images, videos, and text with proper formatting
+- **Universal Implementation**: Flow applies to all current and future WhatsApp bots for consistent user experience
+- **Enhanced Logging**: Comprehensive tracking of welcome flow steps and delayed delivery success

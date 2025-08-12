@@ -486,8 +486,8 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         if platform == "whatsapp":
             existing_user = db_manager.get_user_by_phone(phone_number)
             if not existing_user:
-                logger.info(f"New WhatsApp user {phone_number}, sending welcome message for any first message: '{message_text}'")
-                handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
+                logger.info(f"New WhatsApp user {phone_number}, triggering welcome flow for first message: '{message_text}'")
+                handle_whatsapp_first_message(phone_number, platform, user_data, request_ip, bot_id)
                 return
             elif existing_user.current_day == 1 and not any(cmd in message_lower for cmd in ['start', 'stop', 'help', 'human']):
                 # User on Day 1 sending non-command messages should get bot response (not reflection)
@@ -1074,6 +1074,112 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
         
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
+
+def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
+    """Handle first message from WhatsApp user with welcome flow: greeting → 10 sec delay → Day 1 content"""
+    try:
+        from datetime import datetime
+        import threading
+        
+        # Create new user
+        create_kwargs = {'status': 'active', 'current_day': 1, 'tags': [], 'bot_id': bot_id}
+        if user_data:
+            create_kwargs.update(user_data)
+        
+        user = db_manager.create_user(phone_number, **create_kwargs)
+        logger.info(f"Created new WhatsApp user {phone_number} for bot {bot_id}")
+        
+        # Send welcome message from CMS greeting content
+        greeting = db_manager.get_greeting_content(bot_id=bot_id)
+        if greeting:
+            welcome_message = greeting.content
+            logger.info(f"Using CMS greeting for bot {bot_id}: {greeting.title}")
+        else:
+            # Fallback welcome message
+            welcome_message = ("Selamat datang! Welcome to your faith journey.\n\n"
+                             "You'll receive daily content. Day 1 content will arrive in 10 seconds!")
+            logger.warning(f"No CMS greeting found for bot {bot_id}, using fallback")
+        
+        # Send welcome message immediately
+        success = send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
+        
+        if success and user:
+            # Log the welcome message
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=welcome_message,
+                sentiment='positive',
+                tags=['WELCOME', 'GREETING', 'NEW_USER'],
+                confidence=1.0
+            )
+            
+            # Schedule Day 1 content delivery after 10 seconds
+            def delayed_day1_delivery():
+                try:
+                    import time
+                    time.sleep(10)  # 10 second delay
+                    
+                    # Get fresh user data
+                    fresh_user = db_manager.get_user_by_phone(phone_number)
+                    if not fresh_user:
+                        logger.error(f"User {phone_number} not found for delayed Day 1 delivery")
+                        return
+                    
+                    # Get Day 1 content
+                    content = db_manager.get_content_by_day(1, bot_id=bot_id)
+                    if content:
+                        # Format message with media if available
+                        message = f"📖 Day 1 - {content.title}\n\n{content.content}"
+                        if content.reflection_question:
+                            message += f"\n\n{content.reflection_question}"
+                        
+                        # Send Day 1 content with media support
+                        if content.media_type == 'image' and content.image_filename:
+                            # Send image first, then text
+                            # Use environment variable or construct URL dynamically
+                            base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                            if not base_url.startswith('http'):
+                                base_url = f"https://{base_url}"
+                            media_url = f"{base_url}/static/uploads/images/{content.image_filename}"
+                            bot_service = get_whatsapp_service_for_bot(bot_id)
+                            bot_service.send_image(phone_number, media_url, caption="")
+                            time.sleep(1)  # Small delay between image and text
+                        elif content.media_type == 'video' and content.youtube_url:
+                            message = f"📖 Day 1 - {content.title}\n\n{content.content}\n\n🎥 Video: {content.youtube_url}"
+                            if content.reflection_question:
+                                message += f"\n\n{content.reflection_question}"
+                        
+                        # Send the content message
+                        success = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+                        
+                        if success:
+                            logger.info(f"✅ Day 1 content delivered to new user {phone_number} after 10 seconds")
+                            # Advance user to Day 2
+                            db_manager.update_user(phone_number, current_day=2)
+                            # Log the Day 1 content delivery
+                            db_manager.log_message(
+                                user=fresh_user,
+                                direction='outgoing',
+                                raw_text=message,
+                                sentiment='positive',
+                                tags=['DAY_1', 'CONTENT_DELIVERY', 'NEW_USER'],
+                                confidence=1.0
+                            )
+                        else:
+                            logger.error(f"❌ Failed to deliver Day 1 content to {phone_number}")
+                    else:
+                        logger.error(f"❌ No Day 1 content found for bot {bot_id}")
+                        
+                except Exception as e:
+                    logger.error(f"Error in delayed Day 1 delivery for {phone_number}: {e}")
+            
+            # Start delayed delivery in background thread
+            threading.Thread(target=delayed_day1_delivery, daemon=True).start()
+            logger.info(f"Scheduled Day 1 content delivery for {phone_number} in 10 seconds")
+        
+    except Exception as e:
+        logger.error(f"Error handling WhatsApp first message for {phone_number}: {e}")
 
 def handle_general_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle general conversation using bot-specific AI prompt without reflection context"""
