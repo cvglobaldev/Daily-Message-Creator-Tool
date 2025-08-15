@@ -1,4 +1,4 @@
-# Faith Journey Drip Content - WhatsApp Chatbot
+# Daily Message Creator - WhatsApp Chatbot
 
 ## Overview
 This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide individuals from diverse non-Christian backgrounds through a spiritual journey to learn about Jesus. It delivers daily drip content, collects user reflections, and uses AI to analyze responses for engagement tracking and insights. The system aims to facilitate culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users to engage with Christian teachings at their own pace.
@@ -58,6 +58,13 @@ The system is a scalable and maintainable Flask web application in Python. A key
 - `python-telegram-bot`
 
 ## Recent Changes
+
+### ✅ COMPLETED: Branding Update to "Daily Message Creator" (August 15, 2025)
+- **Complete Rebranding**: Changed all references from "Faith Journey" to "Daily Message Creator" across the entire application
+- **Template Updates**: Updated all HTML templates including dashboard, login page, bot management, CMS, and chat management pages
+- **Logo and Navigation**: Updated navbar branding, page titles, and footer text throughout the system
+- **Documentation**: Updated project documentation and replit.md to reflect new branding
+- **User Experience**: Maintained all functionality while providing fresh, more descriptive branding that better reflects the system's purpose
 
 ### ✅ COMPLETED: WhatsApp First Message Welcome Flow (August 12, 2025)
 - **Standardized Welcome Flow**: All WhatsApp bots now follow: first message → welcome message from CMS → Day 1 content after 10 seconds
