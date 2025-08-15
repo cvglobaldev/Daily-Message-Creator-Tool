@@ -245,6 +245,64 @@
                             <div class="form-text">Message sent when users type /human or HUMAN</div>
                         </div>
 
+                        <!-- AI Content Generation -->
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-magic me-2 cv-text-primary"></i>AI Content Generation</h5>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.enable_ai_content_generation(class="form-check-input", id="enableAiContentGeneration") }}
+                                {{ form.enable_ai_content_generation.label(class="form-check-label") }}
+                            </div>
+                            <div class="form-text">Automatically generate spiritual journey content using AI based on your audience settings</div>
+                        </div>
+
+                        <div id="ai-content-settings" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.content_generation_duration.label(class="form-label") }}
+                                    {{ form.content_generation_duration(class="form-select") }}
+                                    <div class="form-text">How many days of content to generate</div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.audience_language.label(class="form-label") }}
+                                    {{ form.audience_language(class="form-select") }}
+                                    <div class="form-text">Primary language for all bot content and responses</div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.target_audience.label(class="form-label") }}
+                                    {{ form.target_audience(class="form-control", placeholder="e.g., Young Muslim adults, Christian seekers") }}
+                                    <div class="form-text">{{ form.target_audience.description }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.audience_religion.label(class="form-label") }}
+                                    {{ form.audience_religion(class="form-control", placeholder="e.g., Islam, Hindu, Secular") }}
+                                    <div class="form-text">{{ form.audience_religion.description }}</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.audience_age_group.label(class="form-label") }}
+                                {{ form.audience_age_group(class="form-control", placeholder="e.g., 18-25, 25-35, Adults") }}
+                                <div class="form-text">{{ form.audience_age_group.description }}</div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.content_generation_prompt.label(class="form-label") }}
+                                {{ form.content_generation_prompt(class="form-control", rows="4", placeholder="Describe the type of spiritual content you want to generate...") }}
+                                <div class="form-text">{{ form.content_generation_prompt.description }}</div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>AI Content Generation:</strong> When enabled, this will create a complete spiritual journey with daily content, reflection questions, and culturally appropriate messaging tailored to your specified audience.
+                            </div>
+                        </div>
+
                         <!-- Form Actions -->
                         <div class="d-flex justify-content-between">
                             <a href="/bots" class="btn btn-secondary">
@@ -348,6 +406,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // AI Content Generation Toggle
+    const aiToggle = document.getElementById('enableAiContentGeneration');
+    const aiSettings = document.getElementById('ai-content-settings');
+    
+    if (aiToggle) {
+        aiToggle.addEventListener('change', function() {
+            if (this.checked) {
+                aiSettings.style.display = 'block';
+            } else {
+                aiSettings.style.display = 'none';
+            }
+        });
+
+        // Initialize AI Content Generation visibility
+        if (aiToggle.checked) {
+            aiSettings.style.display = 'block';
+        }
+    }
 });
 </script>
 
