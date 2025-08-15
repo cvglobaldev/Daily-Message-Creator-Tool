@@ -32,7 +32,7 @@ class CreateBotForm(FlaskForm):
     
     # Bot behavior
     ai_prompt = TextAreaField(
-        'AI Prompt',
+        'AI Personality',
         validators=[DataRequired(), Length(min=10, max=2000)],
         default="You are a helpful spiritual guide chatbot that helps users on their faith journey. Be compassionate, understanding, and provide thoughtful responses based on their spiritual questions and reflections."
     )
@@ -149,7 +149,7 @@ class EditBotForm(FlaskForm):
     
     # Bot behavior
     ai_prompt = TextAreaField(
-        'AI Prompt',
+        'AI Personality',
         validators=[DataRequired(), Length(min=10, max=2000)]
     )
     journey_duration_days = IntegerField(
