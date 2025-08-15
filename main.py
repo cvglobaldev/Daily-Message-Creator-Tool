@@ -2581,8 +2581,8 @@ def edit_bot(bot_id):
             
             # Handle WhatsApp webhook updates
             whatsapp_enabled = 'whatsapp' in (form.platforms.data or [])
-            whatsapp_token_changed = bot.whatsapp_access_token != getattr(form, 'whatsapp_access_token', {}).get('data', '')
-            whatsapp_phone_changed = bot.whatsapp_phone_number_id != getattr(form, 'whatsapp_phone_number_id', {}).get('data', '')
+            whatsapp_token_changed = bot.whatsapp_access_token != form.whatsapp_access_token.data
+            whatsapp_phone_changed = bot.whatsapp_phone_number_id != form.whatsapp_phone_number_id.data
             whatsapp_newly_enabled = whatsapp_enabled and 'whatsapp' not in (old_platforms or [])
             
             if whatsapp_enabled and bot.whatsapp_access_token and bot.whatsapp_phone_number_id and (whatsapp_token_changed or whatsapp_phone_changed or whatsapp_newly_enabled or not bot.whatsapp_webhook_url):
