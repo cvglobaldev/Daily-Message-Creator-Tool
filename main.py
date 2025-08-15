@@ -831,16 +831,38 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         if greeting:
             welcome_message = greeting.content
         else:
-            # Fallback to default message if no greeting configured
-            welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
-                              "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
-                              "After each piece of content, I'll ask you a simple reflection question.\n\n"
-                              "Available Commands:\n"
-                              f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
-                              f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
-                              f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
-                              f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
-                              "Day 1 content will arrive in a few seconds!")
+            # Generate welcome message using bot-specific AI prompt
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if bot and bot.ai_prompt:
+                try:
+                    welcome_message = gemini_service.generate_bot_response(
+                        user_message="User just started their spiritual journey. Please welcome them and explain what they can expect.",
+                        ai_prompt=bot.ai_prompt,
+                        content_context=None
+                    )
+                except:
+                    # Fallback to default message if AI generation fails
+                    welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
+                                      "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
+                                      "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                                      "Available Commands:\n"
+                                      f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
+                                      f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
+                                      f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
+                                      f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
+                                      "Day 1 content will arrive in a few seconds!")
+            else:
+                # No bot found, use default
+                welcome_message = (f"Welcome to your Faith Journey! {platform_emoji}\n\n"
+                                  "You'll receive daily content for the next 10 days (every 10 minutes for testing). "
+                                  "After each piece of content, I'll ask you a simple reflection question.\n\n"
+                                  "Available Commands:\n"
+                                  f"• {'/start' if platform == 'telegram' else 'START'} - Begin or restart journey\n"
+                                  f"• {'/stop' if platform == 'telegram' else 'STOP'} - Unsubscribe from messages\n"
+                                  f"• {'/help' if platform == 'telegram' else 'HELP'} - Show help message\n"
+                                  f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
+                                  "Day 1 content will arrive in a few seconds!")
         
         logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
         send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
@@ -923,18 +945,45 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
             if bot and bot.stop_message:
                 message = bot.stop_message
             else:
-                # Fallback message with Indonesian support for Bot 2
-                if bot_id == 2:
-                    message = ("Kamu telah berhenti dari perjalanan spiritual Bang Kris. "
-                              "Kalau mau mulai lagi, tinggal kirim START kapan aja. "
-                              "Damai sejahtera bersamamu. 🙏")
+                # Generate stop message using bot-specific AI prompt
+                if bot and bot.ai_prompt:
+                    try:
+                        message = gemini_service.generate_bot_response(
+                            user_message="User wants to stop receiving messages. Please acknowledge their request and let them know they can restart anytime.",
+                            ai_prompt=bot.ai_prompt,
+                            content_context=None
+                        )
+                    except:
+                        # Fallback message with Indonesian support for Bot 2
+                        if bot_id == 2:
+                            message = ("Kamu telah berhenti dari perjalanan spiritual Bang Kris. "
+                                      "Kalau mau mulai lagi, tinggal kirim START kapan aja. "
+                                      "Damai sejahtera bersamamu. 🙏")
+                        else:
+                            message = ("You have been unsubscribed from the Faith Journey. "
+                                      "If you'd like to restart your journey, simply send START anytime. "
+                                      "Peace be with you. 🙏")
                 else:
+                    # No bot found, use generic
                     message = ("You have been unsubscribed from the Faith Journey. "
                               "If you'd like to restart your journey, simply send START anytime. "
                               "Peace be with you. 🙏")
         else:
-            if bot_id == 2:
-                message = "Kamu belum berlangganan perjalanan apapun. Kirim START untuk mulai perjalanan spiritual kamu."
+            # Generate message for non-subscribed user using bot-specific AI prompt
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if bot and bot.ai_prompt:
+                try:
+                    message = gemini_service.generate_bot_response(
+                        user_message="User wants to stop but they are not subscribed. Please let them know they can start their journey anytime.",
+                        ai_prompt=bot.ai_prompt,
+                        content_context=None
+                    )
+                except:
+                    if bot_id == 2:
+                        message = "Kamu belum berlangganan perjalanan apapun. Kirim START untuk mulai perjalanan spiritual kamu."
+                    else:
+                        message = "You weren't subscribed to any journey. Send START to begin your faith journey."
             else:
                 message = "You weren't subscribed to any journey. Send START to begin your faith journey."
         
@@ -1000,17 +1049,38 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
         if bot and bot.help_message:
             help_message = bot.help_message
         else:
-            # Fallback message
-            commands_prefix = "/" if platform == "telegram" else ""
-            help_message = ("📖 Faith Journey Help\n\n"
-                           "Commands:\n"
-                           f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
-                           f"• {commands_prefix}STOP - Unsubscribe from messages\n"
-                           f"• {commands_prefix}HELP - Show this help message\n"
-                           f"• {commands_prefix}HUMAN - Chat directly with a human\n\n"
-                           "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
-                           "Feel free to share your thoughts - there are no wrong answers!\n\n"
-                           "If you need to speak with someone, just let us know.")
+            # Generate help message using bot-specific AI prompt
+            if bot and bot.ai_prompt:
+                try:
+                    help_message = gemini_service.generate_bot_response(
+                        user_message="User needs help. Please explain what you offer and what commands are available.",
+                        ai_prompt=bot.ai_prompt,
+                        content_context=None
+                    )
+                except:
+                    # Fallback message
+                    commands_prefix = "/" if platform == "telegram" else ""
+                    help_message = ("📖 Faith Journey Help\n\n"
+                                   "Commands:\n"
+                                   f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
+                                   f"• {commands_prefix}STOP - Unsubscribe from messages\n"
+                                   f"• {commands_prefix}HELP - Show this help message\n"
+                                   f"• {commands_prefix}HUMAN - Chat directly with a human\n\n"
+                                   "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
+                                   "Feel free to share your thoughts - there are no wrong answers!\n\n"
+                                   "If you need to speak with someone, just let us know.")
+            else:
+                # No bot found, use generic
+                commands_prefix = "/" if platform == "telegram" else ""
+                help_message = ("📖 Faith Journey Help\n\n"
+                               "Commands:\n"
+                               f"• {commands_prefix}START - Begin or restart your 10-day journey\n"
+                               f"• {commands_prefix}STOP - Unsubscribe from messages\n"
+                               f"• {commands_prefix}HELP - Show this help message\n"
+                               f"• {commands_prefix}HUMAN - Chat directly with a human\n\n"
+                               "You'll receive content every 10 minutes (for testing) followed by a reflection question. "
+                               "Feel free to share your thoughts - there are no wrong answers!\n\n"
+                               "If you need to speak with someone, just let us know.")
         
         logger.info(f"🔥 DEBUG: About to send help message to {phone_number}: {help_message[:50]}...")
         success = send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
@@ -1083,14 +1153,30 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
         if bot and bot.human_message:
             response_message = bot.human_message
         else:
-            # Fallback message in Indonesian for Bot 2
-            if bot_id == 2:
-                response_message = ("🤝 Permintaan Chat dengan Manusia\n\n"
-                                  "Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. "
-                                  "Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.\n\n"
-                                  "Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. "
-                                  "Silakan berbagi apa yang ada di hati Anda. 🙏")
+            # Generate human handoff message using bot-specific AI prompt
+            if bot and bot.ai_prompt:
+                try:
+                    response_message = gemini_service.generate_bot_response(
+                        user_message="User wants to speak with a human. Please acknowledge their request and let them know a team member will help them.",
+                        ai_prompt=bot.ai_prompt,
+                        content_context=None
+                    )
+                except:
+                    # Fallback message in Indonesian for Bot 2
+                    if bot_id == 2:
+                        response_message = ("🤝 Permintaan Chat dengan Manusia\n\n"
+                                          "Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. "
+                                          "Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.\n\n"
+                                          "Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. "
+                                          "Silakan berbagi apa yang ada di hati Anda. 🙏")
+                    else:
+                        response_message = ("🤝 Direct Human Chat Requested\n\n"
+                                          "Thank you for reaching out! A member of our team will connect with you shortly. "
+                                          "This conversation has been flagged for priority human response.\n\n"
+                                          "In the meantime, know that you are valued and your journey matters. "
+                                          "Feel free to share what's on your heart. 🙏")
             else:
+                # No bot found, use generic
                 response_message = ("🤝 Direct Human Chat Requested\n\n"
                                   "Thank you for reaching out! A member of our team will connect with you shortly. "
                                   "This conversation has been flagged for priority human response.\n\n"
@@ -1331,12 +1417,25 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
             logger.error(f"Exception details: {str(ai_error)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-                # Ultimate fallback - still use bot-specific language if available
+            # Generate fallback using bot-specific AI prompt
             from models import Bot
             bot = Bot.query.get(bot_id)
-            if bot and bot.name and "indonesia" in bot.name.lower():
-                contextual_response = "Terima kasih sudah mengirim pesan. Saya Bang Kris di sini untuk membantu Anda belajar tentang Isa Al-Masih. Ada yang ingin Anda tanyakan?"
+            if bot and bot.ai_prompt:
+                try:
+                    # Use bot's AI prompt for fallback response
+                    contextual_response = gemini_service.generate_bot_response(
+                        user_message=message_text,
+                        ai_prompt=bot.ai_prompt,
+                        content_context=None
+                    )
+                except:
+                    # Last resort fallback using bot language
+                    if bot and bot.name and "indonesia" in bot.name.lower():
+                        contextual_response = "Terima kasih sudah mengirim pesan. Saya Bang Kris di sini untuk membantu Anda belajar tentang Isa Al-Masih. Ada yang ingin Anda tanyakan?"
+                    else:
+                        contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
             else:
+                # No bot found, use generic
                 contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
         
         # Send the contextual response
@@ -1418,12 +1517,25 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
             logger.error(f"Exception details: {str(ai_error)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            # Ultimate fallback - still use bot-specific language if available
+            # Generate fallback using bot-specific AI prompt
             from models import Bot
             bot = Bot.query.get(bot_id)
-            if bot and bot.name and "indonesia" in bot.name.lower():
-                contextual_response = "Terima kasih sudah berbagi refleksi Anda. Keterbukaan Anda menunjukkan hati yang tulus mencari kebenaan."
+            if bot and bot.ai_prompt:
+                try:
+                    # Use bot's AI prompt for fallback response to reflection
+                    contextual_response = gemini_service.generate_bot_response(
+                        user_message=f"User reflected: {message_text}",
+                        ai_prompt=bot.ai_prompt,
+                        content_context=content
+                    )
+                except:
+                    # Last resort fallback using bot language
+                    if bot and bot.name and "indonesia" in bot.name.lower():
+                        contextual_response = "Terima kasih sudah berbagi refleksi Anda. Keterbukaan Anda menunjukkan hati yang tulus mencari kebenaan."
+                    else:
+                        contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
             else:
+                # No bot found, use generic
                 contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
         
         # Send the contextual response
