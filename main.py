@@ -2516,6 +2516,11 @@ def edit_bot(bot_id):
     form = EditBotForm(obj=bot)
     
     if form.validate_on_submit():
+        logger.info(f"Form validation passed for bot {bot_id} ({bot.name})")
+    else:
+        logger.info(f"Form validation failed for bot {bot_id} ({bot.name}): {form.errors}")
+    
+    if form.validate_on_submit():
         try:
             # Store old values to detect changes
             old_telegram_token = bot.telegram_bot_token
@@ -2585,8 +2590,10 @@ def edit_bot(bot_id):
             
         except Exception as e:
             logger.error(f"Error updating bot: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             db.session.rollback()
-            flash('Error updating bot. Please try again.', 'error')
+            flash(f'Error updating bot: {str(e)}', 'error')
     
     # Pre-populate form with current values
     if request.method == 'GET':
