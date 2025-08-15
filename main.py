@@ -2513,7 +2513,26 @@ In the meantime, feel free to continue sharing your thoughts or questions. Every
 def edit_bot(bot_id):
     """Edit an existing bot"""
     bot = Bot.query.get_or_404(bot_id)
-    form = EditBotForm(obj=bot)
+    form = EditBotForm()
+    
+    # Pre-populate form with current values manually to avoid obj= issues
+    if request.method == 'GET':
+        form.name.data = bot.name
+        form.description.data = bot.description
+        form.platforms.data = bot.platforms or []
+        form.whatsapp_access_token.data = bot.whatsapp_access_token
+        form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
+        form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
+        form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
+        form.telegram_bot_token.data = bot.telegram_bot_token
+        form.telegram_webhook_url.data = bot.telegram_webhook_url
+        form.ai_prompt.data = bot.ai_prompt
+        form.journey_duration_days.data = bot.journey_duration_days
+        form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+        form.help_message.data = bot.help_message
+        form.stop_message.data = bot.stop_message
+        form.human_message.data = bot.human_message
+        form.status.data = bot.status == 'active'
     
     if form.validate_on_submit():
         logger.info(f"Form validation passed for bot {bot_id} ({bot.name})")
@@ -2595,9 +2614,7 @@ def edit_bot(bot_id):
             db.session.rollback()
             flash(f'Error updating bot: {str(e)}', 'error')
     
-    # Pre-populate form with current values
-    if request.method == 'GET':
-        form.status.data = bot.status == 'active'
+
     
     return render_template('edit_bot.html', form=form, bot=bot)
 
