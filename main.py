@@ -67,21 +67,22 @@ bot_telegram_services = {}
 bot_whatsapp_services = {}
 
 def get_whatsapp_service_for_bot(bot_id):
-    """Get bot-specific WhatsApp service"""
+    """Get bot-specific WhatsApp service using environment variables"""
     logger.info(f"🔥 DEBUG: Getting WhatsApp service for bot_id {bot_id}")
     try:
         if bot_id not in bot_whatsapp_services:
             with app.app_context():  # Ensure database context
-                # Get bot configuration from database
-                bot = Bot.query.get(bot_id)
-                logger.info(f"🔥 DEBUG: Bot found: {bot.name if bot else 'None'}, has WhatsApp token: {bool(bot and bot.whatsapp_access_token)}")
-                if bot and bot.whatsapp_access_token and bot.whatsapp_phone_number_id:
-                    bot_whatsapp_services[bot_id] = WhatsAppService(bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
-                    logger.info(f"🔥 DEBUG: Created new WhatsAppService for bot_id {bot_id}")
+                # Always use environment variables for WhatsApp credentials
+                access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+                phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+                
+                if access_token and phone_number_id:
+                    bot_whatsapp_services[bot_id] = WhatsAppService(access_token, phone_number_id)
+                    logger.info(f"🔥 DEBUG: Created new WhatsAppService for bot_id {bot_id} with environment credentials")
                 else:
                     # Fallback to default service
                     bot_whatsapp_services[bot_id] = whatsapp_service
-                    logger.info(f"🔥 DEBUG: Using default WhatsAppService for bot_id {bot_id}")
+                    logger.info(f"🔥 DEBUG: Using default WhatsAppService for bot_id {bot_id} (missing credentials)")
         else:
             logger.info(f"🔥 DEBUG: Using cached WhatsAppService for bot_id {bot_id}")
         return bot_whatsapp_services[bot_id]
