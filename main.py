@@ -15,7 +15,7 @@ from bot_forms import CreateBotForm, EditBotForm, BotContentForm
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 import uuid
-from location_utils import extract_telegram_user_data
+from location_utils import extract_telegram_user_data, get_ip_location_data
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -701,7 +701,7 @@ def extract_telegram_user_data(user_data: dict, request_ip: str = None) -> dict:
         
     if request_ip:
         enhanced_data['ip_address'] = request_ip
-        enhanced_data['location_data'] = get_location_from_ip(request_ip)
+        enhanced_data['location_data'] = get_ip_location_data(request_ip)
     
     return enhanced_data
 
