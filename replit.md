@@ -1,7 +1,7 @@
 # Daily Message Creator - WhatsApp Chatbot
 
 ## Overview
-This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide individuals from diverse non-Christian backgrounds through a spiritual journey to learn about Jesus. It delivers daily drip content, collects user reflections, and uses AI to analyze responses for engagement tracking and insights. The system aims to facilitate culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users to engage with Christian teachings at their own pace.
+This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide individuals from diverse non-Christian backgrounds through a spiritual journey to learn about Jesus. It delivers daily drip content, collects user reflections, and uses AI to analyze responses for engagement tracking and insights. The system aims to facilitate culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users to engage with Christian teachings at their own pace. The project's business vision is to provide a scalable and accessible tool for spiritual guidance, leveraging AI for personalized user interaction and content generation, with the ambition to reach a global audience.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,28 +9,27 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Core Design Principles
-The system is a scalable and maintainable Flask web application in Python. A key decision was migrating to a PostgreSQL relational database for robust data management, schema integrity, and complex querying. The architecture supports multiple independent bot instances, each with its own content, users, and configurations.
+The system is a scalable and maintainable Flask web application in Python. It utilizes a PostgreSQL relational database for robust data management and supports multiple independent bot instances, each with its own content, users, and configurations.
 
 ### Technical Implementation
 - **Backend**: Flask web application with Python.
-- **Database**: PostgreSQL for all data storage, including users, content, message logs, and system settings, featuring relational schemas with foreign keys and indexing.
-- **AI Integration**: Leverages Google Gemini API for sentiment analysis, keyword tagging of user responses, and AI-powered content generation for bot creation.
-- **Messaging Integration**: Integrates with the WhatsApp Business API and Telegram Bot API for multi-platform support, allowing bots to operate independently across different messaging channels. A robust fallback simulation mode is available for development.
-- **Scheduling**: A background thread-based scheduler manages daily content delivery, user progression, and rate limiting, simplifying deployment.
-- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, and support for configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags.
-- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro, offering audience customization (language, religion, age group, cultural background) and flexible journey durations with culturally sensitive content.
-- **Chat Management System**: Provides an interface for consolidated user conversations, message sending, and human handoff detection, including real-time analytics and user profiles.
+- **Database**: PostgreSQL for all data storage, including users, content, message logs, and system settings.
+- **AI Integration**: Leverages Google Gemini API for sentiment analysis, keyword tagging of user responses, and AI-powered content generation.
+- **Messaging Integration**: Integrates with the WhatsApp Business API and Telegram Bot API for multi-platform support, allowing bots to operate independently.
+- **Scheduling**: A background thread-based scheduler manages daily content delivery, user progression, and rate limiting.
+- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, and support for configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags. It supports multimedia delivery (images, audio, video).
+- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro, offering audience customization (language, religion, age group, cultural background) and flexible journey durations.
+- **Chat Management System**: Provides an interface for consolidated user conversations, message sending, human handoff detection, real-time analytics, and user profiles.
 - **Authentication**: Implements Flask-Login for secure password hashing, session management, and role-based access control.
-- **UI/UX**: Applies a consistent "CV Global" design theme across all management interfaces (dashboard, bot management, CMS, chat management) with professional branding, consistent color schemes, and enhanced navigation.
-
-### Feature Specifications
+- **UI/UX**: Applies a consistent "CV Global" design theme across all management interfaces (dashboard, bot management, CMS, chat management) with professional branding and consistent color schemes.
 - **Multi-Bot System**: Enables creation and management of independent bots, each with its own content, user base, AI prompts, and platform configurations.
-- **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds, using appropriate terminology and progressive structures.
+- **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds.
 - **AI Response Analysis**: AI analyzes user reflections for sentiment and tags them with spiritual milestones.
-- **Multimedia Support**: Supports delivery and management of various media types (images, audio, video) directly through the CMS with live preview.
 - **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN" with customizable responses.
 - **User Progression**: Tracks user progress through customizable journey durations (10-90 days).
 - **Error Handling & Simulation**: Includes robust error handling, user deactivation for inactive chats, and development-friendly API simulation modes.
+- **Phone Number Normalization**: Automatically handles various phone number formats for consistent user identification.
+- **Media Management**: Comprehensive system for managing media files, including prevention of broken references and integrity monitoring.
 
 ## External Dependencies
 
@@ -56,93 +55,3 @@ The system is a scalable and maintainable Flask web application in Python. A key
 - `passlib`
 - `python-dotenv`
 - `python-telegram-bot`
-
-## Recent Changes
-
-### ✅ COMPLETED: Enhanced Contextual AI Response System (August 19, 2025)
-- **Intelligent Content-Aware Responses**: Users now receive AI responses that are contextually aware of their current daily content, journey stage, and spiritual topic
-- **Enhanced AI Context Integration**: Improved Google Gemini integration with expanded context including current day content, topics, reflection questions, and journey stage
-- **Unified Contextual Conversation Handler**: Created comprehensive `handle_contextual_conversation` function that provides intelligent responses for all user messages beyond Day 1
-- **Content-Based Response Generation**: AI responses now reference and build upon the user's current daily content, creating more meaningful spiritual conversations
-- **Improved Message Routing**: Enhanced logic to route users to appropriate conversation handlers based on their journey progress and content engagement
-- **Day 1 Contextual Support**: Even Day 1 users receive contextual responses once they've received their initial content
-- **Fallback Enhancement**: Robust fallback system ensures users always receive appropriate responses even during AI service interruptions
-- **Journey-Aware AI Prompts**: AI responses now include detailed context about user's current spiritual content, enabling more relevant and helpful conversations
-
-### ✅ COMPLETED: Universal WhatsApp Authentication Fix (August 19, 2025)
-- **Environment Variable Integration**: All bots now use centralized WhatsApp credentials from environment variables instead of individual bot tokens
-- **Service Cache Management**: Implemented proper bot-specific service caching with environment credential validation
-- **Token Cleanup**: Removed all expired and invalid WhatsApp access tokens from database configurations
-- **Universal Error Prevention**: Applied authentication fixes across all current and future bots to prevent OAuth token issues
-- **Robust Service Creation**: Enhanced WhatsApp service creation with proper credential validation and fallback mechanisms
-
-### ✅ COMPLETED: Branding Update to "Daily Message Creator" (August 15, 2025)
-- **Complete Rebranding**: Changed all references from "Faith Journey" to "Daily Message Creator" across the entire application
-- **Template Updates**: Updated all HTML templates including dashboard, login page, bot management, CMS, and chat management pages
-- **Logo and Navigation**: Updated navbar branding, page titles, and footer text throughout the system
-- **Documentation**: Updated project documentation and replit.md to reflect new branding
-- **User Experience**: Maintained all functionality while providing fresh, more descriptive branding that better reflects the system's purpose
-
-### ✅ COMPLETED: WhatsApp First Message Welcome Flow (August 12, 2025)
-- **Standardized Welcome Flow**: All WhatsApp bots now follow: first message → welcome message from CMS → Day 1 content after 10 seconds
-- **CMS Integration**: Welcome messages are pulled from bot-specific greeting content stored in CMS
-- **Delayed Delivery**: Implemented threaded 10-second delay for Day 1 content delivery after welcome message
-- **Media Support**: Day 1 content supports images, videos, and text with proper formatting
-- **Universal Implementation**: Flow applies to all current and future WhatsApp bots for consistent user experience
-- **Enhanced Logging**: Comprehensive tracking of welcome flow steps and delayed delivery success
-
-### ✅ COMPLETED: Comprehensive Type Safety and Code Robustness (August 12, 2025)
-- **Zero LSP Diagnostics**: Resolved all 66+ type safety issues, None type checks, and parameter validation errors
-- **User Validation**: Added comprehensive None checks for all user objects before database logging operations
-- **File Upload Security**: Enhanced secure_filename usage with proper None handling for all media upload endpoints
-- **Parameter Type Safety**: Fixed all request parameter validation and type conversion issues  
-- **Error Handling**: Implemented robust fallback mechanisms for all AI response generation and bot operations
-- **Universal Protection**: Applied fixes across all current and future WhatsApp bots to prevent runtime errors
-- **Production Ready**: Code now meets enterprise-level type safety and robustness standards
-
-### ✅ COMPLETED: Critical Content Delivery and Admin Reply Fixes (August 12, 2025)
-- **Image Content Delivery Fixed**: Resolved Day 1/2 content image delivery by implementing proper media URL construction in scheduler from database filenames
-- **Media URL Generation**: Added dynamic construction of media URLs from image_filename, video_filename, and audio_filename fields using environment domain
-- **Admin Reply Functionality**: Fixed admin message sending from conversation history page to use bot-specific WhatsApp/Telegram services
-- **Bot-Specific Services**: Ensured admin replies use correct bot tokens and phone number IDs for proper message routing
-- **Message Logging**: Admin messages are now properly logged in message history with appropriate tags and timestamps
-- **Multi-Bot Support**: Both fixes work universally across all bot instances (Bot 1, Bot 2, Bot 5) with proper service isolation
-
-### ✅ COMPLETED: Enhanced Command Reliability and Future-Proofing (August 12, 2025)
-- **Comprehensive Error Handling**: Enhanced all command handlers (STOP, HELP, HUMAN, START) with detailed error logging, traceback capture, and emergency fallback messages
-- **Retry Mechanism**: Implemented exponential backoff retry logic (up to 3 attempts) for all message delivery with automatic fallback to simplified messages if needed
-- **Service Validation**: Added proper validation for bot-specific WhatsApp/Telegram services before message sending to prevent silent failures
-- **Emergency Fallbacks**: Created multi-level fallback system ensuring users always receive confirmation even during critical system failures
-- **Command Reliability Checker**: Built comprehensive monitoring tool for proactive detection and automatic fixing of command processing issues across all bots
-- **Universal Protection**: All improvements apply to current and future bots automatically, preventing similar issues from occurring again
-- **Enhanced Logging**: Added detailed logging with tracebacks for better debugging and issue resolution
-
-### ✅ COMPLETED: Comprehensive Type Safety and Code Robustness (August 12, 2025)
-- **Zero LSP Diagnostics**: Resolved all 66+ type safety issues, None type checks, and parameter validation errors
-- **User Validation**: Added comprehensive None checks for all user objects before database logging operations
-- **File Upload Security**: Enhanced secure_filename usage with proper None handling for all media upload endpoints
-- **Parameter Type Safety**: Fixed all request parameter validation and type conversion issues  
-- **Error Handling**: Implemented robust fallback mechanisms for all AI response generation and bot operations
-- **Universal Protection**: Applied fixes across all current and future WhatsApp bots to prevent runtime errors
-- **Production Ready**: Code now meets enterprise-level type safety and robustness standards
-
-### ✅ COMPLETED: Phone Number Format Universal Support (August 12, 2025)
-- **Root Cause**: Users with formatted phone numbers (+62 838-2233-1133) were not being processed due to format mismatches
-- **Enhanced Normalization**: Implemented comprehensive phone number cleaning (spaces, dashes, parentheses, dots) in webhook processing
-- **Database Lookup Improvements**: Added intelligent phone number variations lookup to find users regardless of format stored vs received
-- **Multi-Format Support**: System now handles all common phone formats: +62838223311133, 62 838-2233-1133, (62) 838.2233.1133, etc.
-- **Indonesian Number Logic**: Special handling for Indonesian local (0xxx) vs international (+62xxx) format conversion
-- **Universal Implementation**: Phone normalization applied to all webhook processing for both current and future bots
-- **Backward Compatibility**: Existing users with any phone format continue working without migration needed
-
-### ✅ COMPLETED: Universal Media Prevention System and Comprehensive File Management (August 12, 2025)
-- **Root Cause Eliminated**: Identified and resolved the core issue where CMS uploads created database references without properly storing files on filesystem
-- **Universal Prevention System**: Built comprehensive prevention system (`universal_media_prevention_system.py`) with bot-specific file isolation, pre/post upload validation, and automatic error handling
-- **Real-time Integrity Monitoring**: Implemented continuous background monitoring with 30-minute integrity checks and automatic repair of broken references
-- **Self-Healing Content Delivery**: Created intelligent fallback system that automatically detects missing files during delivery and converts to text-only mode with database cleanup
-- **Health Monitoring Tools**: Built comprehensive monitoring tool (`media_system_health_monitor.py`) with CLI interface for health checks, repairs, and continuous monitoring
-- **100% System Reliability**: Achieved and maintained 100% media integrity score across all bots with zero content delivery failures
-- **Future-Proof Architecture**: All CMS routes updated to use new prevention system, ensuring automatic protection for all current and future bots
-- **Production-Ready Deployment**: System includes comprehensive logging, error handling, and monitoring suitable for production environments
-- **Enhanced File Save Verification**: Added immediate post-save verification to ensure files are properly written to disk before database commits
-- **Broken Reference Cleanup**: Successfully cleaned up missing media file references and restored 100% system integrity
