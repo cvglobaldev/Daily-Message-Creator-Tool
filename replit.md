@@ -55,3 +55,23 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 - `passlib`
 - `python-dotenv`
 - `python-telegram-bot`
+
+## Recent Changes
+
+### ✅ COMPLETED: Human Connection Option System (August 19, 2025)
+- **Always Offer Human Connection First**: System now proactively offers users the option to connect with a human team member before providing AI responses for sensitive topics
+- **Intelligent Detection**: Enhanced analysis identifies messages containing emotional distress, spiritual concerns, or deep questions requiring personal guidance
+- **No Auto "Human" Tags**: Removed automatic assignment of "Human" tags from AI analysis to prevent premature classification
+- **User Choice Priority**: Users receive clear options to either connect with human team or continue with contextual AI responses based on daily content
+- **Multi-language Support**: Human connection offers available in both English and Indonesian based on bot configuration
+- **Comprehensive Coverage**: Applied across all bots to ensure consistent user experience and support availability
+
+### ✅ COMPLETED: Enhanced Contextual AI Response System (August 19, 2025)
+- **Intelligent Content-Aware Responses**: Users now receive AI responses that are contextually aware of their current daily content, journey stage, and spiritual topic
+- **Enhanced AI Context Integration**: Improved Google Gemini integration with expanded context including current day content, topics, reflection questions, and journey stage
+- **Unified Contextual Conversation Handler**: Created comprehensive `handle_contextual_conversation` function that provides intelligent responses for all user messages beyond Day 1
+- **Content-Based Response Generation**: AI responses now reference and build upon the user's current daily content, creating more meaningful spiritual conversations
+- **Improved Message Routing**: Enhanced logic to route users to appropriate conversation handlers based on their journey progress and content engagement
+- **Day 1 Contextual Support**: Even Day 1 users receive contextual responses once they've received their initial content
+- **Fallback Enhancement**: Robust fallback system ensures users always receive appropriate responses even during AI service interruptions
+- **Journey-Aware AI Prompts**: AI responses now include detailed context about user's current spiritual content, enabling more relevant and helpful conversations

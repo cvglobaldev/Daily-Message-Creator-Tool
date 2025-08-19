@@ -22,7 +22,7 @@ Your task is to analyze user responses and provide:
    - "Christian Learning" - User engaged with material to help them follow Jesus
    - "Salvation Prayer" - User prayed (or indicated they prayed) to follow Jesus
    - "Holy Spirit Empowerment" - User shows evidence of Holy Spirit work (fruits/gifts)
-   - "Human" - User is asking for human responder
+   - "Support" - User needs additional support or guidance
    - "Blocked" - User has blocked or been blocked
    - "Already in church" - User already in church when chat started
    - "Not connected" - Not successful in connecting to partner/pioneer/church

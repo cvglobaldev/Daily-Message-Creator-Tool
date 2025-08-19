@@ -1474,14 +1474,51 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
         elif user.bot_id != bot_id:
             db_manager.update_user(phone_number, bot_id=bot_id)
         
-        # Log the user's message
+        # ALWAYS OFFER HUMAN CONNECTION FIRST - Check if user seems to need additional support
+        should_offer_human = _should_offer_human_connection(message_text, analysis)
+        
+        if should_offer_human:
+            # Offer human connection before providing contextual response
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            
+            if bot and bot.name and "indonesia" in bot.name.lower():
+                human_offer = ("🤝 Apakah Anda ingin berbicara dengan seseorang dari tim kami?\n\n"
+                             "Saya dapat memberikan respons berdasarkan materi hari ini, atau jika Anda lebih suka, "
+                             "saya dapat menghubungkan Anda dengan anggota tim manusia untuk percakapan yang lebih personal.\n\n"
+                             "Ketik 'HUMAN' untuk berbicara dengan tim kami, atau saya akan membantu dengan pertanyaan Anda berdasarkan materi spiritual hari ini.")
+            else:
+                human_offer = ("🤝 Would you like to speak with someone from our team?\n\n"
+                             "I can provide a response based on today's content, or if you prefer, "
+                             "I can connect you with a human team member for more personal conversation.\n\n"
+                             "Type 'HUMAN' to speak with our team, or I'll help with your question based on today's spiritual content.")
+            
+            send_message_to_platform(phone_number, platform, human_offer, bot_id=bot_id)
+            
+            # Log the human connection offer
+            if user:
+                db_manager.log_message(
+                    user=user,
+                    direction='outgoing',
+                    raw_text=human_offer,
+                    sentiment='positive',
+                    tags=['HUMAN_OFFER', 'SUPPORT']
+                )
+            
+            # Return after human offer - user can choose their preference
+            return
+        
+        # Log the user's message (without auto-assigning Human tag)
         if user:
+            # Remove any automatic "Human" tags from analysis
+            filtered_tags = [tag for tag in analysis['tags'] if tag.lower() != 'human']
+            
             db_manager.log_message(
                 user=user,
                 direction='incoming',
                 raw_text=message_text,
                 sentiment=analysis['sentiment'],
-                tags=analysis['tags'],
+                tags=filtered_tags,
                 confidence=analysis.get('confidence')
             )
         
@@ -1568,6 +1605,34 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
             send_message_to_platform(phone_number, platform, fallback_message, bot_id=bot_id)
         except:
             logger.error(f"Failed to send fallback message to {phone_number}")
+
+def _should_offer_human_connection(message_text: str, analysis: dict) -> bool:
+    """Determine if we should offer human connection based on message content and analysis"""
+    message_lower = message_text.lower()
+    
+    # Always offer human connection for sensitive topics or deep spiritual concerns
+    sensitive_indicators = [
+        # Emotional distress
+        "depression", "suicide", "anxiety", "crisis", "help me", "struggling",
+        # Deep spiritual concerns
+        "doubt", "confused", "angry", "lost", "hopeless", "scared", "afraid",
+        # Relationship/forgiveness concerns
+        "terrible things", "forgive", "worthy", "deserve", "guilt", "shame",
+        # Questions requiring personal guidance
+        "why me", "what if", "how can", "is it possible", "can god really"
+    ]
+    
+    # Check sentiment and confidence
+    negative_sentiment = analysis.get('sentiment') == 'negative'
+    high_confidence = analysis.get('confidence', 0) > 0.8
+    
+    # Check for sensitive content indicators
+    has_sensitive_content = any(indicator in message_lower for indicator in sensitive_indicators)
+    
+    # Offer human connection if:
+    # 1. Message contains sensitive indicators, OR
+    # 2. High confidence negative sentiment with substantial message
+    return has_sensitive_content or (negative_sentiment and high_confidence and len(message_text) > 30)
 
 def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle user's reflection response with contextual AI response"""
