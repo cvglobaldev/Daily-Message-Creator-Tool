@@ -293,7 +293,47 @@ def telegram_webhook(bot_id=1):
                 phone_number = f"tg_{chat_id}"
                 
                 # Handle different types of callback queries
-                if callback_data.startswith('quick_reply:'):
+                if callback_data == 'human_yes':
+                    # User chose to connect with human - add Human tag
+                    user = db_manager.get_user_by_phone(phone_number)
+                    if user:
+                        db_manager.log_message(
+                            user=user,
+                            direction='incoming',
+                            raw_text="User requested human connection via button",
+                            sentiment='neutral',
+                            tags=['Human']  # Add Human tag when user explicitly chooses
+                        )
+                    
+                    # Send confirmation message
+                    from models import Bot
+                    bot = Bot.query.get(bot_id)
+                    
+                    if bot and bot.name and "indonesia" in bot.name.lower():
+                        confirmation_msg = "✅ Terima kasih! Tim kami akan segera menghubungi Anda untuk memberikan dukungan personal."
+                    else:
+                        confirmation_msg = "✅ Thank you! Our team will connect with you soon for personal support."
+                    
+                    send_message_to_platform(phone_number, "telegram", confirmation_msg, bot_id=bot_id)
+                    logger.info(f"Human connection requested by {phone_number}")
+                    
+                elif callback_data == 'human_no':
+                    # User chose to continue with bot - provide contextual response
+                    user = db_manager.get_user_by_phone(phone_number)
+                    if user:
+                        # Get the original message from recent logs to provide contextual response
+                        recent_messages = db_manager.get_user_messages(phone_number)[:3]  # Get last 3 messages
+                        if recent_messages and len(recent_messages) > 1:
+                            # Find the original user message (not the human offer)
+                            for msg in reversed(recent_messages):
+                                if msg.direction == 'incoming' and 'human connection' not in msg.raw_text.lower():
+                                    original_message = msg.raw_text
+                                    logger.info(f"User chose bot response, providing contextual reply to: {original_message}")
+                                    # Generate contextual response to the original message
+                                    handle_contextual_conversation(phone_number, original_message, "telegram", bot_id)
+                                    break
+                    
+                elif callback_data.startswith('quick_reply:'):
                     reply_text = callback_data.replace('quick_reply:', '')
                     logger.info(f"Quick reply from {chat_id}: {reply_text}")
                     
@@ -552,6 +592,68 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             "Sorry, there was an error processing your message. Please try again or type HELP for assistance.",
             bot_id=bot_id
         )
+
+def send_message_with_buttons(phone_number: str, platform: str, message: str, bot_id: int = 1) -> bool:
+    """Send message with Yes/No buttons for human connection choice"""
+    try:
+        if platform == "telegram":
+            # Extract chat_id from tg_ prefixed phone number
+            if phone_number.startswith("tg_"):
+                chat_id = phone_number[3:]  # Remove 'tg_' prefix
+                
+                # Get bot-specific Telegram service
+                bot_service = get_telegram_service_for_bot(bot_id)
+                if not bot_service:
+                    logger.error(f"No Telegram service available for bot_id {bot_id}")
+                    return False
+                
+                # Send message with inline keyboard buttons
+                from models import Bot
+                bot = Bot.query.get(bot_id)
+                
+                if bot and bot.name and "indonesia" in bot.name.lower():
+                    buttons = [
+                        [{"text": "✅ Ya, hubungkan dengan tim", "callback_data": "human_yes"}],
+                        [{"text": "🤖 Tidak, lanjutkan dengan bot", "callback_data": "human_no"}]
+                    ]
+                else:
+                    buttons = [
+                        [{"text": "✅ Yes, connect with team", "callback_data": "human_yes"}],
+                        [{"text": "🤖 No, continue with bot", "callback_data": "human_no"}]
+                    ]
+                
+                return bot_service.send_message_with_buttons(chat_id, message, buttons)
+                
+        elif platform == "whatsapp":
+            # Get bot-specific WhatsApp service
+            bot_service = get_whatsapp_service_for_bot(bot_id)
+            if not bot_service:
+                logger.error(f"No WhatsApp service available for bot_id {bot_id}")
+                return False
+            
+            # WhatsApp interactive buttons
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            
+            if bot and bot.name and "indonesia" in bot.name.lower():
+                buttons = [
+                    {"id": "human_yes", "title": "Ya, hubungkan tim"},
+                    {"id": "human_no", "title": "Lanjut dengan bot"}
+                ]
+            else:
+                buttons = [
+                    {"id": "human_yes", "title": "Yes, connect team"},
+                    {"id": "human_no", "title": "Continue with bot"}
+                ]
+            
+            return bot_service.send_interactive_buttons(phone_number, message, buttons)
+            
+    except Exception as e:
+        logger.error(f"Error sending message with buttons to {phone_number}: {e}")
+        # Fallback to regular message
+        return send_message_to_platform(phone_number, platform, message + "\n\nReply 'YES' for human team or 'NO' to continue with bot.", bot_id=bot_id)
+    
+    return False
 
 def send_message_to_platform(phone_number: str, platform: str, message: str, 
                            with_quick_replies: bool = False, copy_text: str = "", 
@@ -1478,22 +1580,21 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
         should_offer_human = _should_offer_human_connection(message_text, analysis)
         
         if should_offer_human:
-            # Offer human connection before providing contextual response
+            # Offer human connection with interactive buttons
             from models import Bot
             bot = Bot.query.get(bot_id)
             
             if bot and bot.name and "indonesia" in bot.name.lower():
                 human_offer = ("🤝 Apakah Anda ingin berbicara dengan seseorang dari tim kami?\n\n"
                              "Saya dapat memberikan respons berdasarkan materi hari ini, atau jika Anda lebih suka, "
-                             "saya dapat menghubungkan Anda dengan anggota tim manusia untuk percakapan yang lebih personal.\n\n"
-                             "Ketik 'HUMAN' untuk berbicara dengan tim kami, atau saya akan membantu dengan pertanyaan Anda berdasarkan materi spiritual hari ini.")
+                             "saya dapat menghubungkan Anda dengan anggota tim manusia untuk percakapan yang lebih personal.")
             else:
                 human_offer = ("🤝 Would you like to speak with someone from our team?\n\n"
                              "I can provide a response based on today's content, or if you prefer, "
-                             "I can connect you with a human team member for more personal conversation.\n\n"
-                             "Type 'HUMAN' to speak with our team, or I'll help with your question based on today's spiritual content.")
+                             "I can connect you with a human team member for more personal conversation.")
             
-            send_message_to_platform(phone_number, platform, human_offer, bot_id=bot_id)
+            # Send message with buttons for user choice
+            send_message_with_buttons(phone_number, platform, human_offer, bot_id=bot_id)
             
             # Log the human connection offer
             if user:

@@ -485,6 +485,11 @@ class TelegramService:
         except Exception as e:
             logger.error(f"Error setting emoji status: {e}")
             return False
+    
+    def send_message_with_buttons(self, chat_id: str, message: str, buttons: list) -> bool:
+        """Send message with inline keyboard buttons"""
+        reply_markup = {"inline_keyboard": buttons}
+        return self.send_message(chat_id, message, reply_markup=reply_markup)
 
 class WhatsAppService:
     """Service for WhatsApp Business API integration"""
@@ -650,6 +655,59 @@ class WhatsAppService:
                 
         except Exception as e:
             logger.error(f"Error sending WhatsApp video to {to}: {e}")
+            return False
+
+    def send_interactive_buttons(self, to: str, message: str, buttons: list) -> bool:
+        """Send an interactive message with buttons via WhatsApp"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 WHATSAPP INTERACTIVE MESSAGE TO {to}:")
+                print(f"   {message}")
+                print(f"   🔘 Buttons: {[btn['title'] for btn in buttons]}")
+                print("   ✅ Interactive message simulated (development mode)")
+                return True
+            
+            url = f"{self.base_url}/{self.phone_number_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": to.replace('+', ''),
+                "type": "interactive",
+                "interactive": {
+                    "type": "button",
+                    "body": {
+                        "text": message
+                    },
+                    "action": {
+                        "buttons": [
+                            {
+                                "type": "reply",
+                                "reply": {
+                                    "id": btn["id"],
+                                    "title": btn["title"]
+                                }
+                            }
+                            for btn in buttons
+                        ]
+                    }
+                }
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                logger.info(f"Interactive message sent successfully to {to}")
+                return True
+            else:
+                logger.error(f"Failed to send interactive message to {to}: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending interactive message to {to}: {e}")
             return False
 
 
