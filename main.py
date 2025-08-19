@@ -501,9 +501,9 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
                 handle_whatsapp_first_message(phone_number, platform, user_data, request_ip, bot_id)
                 return
             elif existing_user.current_day == 1 and not any(cmd in message_lower for cmd in ['start', 'stop', 'help', 'human']):
-                # User on Day 1 sending non-command messages should get bot response (not reflection)
-                logger.info(f"Day 1 user {phone_number} sending general message, using bot-specific AI response")
-                handle_general_conversation(phone_number, message_text, platform, bot_id)
+                # Day 1 users already received content, so they should get contextual responses too
+                logger.info(f"Day 1 user {phone_number} sending message about Day 1 content, using contextual AI response")
+                handle_contextual_conversation(phone_number, message_text, platform, bot_id)
                 return
             else:
                 # Update user with any new WhatsApp data if available
@@ -533,16 +533,15 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             handle_human_handoff(phone_number, message_text, platform, bot_id)
             return
         
-        # Check if user is beyond Day 1 but still having general conversation
+        # Enhanced contextual routing based on user's journey stage
         user = db_manager.get_user_by_phone(phone_number)
         if user and user.current_day > 1:
-            # For users beyond Day 1, check if they're responding to reflection or having general conversation
-            # If they haven't received today's content yet or seem to be asking questions, use general conversation
-            logger.info(f"User {phone_number} (Day {user.current_day}) sending message, routing to reflection handler")
-            handle_reflection_response(phone_number, message_text, platform, bot_id)
+            # Users beyond Day 1 should always get contextual responses based on their current content
+            logger.info(f"User {phone_number} (Day {user.current_day}) sending message, providing contextual response based on current journey")
+            handle_contextual_conversation(phone_number, message_text, platform, bot_id)
         else:
-            # Fallback to general conversation
-            logger.info(f"User {phone_number} message routing to general conversation")
+            # Day 1 users or new users get general conversation
+            logger.info(f"User {phone_number} (Day 1 or new) routing to general conversation")
             handle_general_conversation(phone_number, message_text, platform, bot_id)
         
     except Exception as e:
@@ -1460,6 +1459,115 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
         # Still acknowledge the user's message with fallback
         fallback_response = "Thank you for your message. How can I help you today?"
         send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
+
+def handle_contextual_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+    """Handle any user message with full context of their current daily content"""
+    try:
+        # Analyze the response with Gemini
+        analysis = gemini_service.analyze_response(message_text)
+        
+        # Get or create user with bot_id
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user(phone_number, bot_id=bot_id)
+        
+        # Log the user's message
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=message_text,
+                sentiment=analysis['sentiment'],
+                tags=analysis['tags'],
+                confidence=analysis.get('confidence')
+            )
+        
+        # Get current content for contextual response - use current_day for the content they're currently on
+        current_content_day = user.current_day if user and user.current_day > 0 else 1
+        content = db_manager.get_content_by_day(current_content_day, bot_id=user.bot_id if user else bot_id)
+        
+        # If no current content, try previous day (they might have just advanced)
+        if not content and user and user.current_day > 1:
+            content = db_manager.get_content_by_day(user.current_day - 1, bot_id=user.bot_id)
+            logger.info(f"Using Day {user.current_day - 1} content for contextual response to {phone_number}")
+        
+        # Generate contextual AI response using the bot's prompt and current content
+        try:
+            # Get the bot's configuration for AI prompt
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            ai_prompt = bot.ai_prompt if bot else "You are a helpful spiritual guide chatbot."
+            
+            logger.info(f"Generating contextual response for {phone_number} (Day {current_content_day}) with daily content context")
+            
+            # Generate response using bot-specific AI prompt with content context
+            contextual_response = gemini_service.generate_bot_response(
+                user_message=message_text,
+                ai_prompt=ai_prompt,
+                content_context=content
+            )
+            
+            if content:
+                logger.info(f"Generated contextual response for {phone_number} based on Day {content.day_number}: {content.title}")
+            else:
+                logger.info(f"Generated general response for {phone_number} (no content context available)")
+                
+        except Exception as ai_error:
+            logger.error(f"Failed to generate contextual AI response for {phone_number}: {ai_error}")
+            logger.error(f"Exception details: {str(ai_error)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Generate fallback using bot-specific AI prompt with available context
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if bot and bot.ai_prompt:
+                try:
+                    # Use bot's AI prompt for fallback response with content context
+                    contextual_response = gemini_service.generate_bot_response(
+                        user_message=message_text,
+                        ai_prompt=bot.ai_prompt,
+                        content_context=content
+                    )
+                except:
+                    # Last resort fallback with bot-specific language
+                    if bot and bot.name and "indonesia" in bot.name.lower():
+                        contextual_response = "Terima kasih sudah berbagi. Saya Bang Kris di sini untuk membantu Anda dalam perjalanan spiritual ini. Ada yang ingin Anda tanyakan tentang materi hari ini?"
+                    else:
+                        contextual_response = "Thank you for sharing. I'm here to guide you through this spiritual journey. Do you have any questions about today's content?"
+            else:
+                # No bot found, use generic contextual
+                contextual_response = "Thank you for your reflection. I'm here to help you explore today's spiritual content. What are your thoughts?"
+        
+        # Send the contextual response
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
+        
+        # Log the outgoing response
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=contextual_response,
+                sentiment='positive',
+                tags=['AI_RESPONSE', 'CONTEXTUAL']
+            )
+            
+    except Exception as e:
+        logger.error(f"Error handling contextual conversation from {phone_number}: {e}")
+        # Still acknowledge the user's message with fallback
+        try:
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if bot and bot.name and "indonesia" in bot.name.lower():
+                fallback_message = "Maaf, ada sedikit masalah teknis. Terima kasih sudah berbagi pemikiran Anda. Ada yang bisa saya bantu?"
+            else:
+                fallback_message = "Thank you for your message. I'm here to help with any questions about your spiritual journey."
+            send_message_to_platform(phone_number, platform, fallback_message, bot_id=bot_id)
+        except:
+            logger.error(f"Failed to send fallback message to {phone_number}")
 
 def handle_reflection_response(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle user's reflection response with contextual AI response"""

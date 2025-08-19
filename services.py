@@ -860,14 +860,22 @@ class GeminiService:
             # Add content context if available
             if content_context:
                 context_addition = f"""
-                
-Current journey context:
-- Day: {content_context.day_number}
-- Topic: {content_context.title}
-- Content: {content_context.content[:200]}...
-- Reflection Question: {content_context.reflection_question}
 
-Please respond in a way that acknowledges their current journey stage and the content they're reflecting on.
+CURRENT DAILY CONTENT CONTEXT:
+- Journey Day: {content_context.day_number}
+- Today's Topic: {content_context.title}
+- Today's Content Summary: {content_context.content[:400]}...
+- Today's Reflection Question: {content_context.reflection_question}
+
+CONTEXTUAL RESPONSE GUIDELINES:
+1. Reference the user's current day/topic when relevant to their question or reflection
+2. Connect your response to today's content themes and concepts
+3. If they're asking questions, relate answers back to today's spiritual lesson
+4. If they're sharing reflections, acknowledge their thoughts about today's content
+5. Guide them deeper into today's topic while addressing their specific message
+6. Use today's content as foundation for expanding on related spiritual concepts
+
+Please respond in a way that shows you understand their current spiritual journey stage and today's specific content they're engaging with.
 """
                 system_instruction += context_addition
             
