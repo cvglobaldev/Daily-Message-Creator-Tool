@@ -835,14 +835,36 @@ class GeminiService:
             return self._get_fallback_contextual_response(user_reflection)
     
     def _get_fallback_contextual_response(self, user_reflection: str) -> str:
-        """Provide fallback contextual responses when Gemini is unavailable"""
-        responses = [
-            "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth.",
-            "I appreciate you taking time to reflect on this. Your insights show that you're truly engaging with these important concepts.",
-            "Your reflection shows deep thinking. These are exactly the kind of questions that lead to meaningful spiritual growth.",
-            "Thank you for your honest response. Your willingness to explore these ideas is encouraging to see.",
-            "I'm grateful you shared your thoughts. Your reflection shows you're genuinely considering what this means for your own life."
-        ]
+        """Enhanced fallback contextual response that addresses spiritual concerns meaningfully"""
+        message_lower = user_reflection.lower()
+        
+        # Enhanced contextual fallback responses based on message content
+        if any(word in message_lower for word in ["deserve", "worthy", "enough", "not good"]):
+            responses = [
+                "Your feelings of unworthiness are deeply human and understandable. Many people wrestle with these same thoughts. The beautiful truth is that God's love isn't based on what we deserve - it's based on His character and grace.",
+                "It's natural to feel undeserving when we consider the magnitude of God's love. But that's precisely what makes grace so incredible - it's not about our worthiness, but about His love choosing us anyway.",
+                "Thank you for sharing such an honest and vulnerable thought. These feelings of unworthiness are actually where grace begins to make the most sense - when we realize it's not about what we deserve, but about being loved anyway."
+            ]
+        elif any(word in message_lower for word in ["relationship", "connect", "close", "personal"]):
+            responses = [
+                "The desire for relationship with God is something He placed in every human heart. Your question shows that longing is alive in you, which is beautiful.",
+                "Relationship with God isn't reserved for the 'super spiritual' - it's available to anyone who seeks it genuinely, just as you're doing right now.",
+                "Your question about relationship with God shows your heart is already moving toward Him. That's exactly how spiritual connection begins."
+            ]
+        elif any(word in message_lower for word in ["doubt", "confused", "unclear", "understand"]):
+            responses = [
+                "Doubt and confusion are natural parts of any spiritual journey. Your honesty about these feelings shows you're engaging genuinely with these deep questions.",
+                "Thank you for sharing your honest thoughts. Wrestling with these concepts shows you're taking this journey seriously, which is exactly what spiritual growth looks like.",
+                "Your questions and uncertainty are not barriers to faith - they're often the very pathway through which deeper understanding comes."
+            ]
+        else:
+            responses = [
+                "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth.",
+                "I appreciate you taking time to reflect on this. Your insights show that you're truly engaging with these important concepts.",
+                "Your reflection shows deep thinking. These are exactly the kind of questions that lead to meaningful spiritual growth.",
+                "Thank you for your honest response. Your willingness to explore these ideas is encouraging to see.",
+                "I'm grateful you shared your thoughts. Your reflection shows you're genuinely considering what this means for your own life."
+            ]
         
         import random
         return random.choice(responses)
