@@ -123,14 +123,18 @@ class ContentScheduler:
                 return True
             
             # Check if user already received content for this day (prevent duplicates)
-            # Get the most recent message for this user to check if they already got today's content
-            recent_messages = self.db.get_user_messages_by_id(user.id, limit=5)
+            # Only check messages from the last 12 hours to avoid issues with STOP/START cycles
+            from datetime import datetime, timedelta
+            twelve_hours_ago = datetime.now() - timedelta(hours=12)
+            recent_messages = self.db.get_user_messages_by_id(user.id, limit=3)
             if recent_messages:
-                # Check if any recent message contains content for the current day
+                # Check if any recent message contains content for the current day within the last 12 hours
                 day_content_text = f"Day {current_day}"
                 for msg in recent_messages:
-                    if msg.direction == 'outgoing' and day_content_text in msg.raw_text:
-                        logger.info(f"User {phone_number} already received content for day {current_day}, skipping duplicate")
+                    if (msg.direction == 'outgoing' and 
+                        day_content_text in msg.raw_text and 
+                        msg.timestamp > twelve_hours_ago):
+                        logger.info(f"User {phone_number} already received content for day {current_day} recently, skipping duplicate")
                         return True
                 
             # Get content for current day

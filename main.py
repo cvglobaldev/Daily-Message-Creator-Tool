@@ -814,10 +814,11 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         # Check if user already exists
         existing_user = db_manager.get_user_by_phone(phone_number)
         
-        if existing_user and existing_user.status == 'active':
+        if existing_user and existing_user.status in ['active', 'inactive']:
                     
             # Allow restart - reset to Day 1 and update with enhanced user data
-            update_kwargs = {'current_day': 1, 'join_date': datetime.now(), 'bot_id': bot_id}
+            # Reset join_date to current time to restart scheduler tracking
+            update_kwargs = {'current_day': 1, 'join_date': datetime.now(), 'bot_id': bot_id, 'status': 'active'}
             if user_data and platform == "telegram":
                 enhanced_data = extract_telegram_user_data(user_data, request_ip)
                 update_kwargs.update(enhanced_data)
@@ -2464,6 +2465,39 @@ def test_scheduler_user():
         return jsonify({'success': success, 'message': f'Content delivery attempted for {phone_number}'})
     except Exception as e:
         logger.error(f"Error testing scheduler: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/fix-stuck-users', methods=['POST'])
+def fix_stuck_users():
+    """Fix users who are stuck in progression due to STOP/START issues"""
+    try:
+        from recovery_utils import fix_stuck_users
+        fixed_count = fix_stuck_users()
+        return jsonify({
+            'success': True, 
+            'message': f'Fixed {fixed_count} stuck users across all bots',
+            'fixed_count': fixed_count
+        })
+    except Exception as e:
+        logger.error(f"Error fixing stuck users: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/test-stop-start-cycle', methods=['POST'])
+def test_stop_start_cycle():
+    """Test STOP/START cycle functionality"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        bot_id = data.get('bot_id', 2)
+        
+        from recovery_utils import test_stop_start_cycle
+        success = test_stop_start_cycle(phone_number, bot_id)
+        return jsonify({
+            'success': success, 
+            'message': f'STOP/START cycle test {"PASSED" if success else "FAILED"} for {phone_number}'
+        })
+    except Exception as e:
+        logger.error(f"Error testing STOP/START cycle: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Bot Management Routes
