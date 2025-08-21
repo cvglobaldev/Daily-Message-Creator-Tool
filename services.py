@@ -961,14 +961,14 @@ Please respond in a way that shows you understand their current spiritual journe
             
             # Generate response using the bot's specific AI prompt
             response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.0-flash-exp",
                 contents=[
                     types.Content(role="user", parts=[types.Part(text=user_message)])
                 ],
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     temperature=0.7,
-                    max_output_tokens=500
+                    max_output_tokens=800
                 )
             )
             
