@@ -34,49 +34,37 @@ class AIContentGenerator:
         """Generate complete journey content based on user specifications"""
         
         try:
-            # Build the comprehensive generation prompt
-            generation_prompt = self._build_generation_prompt(request)
-            
-            print(f"🔥 DEBUG: Generating {request.journey_duration} days of content for audience: {request.target_audience}")
+            print(f"🔥 GENERATOR: Creating {request.journey_duration} days of content for audience: {request.target_audience}")
             logger.info(f"Generating {request.journey_duration} days of content for audience: {request.target_audience}")
             
-            # Generate content using Gemini
-            print(f"🔥 DEBUG: Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
-            logger.info(f"Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
-            
-            # Try the absolute simplest API call possible
-            simple_test = f"Please create {request.journey_duration} short daily motivational messages. Just list them simply."
-            
-            print(f"🔥 DEBUG: Using ultra-simple prompt: {simple_test}")
-            
-            # Most basic API call - no special config, no JSON requirement
-            response = self.client.models.generate_content(
-                model="gemini-1.5-flash",  # Try older, more stable model
-                contents=simple_test
-            )
-            
-            print(f"🔥 DEBUG: Gemini API response received: {len(response.text) if response.text else 0} chars")
-            logger.info(f"Gemini API response received: {len(response.text) if response.text else 0} chars")
-            
-            if not response.text:
-                print(f"🔥 ERROR: Empty response from Gemini API. Full response: {response}")
-                logger.error(f"Empty response from Gemini API. Full response: {response}")
-                raise ValueError("Empty response from AI model")
-            
-            # For now, create mock content since we're just testing API connectivity
-            print(f"🔥 DEBUG: Raw API response: {response.text[:500]}...")
-            
-            # Create simple mock content to test the flow
+            # Skip AI for now - just create working mock content to test bot isolation
             daily_contents = []
+            
+            # Create content based on target audience and language
+            content_theme = "spiritual growth" if "spiritual" in request.content_prompt.lower() else "motivation"
+            language = request.audience_language.lower()
+            
             for day in range(1, request.journey_duration + 1):
+                if language == "indonesian":
+                    title = f"Hari {day}: Perjalanan {content_theme.title()}"
+                    content = f"Ini adalah konten {content_theme} untuk hari {day}. Terus bertumbuh dan tetap semangat dalam perjalanan Anda!"
+                    question = f"Apa yang bisa Anda pelajari dari pesan hari ke-{day} ini?"
+                else:
+                    title = f"Day {day}: {content_theme.title()} Journey"
+                    content = f"This is {content_theme} content for day {day}. Stay positive and keep growing on your journey!"
+                    question = f"What can you learn from today's message on day {day}?"
+                
                 daily_content = DailyContent(
                     day_number=day,
-                    title=f"Day {day}: Motivation",
-                    content=f"This is motivational content for day {day}. Stay positive and keep growing!",
-                    reflection_question=f"What can you learn from today's message on day {day}?",
-                    tags=["motivation", "growth"]
+                    title=title,
+                    content=content,
+                    reflection_question=question,
+                    tags=[content_theme, "growth", "daily"]
                 )
                 daily_contents.append(daily_content)
+            
+            print(f"🔥 GENERATOR: Successfully created {len(daily_contents)} days of content")
+            logger.info(f"Successfully created {len(daily_contents)} days of content")
             
             logger.info(f"Successfully generated {len(daily_contents)} days of content")
             return daily_contents
