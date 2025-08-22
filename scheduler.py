@@ -377,7 +377,6 @@ class ContentScheduler:
         """Send a holding message when content is missing"""
         try:
             from models import Bot
-            from main import get_bot_service
             
             bot = Bot.query.get(user.bot_id)
             if not bot:
