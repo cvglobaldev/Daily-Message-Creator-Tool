@@ -10,8 +10,8 @@ from scheduler import ContentScheduler
 import threading
 import time
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm
-from bot_forms import CreateBotForm, EditBotForm, BotContentForm, AIContentGenerationForm
+from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm, AIContentGenerationForm
+from bot_forms import CreateBotForm, EditBotForm, BotContentForm
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 import uuid

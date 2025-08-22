@@ -40,6 +40,7 @@ class AIContentGenerator:
             logger.info(f"Generating {request.journey_duration} days of content for audience: {request.target_audience}")
             
             # Generate content using Gemini
+            logger.info(f"Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
             response = self.client.models.generate_content(
                 model="gemini-2.5-pro",
                 contents=generation_prompt,
@@ -50,7 +51,10 @@ class AIContentGenerator:
                 )
             )
             
+            logger.info(f"Gemini API response received: {len(response.text) if response.text else 0} chars")
+            
             if not response.text:
+                logger.error(f"Empty response from Gemini API. Full response: {response}")
                 raise ValueError("Empty response from AI model")
             
             # Parse the JSON response
