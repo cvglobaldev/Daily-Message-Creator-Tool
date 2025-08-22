@@ -37,13 +37,33 @@ class AIContentGenerator:
             # Build the comprehensive generation prompt
             generation_prompt = self._build_generation_prompt(request)
             
+            print(f"🔥 DEBUG: Generating {request.journey_duration} days of content for audience: {request.target_audience}")
             logger.info(f"Generating {request.journey_duration} days of content for audience: {request.target_audience}")
             
             # Generate content using Gemini
+            print(f"🔥 DEBUG: Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
             logger.info(f"Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
+            
+            # Try with a shorter, simpler prompt first for debugging
+            simple_prompt = f"""Generate a {request.journey_duration}-day spiritual journey as JSON:
+
+{{
+  "daily_content": [
+    {{
+      "day_number": 1,
+      "title": "Day 1 Title",
+      "content": "Day 1 spiritual content about faith and hope.",
+      "reflection_question": "How do you understand faith in your life?",
+      "tags": ["faith", "hope"]
+    }}
+  ]
+}}
+
+Generate exactly {request.journey_duration} days."""
+            
             response = self.client.models.generate_content(
                 model="gemini-2.5-pro",
-                contents=generation_prompt,
+                contents=simple_prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=0.7,
@@ -51,9 +71,11 @@ class AIContentGenerator:
                 )
             )
             
+            print(f"🔥 DEBUG: Gemini API response received: {len(response.text) if response.text else 0} chars")
             logger.info(f"Gemini API response received: {len(response.text) if response.text else 0} chars")
             
             if not response.text:
+                print(f"🔥 ERROR: Empty response from Gemini API. Full response: {response}")
                 logger.error(f"Empty response from Gemini API. Full response: {response}")
                 raise ValueError("Empty response from AI model")
             
