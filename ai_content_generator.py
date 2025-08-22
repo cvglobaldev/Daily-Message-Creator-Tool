@@ -34,30 +34,17 @@ class AIContentGenerator:
         """Generate complete journey content based on user specifications"""
         
         try:
-            print(f"🔥 GENERATOR: Creating {request.journey_duration} days of content for audience: {request.target_audience}")
-            logger.info(f"Generating {request.journey_duration} days of content for audience: {request.target_audience}")
+            print(f"🔥 GENERATOR: Creating {request.journey_duration} days of AI content for audience: {request.target_audience}")
+            logger.info(f"Generating {request.journey_duration} days of AI content for audience: {request.target_audience}")
             
-            # Create customized content based on form inputs
-            daily_contents = []
-            
-            # Get audience-specific content themes and approaches
+            # Get audience-specific content configuration for AI prompting
             content_config = self._get_audience_content_config(request)
             
-            for day in range(1, request.journey_duration + 1):
-                # Generate day-specific content using audience parameters
-                title, content, question, tags = self._generate_day_content(day, request, content_config)
-                
-                daily_content = DailyContent(
-                    day_number=day,
-                    title=title,
-                    content=content,
-                    reflection_question=question,
-                    tags=tags
-                )
-                daily_contents.append(daily_content)
+            # Generate AI content using Gemini 2.5 Flash
+            daily_contents = self._generate_ai_content_with_gemini(request, content_config)
             
-            print(f"🔥 GENERATOR: Successfully created {len(daily_contents)} days of customized content for {request.target_audience}")
-            logger.info(f"Successfully created {len(daily_contents)} days of customized content")
+            print(f"🔥 GENERATOR: Successfully created {len(daily_contents)} days of AI-generated content for {request.target_audience}")
+            logger.info(f"Successfully created {len(daily_contents)} days of AI-generated content")
             
             return daily_contents
             
@@ -145,6 +132,127 @@ class AIContentGenerator:
             tags = ["spiritual", "growth", "journey"]
         
         return title, content, question, tags
+    
+    def _generate_ai_content_with_gemini(self, request: ContentGenerationRequest, config: Dict) -> List[DailyContent]:
+        """Generate content using Gemini AI with audience-specific customization"""
+        try:
+            # Build customized AI prompt based on audience
+            prompt = self._build_audience_specific_prompt(request, config)
+            
+            print(f"🔥 GEMINI: Generating content with gemini-2.5-flash for {request.target_audience}")
+            
+            # Generate content using Gemini 2.5 Flash
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+            
+            if not response.text:
+                raise Exception("Gemini returned empty response")
+            
+            # Parse the JSON response
+            content_data = json.loads(response.text)
+            daily_contents = []
+            
+            for item in content_data.get("daily_content", []):
+                daily_content = DailyContent(
+                    day_number=item["day_number"],
+                    title=item["title"],
+                    content=item["content"],
+                    reflection_question=item["reflection_question"],
+                    tags=item.get("tags", ["growth", "reflection"])
+                )
+                daily_contents.append(daily_content)
+            
+            print(f"🔥 GEMINI: Successfully parsed {len(daily_contents)} days of AI content")
+            return daily_contents
+            
+        except Exception as e:
+            print(f"🔥 GEMINI ERROR: {e}")
+            logger.warning(f"Gemini AI generation failed: {e}. Falling back to customized mock content.")
+            
+            # Fallback to customized mock content if AI fails
+            return self._generate_fallback_content(request, config)
+    
+    def _generate_fallback_content(self, request: ContentGenerationRequest, config: Dict) -> List[DailyContent]:
+        """Generate fallback content if AI fails, using audience customization"""
+        daily_contents = []
+        
+        for day in range(1, request.journey_duration + 1):
+            title, content, question, tags = self._generate_day_content(day, request, config)
+            
+            daily_content = DailyContent(
+                day_number=day,
+                title=title,
+                content=content,
+                reflection_question=question,
+                tags=tags
+            )
+            daily_contents.append(daily_content)
+        
+        return daily_contents
+    
+    def _build_audience_specific_prompt(self, request: ContentGenerationRequest, config: Dict) -> str:
+        """Build AI prompt customized for specific audience"""
+        
+        approach = config["approach"]
+        tone = config["tone"]
+        themes = ", ".join(config["themes"])
+        avoid = ", ".join(config["avoid"])
+        focus = config["focus"]
+        
+        prompt = f"""You are an expert content creator specializing in culturally sensitive personal growth journeys.
+
+Create a {request.journey_duration}-day personal development journey with the following specifications:
+
+**Target Audience:**
+- Demographics: {request.target_audience}
+- Age Group: {request.audience_age_group}
+- Current Background: {request.audience_religion}
+- Language: {request.audience_language}
+
+**Content Approach:**
+- Approach: {approach}
+- Tone: {tone}
+- Key Themes: {themes}
+- Areas to Avoid: {avoid}
+- Primary Focus: {focus}
+
+**Custom Requirements:**
+{request.content_prompt}
+
+**Output Format:**
+Generate content as a JSON object with this exact structure:
+
+{{
+  "daily_content": [
+    {{
+      "day_number": 1,
+      "title": "Clear, engaging title for the day",
+      "content": "Main content (200-400 words). Be respectful, encouraging, and culturally appropriate. Focus on {focus}. Use {tone} tone.",
+      "reflection_question": "Thoughtful question that encourages personal reflection and growth",
+      "tags": ["relevant", "themes", "from", "list"]
+    }},
+    // ... continue for all {request.journey_duration} days
+  ]
+}}
+
+**Critical Guidelines:**
+1. **Cultural Sensitivity**: Deeply respect the audience's background and beliefs
+2. **Progressive Journey**: Build concepts gradually, each day building on previous ones
+3. **Practical Application**: Include actionable insights and real-world applications
+4. **Encouraging Tone**: Maintain supportive, non-judgmental approach throughout
+5. **Personal Growth**: Focus on universal human values like compassion, integrity, purpose
+6. **Respectful Language**: Use inclusive, accessible language appropriate for the demographic
+7. **Varied Content**: Mix philosophical insights, practical exercises, and personal reflection
+8. **Safe Space**: Create content that feels welcoming and non-threatening
+
+Ensure the content progression makes logical sense and builds a coherent journey of personal growth."""
+
+        return prompt
     
     def _build_generation_prompt(self, request: ContentGenerationRequest) -> str:
         """Build the AI generation prompt based on user requirements"""
