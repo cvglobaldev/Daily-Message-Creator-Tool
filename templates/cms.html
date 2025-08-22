@@ -311,6 +311,9 @@
             document.getElementById('addNewDayBtn').addEventListener('click', addNewDay);
             document.getElementById('saveContentBtn').addEventListener('click', saveContent);
             document.getElementById('deleteButton').addEventListener('click', deleteContent);
+            document.getElementById('aiGeneratedContentBtn').addEventListener('click', function() {
+                window.location.href = '/cms/ai-content-generation';
+            });
             
             // Add event listeners for file inputs
             document.getElementById('imageFile').addEventListener('change', updatePreview);

@@ -10,7 +10,7 @@ from scheduler import ContentScheduler
 import threading
 import time
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm
+from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm, AIContentGenerationForm
 from bot_forms import CreateBotForm, EditBotForm, BotContentForm
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
@@ -3979,6 +3979,61 @@ def cms_content_delete(content_id):
         flash('Error deleting content. Please try again.', 'danger')
     
     return redirect(url_for('cms'))
+
+# AI Content Generation Routes
+@app.route('/cms/ai-content-generation', methods=['GET', 'POST'])
+@login_required
+def ai_content_generation():
+    """AI Content Generation setup page"""
+    form = AIContentGenerationForm()
+    
+    if form.validate_on_submit():
+        try:
+            from ai_content_generator import AIContentGenerator, ContentGenerationRequest
+            
+            # Create content generation request
+            request = ContentGenerationRequest(
+                target_audience=form.target_audience.data or "General spiritual seekers",
+                audience_language=form.audience_language.data or "English",
+                audience_religion=form.audience_religion.data or "Mixed backgrounds",
+                audience_age_group=form.audience_age_group.data or "Adults",
+                content_prompt=form.content_generation_prompt.data,
+                journey_duration=int(form.content_generation_duration.data)
+            )
+            
+            # Generate content using AI
+            logger.info(f"Starting AI content generation via CMS")
+            generator = AIContentGenerator()
+            daily_contents = generator.generate_journey_content(request)
+            
+            # Validate generated content
+            if generator.validate_generated_content(daily_contents, request.journey_duration):
+                # Save generated content to database
+                for daily_content in daily_contents:
+                    content = Content()
+                    content.day_number = daily_content.day_number
+                    content.content = daily_content.content
+                    content.media_type = 'text'
+                    content.media_url = None
+                    content.reflection_question = daily_content.reflection_question
+                    content.title = daily_content.title
+                    content.is_active = True
+                    content.tags = daily_content.tags or []
+                    
+                    db.session.add(content)
+                
+                db.session.commit()
+                flash(f'✅ AI generated {len(daily_contents)} days of content successfully!', 'success')
+                logger.info(f"Successfully saved {len(daily_contents)} days of AI-generated content via CMS")
+                return redirect(url_for('cms'))
+            else:
+                flash('⚠️ AI content validation failed - please review and add content manually', 'warning')
+                
+        except Exception as e:
+            logger.error(f"AI content generation failed via CMS: {e}")
+            flash(f'❌ AI content generation failed: {str(e)}', 'danger')
+    
+    return render_template('ai_content_generation.html', form=form, user=current_user)
 
 @app.route('/test_day1_delivery', methods=['POST'])
 def test_day1_delivery():

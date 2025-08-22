@@ -118,11 +118,39 @@ class ContentForm(FlaskForm):
     )
     
     submit = SubmitField('Save Content')
+
+class AIContentGenerationForm(FlaskForm):
+    """Form for AI content generation setup"""
+    content_generation_duration = SelectField(
+        'Content Duration',
+        choices=[('10', '10 Days'), ('30', '30 Days'), ('60', '60 Days'), ('90', '90 Days')],
+        default='30',
+        validators=[DataRequired()]
+    )
     
-    def __init__(self, day_choices=None, *args, **kwargs):
-        super(ContentForm, self).__init__(*args, **kwargs)
-        if day_choices:
-            self.day_number.choices = [(i, f'Day {i}') for i in day_choices]
-        else:
-            # Default to 1-90 days
-            self.day_number.choices = [(i, f'Day {i}') for i in range(1, 91)]
+    # Audience and Content Customization
+    target_audience = StringField('Target Audience', validators=[Optional(), Length(max=200)], 
+                                 description="e.g., Young Muslim adults, Christian seekers, etc.")
+    audience_language = SelectField('Audience Language', 
+                                   choices=[
+                                       ('English', 'English'),
+                                       ('Indonesian', 'Bahasa Indonesia'),
+                                       ('Spanish', 'Spanish'),
+                                       ('Other', 'Other (specify in content prompt)')
+                                   ],
+                                   default="English", 
+                                   description="Primary language for bot responses and content")
+    audience_religion = StringField('Current Religion/Background', validators=[Optional(), Length(max=100)], 
+                                   description="e.g., Islam, Christianity, Hindu, Secular, etc.")
+    audience_age_group = StringField('Age Group', validators=[Optional(), Length(max=50)], 
+                                    description="e.g., 18-25, 25-35, Adults, etc.")
+    
+    # Content Generation Prompt
+    content_generation_prompt = TextAreaField(
+        'Content Generation Prompt',
+        validators=[DataRequired(), Length(max=2000)],
+        default="Create a gentle, respectful faith journey that introduces Christian concepts to someone from a Muslim background. Focus on love, compassion, and spiritual growth. Include reflection questions that encourage personal spiritual exploration.",
+        description="Describe the type of content you want to generate. Be specific about tone, topics, and approach."
+    )
+    
+    submit = SubmitField('Generate Content')

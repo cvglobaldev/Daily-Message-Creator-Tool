@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Generation - Daily Message Creator</title>
+    
+    <!-- CV Global Favicon Implementation -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="msapplication-TileColor" content="#000000">
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
+    <style>
+        .cv-section-header {
+            border-left: 4px solid #00ff88;
+            padding-left: 15px;
+            margin: 20px 0 15px 0;
+        }
+        .ai-content-section {
+            background-color: var(--bs-secondary);
+            border-radius: 0.5rem;
+            border: 1px solid var(--bs-border-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
+                Daily Message Creator - AI Content Generation
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link me-3" href="/dashboard">
+                    <i class="fas fa-chart-line me-1"></i>Dashboard
+                </a>
+                <a class="nav-link me-3" href="/cms">
+                    <i class="fas fa-arrow-left me-1"></i>Back to CMS
+                </a>
+                <a class="nav-link me-3" href="/bots">
+                    <i class="fas fa-robot me-1"></i>Bot Management
+                </a>
+                <a class="nav-link" href="/logout">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-12">
+                <div class="cv-section-header">
+                    <h2><i class="fas fa-robot me-3 cv-text-primary"></i>AI Content Generation Setup</h2>
+                    <p class="text-muted">Configure and generate daily spiritual content using AI based on your audience and requirements</p>
+                </div>
+
+                <div class="card cv-card">
+                    <div class="card-header cv-bg-secondary">
+                        <h5 class="mb-0 cv-text-primary"><i class="fas fa-magic me-2"></i>AI Content Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {{ form.hidden_tag() }}
+                            
+                            <div class="ai-content-section p-4 mb-4">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.content_generation_duration.label(class="form-label") }}
+                                        {{ form.content_generation_duration(class="form-select") }}
+                                        <div class="form-text">Choose how many days of content to generate</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.audience_language.label(class="form-label") }}
+                                        {{ form.audience_language(class="form-control") }}
+                                        <div class="form-text">{{ form.audience_language.description }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.target_audience.label(class="form-label") }}
+                                        {{ form.target_audience(class="form-control", placeholder="Young Muslim adults seeking spiritual guidance") }}
+                                        <div class="form-text">{{ form.target_audience.description }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.audience_age_group.label(class="form-label") }}
+                                        {{ form.audience_age_group(class="form-control", placeholder="18-25") }}
+                                        <div class="form-text">{{ form.audience_age_group.description }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.audience_religion.label(class="form-label") }}
+                                    {{ form.audience_religion(class="form-control", placeholder="Islam") }}
+                                    <div class="form-text">{{ form.audience_religion.description }}</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.content_generation_prompt.label(class="form-label") }}
+                                    {{ form.content_generation_prompt(class="form-control", rows="6", placeholder="Create a gentle, respectful faith journey that introduces Christian concepts...") }}
+                                    <div class="form-text">{{ form.content_generation_prompt.description }}</div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    <strong>Content Generation Tips:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Be specific about your target audience's background and needs</li>
+                                        <li>Describe the tone you want (gentle, encouraging, respectful, etc.)</li>
+                                        <li>Mention any specific topics or themes to focus on</li>
+                                        <li>Consider cultural sensitivities and religious backgrounds</li>
+                                        <li>Content will include daily messages with reflection questions</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('cms') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>Back to CMS
+                                </a>
+                                <button type="submit" class="btn cv-btn-success">
+                                    <i class="fas fa-magic me-1"></i>{{ form.submit.label.text }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
