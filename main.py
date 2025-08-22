@@ -4053,7 +4053,7 @@ def bot_ai_content_generation(bot_id):
             from ai_content_generator import AIContentGenerator, ContentGenerationRequest
             
             # Create content generation request
-            request = ContentGenerationRequest(
+            content_request = ContentGenerationRequest(
                 target_audience=form.target_audience.data or "General spiritual seekers",
                 audience_language=form.audience_language.data or "English",
                 audience_religion=form.audience_religion.data or "Mixed backgrounds",
@@ -4065,10 +4065,10 @@ def bot_ai_content_generation(bot_id):
             # Generate content using AI
             logger.info(f"Starting AI content generation via CMS for bot {bot_id}")
             generator = AIContentGenerator()
-            daily_contents = generator.generate_journey_content(request)
+            daily_contents = generator.generate_journey_content(content_request)
             
             # Validate generated content
-            if generator.validate_generated_content(daily_contents, request.journey_duration):
+            if generator.validate_generated_content(daily_contents, content_request.journey_duration):
                 # Save generated content to database with bot_id
                 for daily_content in daily_contents:
                     content = Content()
