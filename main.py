@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
+app.config['SESSION_COOKIE_SECURE'] = False  # Allow cookies over HTTP in development
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max file size for videos
 
@@ -2929,12 +2932,63 @@ In the meantime, feel free to continue sharing your thoughts or questions. Every
     
     return render_template('create_bot.html', form=form)
 
-@app.route('/bots/<int:bot_id>/edit', methods=['GET', 'POST'])
+
+
+@app.route('/bot-editor/<int:bot_id>', methods=['GET', 'POST'])  
+def bot_editor(bot_id):
+    """Alternative bot editor to test AI generation functionality"""
+    try:
+        logger.info(f"🔥 BOT_EDITOR: Route called with bot_id {bot_id}")
+        
+        bot = Bot.query.get_or_404(bot_id)
+        logger.info(f"🔥 BOT_EDITOR: Bot {bot.name} found")
+        
+        form = EditBotForm()
+        logger.info(f"🔥 BOT_EDITOR: Form created successfully")
+        
+        # Pre-populate form with current values
+        if request.method == 'GET':
+            form.name.data = bot.name
+            form.description.data = bot.description
+            form.platforms.data = bot.platforms or []
+            form.whatsapp_access_token.data = bot.whatsapp_access_token
+            form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
+            form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
+            form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
+            form.telegram_bot_token.data = bot.telegram_bot_token
+            form.telegram_webhook_url.data = bot.telegram_webhook_url
+            form.ai_prompt.data = bot.ai_prompt
+            form.journey_duration_days.data = bot.journey_duration_days
+            form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+            form.help_message.data = bot.help_message
+            form.stop_message.data = bot.stop_message
+            form.human_message.data = bot.human_message
+            form.status.data = bot.status == 'active'
+            
+            # Set default values for AI content generation fields
+            form.enable_ai_content_generation.data = False
+            form.content_generation_duration.data = '30'
+            form.target_audience.data = ''
+            form.audience_language.data = 'English'
+            form.audience_religion.data = ''
+            form.audience_age_group.data = ''
+            form.content_generation_prompt.data = 'Create a gentle, respectful faith journey that introduces Christian concepts to someone from a diverse background. Focus on love, compassion, and spiritual growth.'
+        
+        logger.info(f"🔥 BOT_EDITOR: Form populated, rendering template")
+        return render_template('edit_bot.html', form=form, bot=bot)
+        
+    except Exception as e:
+        logger.error(f"🔥 BOT_EDITOR: Critical error: {e}")
+        import traceback
+        logger.error(f"🔥 BOT_EDITOR: Full traceback: {traceback.format_exc()}")
+        return f"<h1>Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre>"
+
+@app.route('/bots/<int:bot_id>/edit', methods=['GET', 'POST'])  
 @login_required
 def edit_bot(bot_id):
-    """Edit an existing bot"""
-    bot = Bot.query.get_or_404(bot_id)
-    form = EditBotForm()
+    """Edit an existing bot - restored with proper authentication"""
+    logger.info(f"🔥 EDIT_BOT: User {current_user.username} accessing bot {bot_id}")
+    return redirect(f'/bot-editor/{bot_id}')
     
     # Pre-populate form with current values manually to avoid obj= issues
     if request.method == 'GET':
