@@ -4039,13 +4039,22 @@ def ai_content_generation():
 @login_required
 def bot_ai_content_generation(bot_id):
     """AI Content Generation setup page (bot-specific)"""
-    bot = Bot.query.get_or_404(bot_id)
-    form = AIContentGenerationForm()
-    
-    print(f"🔥 FORM DEBUG: Request method: {request.method}")
-    print(f"🔥 FORM DEBUG: Form errors: {form.errors}")
-    print(f"🔥 FORM DEBUG: Form data: {form.data}")
-    print(f"🔥 FORM DEBUG: Form validates: {form.validate_on_submit()}")
+    try:
+        print(f"🔥 ROUTE DEBUG: Accessing bot {bot_id} AI content generation")
+        bot = Bot.query.get_or_404(bot_id)
+        print(f"🔥 ROUTE DEBUG: Bot found: {bot.name}")
+        
+        form = AIContentGenerationForm()
+        print(f"🔥 ROUTE DEBUG: Form created successfully")
+        
+        print(f"🔥 FORM DEBUG: Request method: {request.method}")
+        print(f"🔥 FORM DEBUG: Form errors: {form.errors}")
+        print(f"🔥 FORM DEBUG: Form validates: {form.validate_on_submit()}")
+    except Exception as e:
+        print(f"🔥 ERROR DEBUG: Exception in bot_ai_content_generation: {e}")
+        import traceback
+        print(f"🔥 ERROR DEBUG: Traceback: {traceback.format_exc()}")
+        raise e
     
     if form.validate_on_submit():
         print(f"🔥 ROUTE DEBUG: Starting AI content generation for bot {bot_id}")
@@ -4095,7 +4104,14 @@ def bot_ai_content_generation(bot_id):
             logger.error(f"AI content generation failed for bot {bot_id}: {e}")
             flash(f'❌ AI content generation failed: {str(e)}', 'danger')
     
-    return render_template('ai_content_generation.html', form=form, user=current_user, bot=bot)
+    try:
+        print(f"🔥 TEMPLATE DEBUG: Rendering template for bot {bot_id}")
+        return render_template('ai_content_generation.html', form=form, user=current_user, bot=bot)
+    except Exception as e:
+        print(f"🔥 TEMPLATE ERROR: {e}")
+        import traceback
+        print(f"🔥 TEMPLATE ERROR: Traceback: {traceback.format_exc()}")
+        raise e
 
 @app.route('/test_day1_delivery', methods=['POST'])
 def test_day1_delivery():
