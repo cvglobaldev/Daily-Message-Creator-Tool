@@ -44,30 +44,31 @@ class AIContentGenerator:
             print(f"🔥 DEBUG: Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
             logger.info(f"Sending prompt to Gemini API (length: {len(generation_prompt)} chars)")
             
-            # Try with a shorter, simpler prompt first for debugging
-            simple_prompt = f"""Generate a {request.journey_duration}-day spiritual journey as JSON:
+            # Try with very simple non-spiritual content first to test API
+            test_prompt = f"""Create {request.journey_duration} daily motivational messages as JSON:
 
 {{
   "daily_content": [
     {{
       "day_number": 1,
-      "title": "Day 1 Title",
-      "content": "Day 1 spiritual content about faith and hope.",
-      "reflection_question": "How do you understand faith in your life?",
-      "tags": ["faith", "hope"]
+      "title": "Start Your Day",
+      "content": "Today is a new opportunity to grow and learn something new.",
+      "reflection_question": "What would you like to accomplish today?",
+      "tags": ["motivation", "growth"]
     }}
   ]
 }}
 
-Generate exactly {request.journey_duration} days."""
+Generate exactly {request.journey_duration} days of positive daily messages."""
             
+            # Try with gemini-2.5-flash first (more reliable than pro)
             response = self.client.models.generate_content(
-                model="gemini-2.5-pro",
-                contents=simple_prompt,
+                model="gemini-2.5-flash",
+                contents=test_prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.7,
-                    max_output_tokens=8192
+                    temperature=0.5,
+                    max_output_tokens=4096
                 )
             )
             
