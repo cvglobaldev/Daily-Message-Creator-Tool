@@ -312,7 +312,11 @@
             document.getElementById('saveContentBtn').addEventListener('click', saveContent);
             document.getElementById('deleteButton').addEventListener('click', deleteContent);
             document.getElementById('aiGeneratedContentBtn').addEventListener('click', function() {
+                {% if bot %}
+                window.location.href = '/bots/{{ bot.id }}/ai-content-generation';
+                {% else %}
                 window.location.href = '/cms/ai-content-generation';
+                {% endif %}
             });
             
             // Add event listeners for file inputs

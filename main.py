@@ -3984,7 +3984,7 @@ def cms_content_delete(content_id):
 @app.route('/cms/ai-content-generation', methods=['GET', 'POST'])
 @login_required
 def ai_content_generation():
-    """AI Content Generation setup page"""
+    """AI Content Generation setup page (global)"""
     form = AIContentGenerationForm()
     
     if form.validate_on_submit():
@@ -4002,13 +4002,13 @@ def ai_content_generation():
             )
             
             # Generate content using AI
-            logger.info(f"Starting AI content generation via CMS")
+            logger.info(f"Starting AI content generation via CMS (global)")
             generator = AIContentGenerator()
             daily_contents = generator.generate_journey_content(request)
             
             # Validate generated content
             if generator.validate_generated_content(daily_contents, request.journey_duration):
-                # Save generated content to database
+                # Save generated content to database (global content, no bot_id)
                 for daily_content in daily_contents:
                     content = Content()
                     content.day_number = daily_content.day_number
@@ -4024,16 +4024,72 @@ def ai_content_generation():
                 
                 db.session.commit()
                 flash(f'✅ AI generated {len(daily_contents)} days of content successfully!', 'success')
-                logger.info(f"Successfully saved {len(daily_contents)} days of AI-generated content via CMS")
+                logger.info(f"Successfully saved {len(daily_contents)} days of AI-generated content via CMS (global)")
                 return redirect(url_for('cms'))
             else:
                 flash('⚠️ AI content validation failed - please review and add content manually', 'warning')
                 
         except Exception as e:
-            logger.error(f"AI content generation failed via CMS: {e}")
+            logger.error(f"AI content generation failed via CMS (global): {e}")
             flash(f'❌ AI content generation failed: {str(e)}', 'danger')
     
-    return render_template('ai_content_generation.html', form=form, user=current_user)
+    return render_template('ai_content_generation.html', form=form, user=current_user, bot=None)
+
+@app.route('/bots/<int:bot_id>/ai-content-generation', methods=['GET', 'POST'])
+@login_required
+def bot_ai_content_generation(bot_id):
+    """AI Content Generation setup page (bot-specific)"""
+    bot = Bot.query.get_or_404(bot_id)
+    form = AIContentGenerationForm()
+    
+    if form.validate_on_submit():
+        try:
+            from ai_content_generator import AIContentGenerator, ContentGenerationRequest
+            
+            # Create content generation request
+            request = ContentGenerationRequest(
+                target_audience=form.target_audience.data or "General spiritual seekers",
+                audience_language=form.audience_language.data or "English",
+                audience_religion=form.audience_religion.data or "Mixed backgrounds",
+                audience_age_group=form.audience_age_group.data or "Adults",
+                content_prompt=form.content_generation_prompt.data,
+                journey_duration=int(form.content_generation_duration.data)
+            )
+            
+            # Generate content using AI
+            logger.info(f"Starting AI content generation via CMS for bot {bot_id}")
+            generator = AIContentGenerator()
+            daily_contents = generator.generate_journey_content(request)
+            
+            # Validate generated content
+            if generator.validate_generated_content(daily_contents, request.journey_duration):
+                # Save generated content to database with bot_id
+                for daily_content in daily_contents:
+                    content = Content()
+                    content.bot_id = bot_id
+                    content.day_number = daily_content.day_number
+                    content.content = daily_content.content
+                    content.media_type = 'text'
+                    content.media_url = None
+                    content.reflection_question = daily_content.reflection_question
+                    content.title = daily_content.title
+                    content.is_active = True
+                    content.tags = daily_content.tags or []
+                    
+                    db.session.add(content)
+                
+                db.session.commit()
+                flash(f'✅ AI generated {len(daily_contents)} days of content successfully for {bot.name}!', 'success')
+                logger.info(f"Successfully saved {len(daily_contents)} days of AI-generated content for bot {bot_id}")
+                return redirect(url_for('bot_content_management', bot_id=bot_id))
+            else:
+                flash('⚠️ AI content validation failed - please review and add content manually', 'warning')
+                
+        except Exception as e:
+            logger.error(f"AI content generation failed for bot {bot_id}: {e}")
+            flash(f'❌ AI content generation failed: {str(e)}', 'danger')
+    
+    return render_template('ai_content_generation.html', form=form, user=current_user, bot=bot)
 
 @app.route('/test_day1_delivery', methods=['POST'])
 def test_day1_delivery():
