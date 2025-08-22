@@ -40,8 +40,8 @@ class AIContentGenerator:
             # Get audience-specific content configuration for AI prompting
             content_config = self._get_audience_content_config(request)
             
-            # Generate AI content using Gemini 2.5 Flash
-            daily_contents = self._generate_ai_content_with_gemini(request, content_config)
+            # Generate AI content in smaller batches to avoid timeouts
+            daily_contents = self._generate_ai_content_in_batches(request, content_config)
             
             print(f"🔥 GENERATOR: Successfully created {len(daily_contents)} days of AI-generated content for {request.target_audience}")
             logger.info(f"Successfully created {len(daily_contents)} days of AI-generated content")
@@ -133,11 +133,62 @@ class AIContentGenerator:
         
         return title, content, question, tags
     
-    def _generate_ai_content_with_gemini(self, request: ContentGenerationRequest, config: Dict) -> List[DailyContent]:
+    def _generate_ai_content_in_batches(self, request: ContentGenerationRequest, config: Dict) -> List[DailyContent]:
+        """Generate AI content in smaller batches to avoid timeouts"""
+        batch_size = 5  # Generate 5 days at a time
+        all_daily_contents = []
+        
+        total_days = request.journey_duration
+        
+        for start_day in range(1, total_days + 1, batch_size):
+            end_day = min(start_day + batch_size - 1, total_days)
+            batch_days = end_day - start_day + 1
+            
+            print(f"🔥 BATCH: Generating days {start_day}-{end_day} ({batch_days} days)")
+            
+            try:
+                # Create a batch request
+                batch_request = ContentGenerationRequest(
+                    target_audience=request.target_audience,
+                    audience_language=request.audience_language,
+                    audience_religion=request.audience_religion,
+                    audience_age_group=request.audience_age_group,
+                    content_prompt=request.content_prompt,
+                    journey_duration=batch_days
+                )
+                
+                # Generate this batch using AI
+                batch_contents = self._generate_ai_content_with_gemini(batch_request, config, start_day)
+                
+                # Adjust day numbers for the batch
+                for content in batch_contents:
+                    content.day_number = start_day + content.day_number - 1
+                
+                all_daily_contents.extend(batch_contents)
+                print(f"🔥 BATCH: Successfully generated days {start_day}-{end_day}")
+                
+            except Exception as e:
+                print(f"🔥 BATCH ERROR: Failed to generate days {start_day}-{end_day}: {e}")
+                # Generate fallback content for this batch
+                for day in range(start_day, end_day + 1):
+                    title, content, question, tags = self._generate_day_content(day, request, config)
+                    fallback_content = DailyContent(
+                        day_number=day,
+                        title=title,
+                        content=content,
+                        reflection_question=question,
+                        tags=tags
+                    )
+                    all_daily_contents.append(fallback_content)
+                print(f"🔥 BATCH: Used fallback for days {start_day}-{end_day}")
+        
+        return all_daily_contents
+    
+    def _generate_ai_content_with_gemini(self, request: ContentGenerationRequest, config: Dict, start_day: int = 1) -> List[DailyContent]:
         """Generate content using Gemini AI with audience-specific customization"""
         try:
             # Build customized AI prompt based on audience
-            prompt = self._build_audience_specific_prompt(request, config)
+            prompt = self._build_audience_specific_prompt(request, config, start_day)
             
             print(f"🔥 GEMINI: Generating content with gemini-2.5-flash for {request.target_audience}")
             
@@ -195,7 +246,7 @@ class AIContentGenerator:
         
         return daily_contents
     
-    def _build_audience_specific_prompt(self, request: ContentGenerationRequest, config: Dict) -> str:
+    def _build_audience_specific_prompt(self, request: ContentGenerationRequest, config: Dict, start_day: int = 1) -> str:
         """Build AI prompt customized for specific audience"""
         
         approach = config["approach"]
@@ -204,9 +255,17 @@ class AIContentGenerator:
         avoid = ", ".join(config["avoid"])
         focus = config["focus"]
         
+        days_text = f"{request.journey_duration} days" if request.journey_duration > 1 else "1 day"
+        if start_day > 1:
+            journey_context = f"This is part of a longer journey. You are creating days {start_day} to {start_day + request.journey_duration - 1}."
+        else:
+            journey_context = f"This is the beginning of the journey."
+            
         prompt = f"""You are an expert content creator specializing in culturally sensitive personal growth journeys.
 
-Create a {request.journey_duration}-day personal development journey with the following specifications:
+Create {days_text} of personal development content with the following specifications:
+
+**Context:** {journey_context}
 
 **Target Audience:**
 - Demographics: {request.target_audience}
