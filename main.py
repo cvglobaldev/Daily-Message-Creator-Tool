@@ -4039,11 +4039,51 @@ def ai_content_generation():
 @login_required  
 def bot_ai_content_generation(bot_id):
     """AI Content Generation setup page (bot-specific)"""
-    # Minimal version to test basic functionality
-    try:
-        return f"<h1>AI Content Generation</h1><p>Bot ID: {bot_id}</p><p>This is a test page to confirm the route works.</p>"
-    except Exception as e:
-        return f"<h1>Error</h1><p>{e}</p>", 500
+    bot = Bot.query.get_or_404(bot_id)
+    form = AIContentGenerationForm()
+    
+    if form.validate_on_submit():
+        try:
+            from ai_content_generator import AIContentGenerator, ContentGenerationRequest
+            
+            # Create content generation request
+            content_request = ContentGenerationRequest(
+                target_audience=form.target_audience.data or "General spiritual seekers",
+                audience_language=form.audience_language.data or "English",
+                audience_religion=form.audience_religion.data or "Mixed backgrounds",
+                audience_age_group=form.audience_age_group.data or "Adults",
+                content_prompt=form.content_generation_prompt.data or "Create meaningful daily content",
+                journey_duration=int(form.content_generation_duration.data)
+            )
+            
+            # Generate content using AI (using mock content for now)
+            generator = AIContentGenerator()
+            daily_contents = generator.generate_journey_content(content_request)
+            
+            # Skip validation - just save the content directly
+            for daily_content in daily_contents:
+                content = Content()
+                content.bot_id = bot_id
+                content.day_number = daily_content.day_number
+                content.content = daily_content.content
+                content.media_type = 'text'
+                content.media_url = None
+                content.reflection_question = daily_content.reflection_question
+                content.title = daily_content.title
+                content.is_active = True
+                content.tags = daily_content.tags or []
+                
+                db.session.add(content)
+            
+            db.session.commit()
+            flash(f'✅ AI generated {len(daily_contents)} days of content successfully for {bot.name}!', 'success')
+            return redirect(url_for('bot_content_management', bot_id=bot_id))
+                
+        except Exception as e:
+            logger.error(f"AI content generation failed for bot {bot_id}: {e}")
+            flash(f'❌ AI content generation failed: {str(e)}', 'danger')
+    
+    return render_template('ai_content_generation.html', form=form, user=current_user, bot=bot)
     
 
 @app.route('/test_day1_delivery', methods=['POST'])
