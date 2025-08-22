@@ -137,11 +137,13 @@ class ContentScheduler:
                         logger.info(f"User {phone_number} already received content for day {current_day} recently, skipping duplicate")
                         return True
                 
-            # Get content for current day
+            # Get content for current day with safety check
             content = self.db.get_content_by_day(current_day, bot_id=user.bot_id)
             if not content:
-                logger.error(f"No content found for day {current_day}")
-                return False
+                logger.warning(f"No content found for day {current_day} for bot {user.bot_id} - sending holding message")
+                # Send a holding message instead of failing silently
+                self._send_content_gap_message(user, current_day)
+                return True  # Return True to prevent retries
             
             # Send the main content with reflection question combined
             content_dict = content.to_dict()
@@ -370,6 +372,71 @@ class ContentScheduler:
             
         except Exception as e:
             logger.error(f"Error logging delivered content: {e}")
+    
+    def _send_content_gap_message(self, user, day_number):
+        """Send a holding message when content is missing"""
+        try:
+            from models import Bot
+            from main import get_bot_service
+            
+            bot = Bot.query.get(user.bot_id)
+            if not bot:
+                logger.error(f"Bot {user.bot_id} not found")
+                return
+            
+            # Determine message language based on bot
+            if bot.name and ('Indonesian' in bot.name or 'Bang Kris' in bot.name):
+                holding_message = f"""Halo! 👋
+
+Maaf, konten untuk hari ke-{day_number} masih dalam persiapan. Tim kami sedang bekerja keras menyediakan materi spiritual berkualitas untukmu.
+
+Mohon bersabar, konten akan segera tersedia. Terima kasih atas pengertiannya! 🙏
+
+Sementara itu, jangan ragu bertanya tentang perjalanan spiritualmu."""
+            else:
+                holding_message = f"""Hello! 👋
+
+We're currently preparing content for Day {day_number} of your spiritual journey. Our team is working hard to provide you with meaningful spiritual content.
+
+Please be patient - new content will be available soon. Thank you for your understanding! 🙏
+
+In the meantime, feel free to ask questions about your spiritual journey."""
+            
+            # Send message using appropriate service
+            try:
+                if user.phone_number.startswith('tg_'):
+                    # Telegram user
+                    chat_id = user.phone_number[3:]
+                    if bot and bot.telegram_bot_token:
+                        telegram_service = TelegramService(bot.telegram_bot_token)
+                        success = telegram_service.send_message(chat_id, holding_message)
+                    else:
+                        success = self.telegram_service.send_message(chat_id, holding_message)
+                else:
+                    # WhatsApp user
+                    from main import get_whatsapp_service_for_bot
+                    whatsapp_service = get_whatsapp_service_for_bot(user.bot_id)
+                    success = whatsapp_service.send_message(user.phone_number, holding_message)
+                
+                if success:
+                    logger.info(f"Sent content gap message to {user.phone_number} for Day {day_number}")
+                    # Log the message
+                    self.db.log_message(
+                        user=user,
+                        direction='outgoing',
+                        raw_text=holding_message,
+                        sentiment='neutral',
+                        tags=['CONTENT_GAP', 'HOLDING_MESSAGE', f'Day_{day_number}'],
+                        confidence=1.0
+                    )
+                else:
+                    logger.error(f"Failed to send content gap message to {user.phone_number}")
+                    
+            except Exception as send_error:
+                logger.error(f"Error sending content gap message to {user.phone_number}: {send_error}")
+                
+        except Exception as e:
+            logger.error(f"Error in content gap message handler: {e}")
     
     def _complete_user_journey(self, phone_number: str, user):
         """Complete user's 30-day journey"""
