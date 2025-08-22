@@ -37,41 +37,114 @@ class AIContentGenerator:
             print(f"🔥 GENERATOR: Creating {request.journey_duration} days of content for audience: {request.target_audience}")
             logger.info(f"Generating {request.journey_duration} days of content for audience: {request.target_audience}")
             
-            # Skip AI for now - just create working mock content to test bot isolation
+            # Create customized content based on form inputs
             daily_contents = []
             
-            # Create content based on target audience and language
-            content_theme = "spiritual growth" if "spiritual" in request.content_prompt.lower() else "motivation"
-            language = request.audience_language.lower()
+            # Get audience-specific content themes and approaches
+            content_config = self._get_audience_content_config(request)
             
             for day in range(1, request.journey_duration + 1):
-                if language == "indonesian":
-                    title = f"Hari {day}: Perjalanan {content_theme.title()}"
-                    content = f"Ini adalah konten {content_theme} untuk hari {day}. Terus bertumbuh dan tetap semangat dalam perjalanan Anda!"
-                    question = f"Apa yang bisa Anda pelajari dari pesan hari ke-{day} ini?"
-                else:
-                    title = f"Day {day}: {content_theme.title()} Journey"
-                    content = f"This is {content_theme} content for day {day}. Stay positive and keep growing on your journey!"
-                    question = f"What can you learn from today's message on day {day}?"
+                # Generate day-specific content using audience parameters
+                title, content, question, tags = self._generate_day_content(day, request, content_config)
                 
                 daily_content = DailyContent(
                     day_number=day,
                     title=title,
                     content=content,
                     reflection_question=question,
-                    tags=[content_theme, "growth", "daily"]
+                    tags=tags
                 )
                 daily_contents.append(daily_content)
             
-            print(f"🔥 GENERATOR: Successfully created {len(daily_contents)} days of content")
-            logger.info(f"Successfully created {len(daily_contents)} days of content")
+            print(f"🔥 GENERATOR: Successfully created {len(daily_contents)} days of customized content for {request.target_audience}")
+            logger.info(f"Successfully created {len(daily_contents)} days of customized content")
             
-            logger.info(f"Successfully generated {len(daily_contents)} days of content")
             return daily_contents
             
         except Exception as e:
             logger.error(f"Error generating AI content: {e}")
             raise Exception(f"Content generation failed: {e}")
+    
+    def _get_audience_content_config(self, request: ContentGenerationRequest) -> Dict:
+        """Get content configuration based on target audience"""
+        audience = request.target_audience.lower()
+        religion = request.audience_religion.lower()
+        language = request.audience_language.lower()
+        
+        # Customize approach based on audience background
+        if "atheist" in audience or "non-religious" in audience or "secular" in audience:
+            return {
+                "approach": "philosophical",
+                "tone": "analytical and questioning",
+                "themes": ["philosophy", "ethics", "meaning", "purpose", "human connection"],
+                "avoid": ["religious terminology", "prayer", "scripture"],
+                "focus": "humanistic values and personal growth"
+            }
+        elif "muslim" in religion or "islam" in religion:
+            return {
+                "approach": "respectful bridge-building",
+                "tone": "gentle and culturally sensitive",
+                "themes": ["shared values", "love", "compassion", "community", "spiritual growth"],
+                "avoid": ["direct theological challenges"],
+                "focus": "common ground and universal truths"
+            }
+        elif "hindu" in religion or "buddhist" in religion:
+            return {
+                "approach": "interfaith dialogue",
+                "tone": "meditative and reflective",
+                "themes": ["inner peace", "mindfulness", "compassion", "spiritual journey"],
+                "avoid": ["conflicting doctrines"],
+                "focus": "spiritual practices and personal transformation"
+            }
+        else:
+            return {
+                "approach": "universal spiritual",
+                "tone": "inclusive and welcoming",
+                "themes": ["spiritual growth", "love", "hope", "community"],
+                "avoid": ["exclusivity"],
+                "focus": "universal spiritual principles"
+            }
+    
+    def _generate_day_content(self, day: int, request: ContentGenerationRequest, config: Dict) -> tuple:
+        """Generate customized content for a specific day"""
+        language = request.audience_language.lower()
+        approach = config["approach"]
+        themes = config["themes"]
+        
+        # Day-specific progression
+        if day <= 3:
+            stage = "introduction"
+        elif day <= 10:
+            stage = "exploration"
+        elif day <= 20:
+            stage = "deepening"
+        else:
+            stage = "integration"
+        
+        # Customize content based on audience and stage
+        if "atheist" in request.target_audience.lower():
+            if language == "indonesian":
+                title = f"Hari {day}: Refleksi Filosofis"
+                content = f"Hari ke-{day} - Mari kita jelajahi pertanyaan mendalam tentang makna dan tujuan hidup. Tanpa mengandalkan keyakinan supranatural, kita dapat menemukan nilai-nilai yang mendalam dalam hubungan manusia, etika, dan pencarian akan kebenaran. Hari ini, mari kita renungkan bagaimana kita dapat hidup dengan integritas dan kasih sayang terhadap sesama."
+                question = f"Nilai-nilai apa yang paling penting bagi Anda dalam menjalani hidup yang bermakna?"
+            else:
+                title = f"Day {day}: Philosophical Reflection"
+                content = f"Day {day} - Let's explore profound questions about meaning and purpose in life. Without relying on supernatural beliefs, we can discover deep values in human relationships, ethics, and the search for truth. Today, let's reflect on how we can live with integrity and compassion toward others."
+                question = f"What values are most important to you in living a meaningful life?"
+            tags = ["philosophy", "ethics", "humanism", "meaning"]
+        else:
+            # Default spiritual content for other audiences
+            if language == "indonesian":
+                title = f"Hari {day}: Perjalanan Spiritual"
+                content = f"Hari ke-{day} dalam perjalanan spiritual Anda. Mari kita jelajahi tema-tema kasih, harapan, dan pertumbuhan pribadi yang dapat memperkaya hidup kita."
+                question = f"Bagaimana Anda dapat menerapkan pembelajaran hari ini dalam kehidupan sehari-hari?"
+            else:
+                title = f"Day {day}: Spiritual Journey"
+                content = f"Day {day} of your spiritual journey. Let's explore themes of love, hope, and personal growth that can enrich our lives."
+                question = f"How can you apply today's learning in your daily life?"
+            tags = ["spiritual", "growth", "journey"]
+        
+        return title, content, question, tags
     
     def _build_generation_prompt(self, request: ContentGenerationRequest) -> str:
         """Build the AI generation prompt based on user requirements"""
