@@ -2938,32 +2938,38 @@ def edit_bot(bot_id):
     
     # Pre-populate form with current values manually to avoid obj= issues
     if request.method == 'GET':
-        form.name.data = bot.name
-        form.description.data = bot.description
-        form.platforms.data = bot.platforms or []
-        form.whatsapp_access_token.data = bot.whatsapp_access_token
-        form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
-        form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
-        form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
-        form.telegram_bot_token.data = bot.telegram_bot_token
-        form.telegram_webhook_url.data = bot.telegram_webhook_url
-        form.ai_prompt.data = bot.ai_prompt
-        form.journey_duration_days.data = bot.journey_duration_days
-        form.delivery_interval_minutes.data = bot.delivery_interval_minutes
-        form.help_message.data = bot.help_message
-        form.stop_message.data = bot.stop_message
-        form.human_message.data = bot.human_message
-        form.status.data = bot.status == 'active'
-        
-        # Set default values for AI content generation fields
-        form.enable_ai_content_generation.data = False
-        form.content_generation_duration.data = '30'
-        form.target_audience.data = ''
-        form.audience_language.data = 'English'
-        form.audience_religion.data = ''
-        form.audience_age_group.data = ''
-        form.content_generation_prompt.data = 'Create a gentle, respectful faith journey that introduces Christian concepts to someone from a diverse background. Focus on love, compassion, and spiritual growth.'
+        try:
+            form.name.data = bot.name
+            form.description.data = bot.description
+            form.platforms.data = bot.platforms or []
+            form.whatsapp_access_token.data = bot.whatsapp_access_token
+            form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
+            form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
+            form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
+            form.telegram_bot_token.data = bot.telegram_bot_token
+            form.telegram_webhook_url.data = bot.telegram_webhook_url
+            form.ai_prompt.data = bot.ai_prompt
+            form.journey_duration_days.data = bot.journey_duration_days
+            form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+            form.help_message.data = bot.help_message
+            form.stop_message.data = bot.stop_message
+            form.human_message.data = bot.human_message
+            form.status.data = bot.status == 'active'
+            
+            # Set default values for AI content generation fields
+            form.enable_ai_content_generation.data = False
+            form.content_generation_duration.data = '30'
+            form.target_audience.data = ''
+            form.audience_language.data = 'English'
+            form.audience_religion.data = ''
+            form.audience_age_group.data = ''
+            form.content_generation_prompt.data = 'Create a gentle, respectful faith journey that introduces Christian concepts to someone from a diverse background. Focus on love, compassion, and spiritual growth.'
+        except Exception as form_error:
+            logger.error(f"Error populating form for bot {bot_id}: {form_error}")
+            flash(f'Error loading bot form: {str(form_error)}', 'error')
+            return redirect('/bots')
     
+    # If we get here, form was populated successfully, now handle form submission
     if form.validate_on_submit():
         logger.info(f"Form validation passed for bot {bot_id} ({bot.name})")
     else:
@@ -3094,8 +3100,6 @@ def edit_bot(bot_id):
             logger.error(f"Traceback: {traceback.format_exc()}")
             db.session.rollback()
             flash(f'Error updating bot: {str(e)}', 'error')
-    
-
     
     return render_template('edit_bot.html', form=form, bot=bot)
 
