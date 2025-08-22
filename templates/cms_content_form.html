@@ -305,6 +305,92 @@
                                 </div>
                             </div>
 
+                            <!-- AI Content Generation Section -->
+                            <div class="card border-success mb-4">
+                                <div class="card-header bg-success">
+                                    <h6 class="mb-0"><i class="fas fa-robot me-2"></i>AI Content Generation</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.enable_ai_content_generation(class="form-check-input", id="enableAIGeneration") }}
+                                            {{ form.enable_ai_content_generation.label(class="form-check-label") }}
+                                            <div class="form-text">
+                                                Use AI to automatically generate content for your bot's journey
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="aiGenerationSettings" style="display: none;">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                {{ form.content_generation_duration.label(class="form-label") }}
+                                                {{ form.content_generation_duration(class="form-select") }}
+                                                {% if form.content_generation_duration.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.content_generation_duration.errors[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {{ form.audience_language.label(class="form-label") }}
+                                                {{ form.audience_language(class="form-select") }}
+                                                <div class="form-text">{{ form.audience_language.description }}</div>
+                                                {% if form.audience_language.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.audience_language.errors[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                {{ form.target_audience.label(class="form-label") }}
+                                                {{ form.target_audience(class="form-control") }}
+                                                <div class="form-text">{{ form.target_audience.description }}</div>
+                                                {% if form.target_audience.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.target_audience.errors[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-4">
+                                                {{ form.audience_religion.label(class="form-label") }}
+                                                {{ form.audience_religion(class="form-control") }}
+                                                <div class="form-text">{{ form.audience_religion.description }}</div>
+                                                {% if form.audience_religion.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.audience_religion.errors[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-4">
+                                                {{ form.audience_age_group.label(class="form-label") }}
+                                                {{ form.audience_age_group(class="form-control") }}
+                                                <div class="form-text">{{ form.audience_age_group.description }}</div>
+                                                {% if form.audience_age_group.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.audience_age_group.errors[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            {{ form.content_generation_prompt.label(class="form-label") }}
+                                            {{ form.content_generation_prompt(class="form-control", rows="4") }}
+                                            <div class="form-text">{{ form.content_generation_prompt.description }}</div>
+                                            {% if form.content_generation_prompt.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.content_generation_prompt.errors[0] }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="d-flex justify-content-between">
                                 <a href="{{ url_for('cms') }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>Back to CMS
@@ -345,6 +431,21 @@
         
         mediaTypeSelect.addEventListener('change', toggleSections);
         toggleSections(); // Initialize on page load
+        
+        // Handle AI generation toggle
+        const aiGenerationCheckbox = document.getElementById('enableAIGeneration');
+        const aiGenerationSettings = document.getElementById('aiGenerationSettings');
+        
+        function toggleAISettings() {
+            if (aiGenerationCheckbox && aiGenerationSettings) {
+                aiGenerationSettings.style.display = aiGenerationCheckbox.checked ? 'block' : 'none';
+            }
+        }
+        
+        if (aiGenerationCheckbox) {
+            aiGenerationCheckbox.addEventListener('change', toggleAISettings);
+            toggleAISettings(); // Initialize on page load
+        }
     });
 
     // Load media files function
