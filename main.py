@@ -4044,6 +4044,7 @@ def bot_ai_content_generation(bot_id):
         bot = Bot.query.get_or_404(bot_id)
         print(f"🔥 ROUTE DEBUG: Bot found: {bot.name}")
         
+        # Create form (should already be in app context within route)
         form = AIContentGenerationForm()
         print(f"🔥 ROUTE DEBUG: Form created successfully")
         
@@ -4054,7 +4055,8 @@ def bot_ai_content_generation(bot_id):
         print(f"🔥 ERROR DEBUG: Exception in bot_ai_content_generation: {e}")
         import traceback
         print(f"🔥 ERROR DEBUG: Traceback: {traceback.format_exc()}")
-        raise e
+        # Return a simple error page instead of raising
+        return f"<h1>Error 500</h1><p>Internal Server Error: {e}</p>", 500
     
     if form.validate_on_submit():
         print(f"🔥 ROUTE DEBUG: Starting AI content generation for bot {bot_id}")
