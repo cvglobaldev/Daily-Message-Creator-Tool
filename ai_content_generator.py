@@ -5,7 +5,8 @@ import os
 import json
 import logging
 from typing import List, Dict, Optional
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -27,11 +28,7 @@ class ContentGenerationRequest(BaseModel):
 
 class AIContentGenerator:
     def __init__(self):
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')  # Use Flash for better quota management
+        self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         
     def generate_journey_content(self, request: ContentGenerationRequest) -> List[DailyContent]:
         """Generate complete journey content based on user specifications"""
@@ -43,9 +40,11 @@ class AIContentGenerator:
             logger.info(f"Generating {request.journey_duration} days of content for audience: {request.target_audience}")
             
             # Generate content using Gemini
-            response = self.model.generate_content(
-                generation_prompt,
-                generation_config=genai.types.GenerationConfig(
+            response = self.client.models.generate_content(
+                model="gemini-2.5-pro",
+                contents=generation_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
                     temperature=0.7,
                     max_output_tokens=8192
                 )

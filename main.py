@@ -24,9 +24,6 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
-app.config['SESSION_COOKIE_SECURE'] = False  # Allow cookies over HTTP in development
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max file size for videos
 
@@ -2932,98 +2929,32 @@ In the meantime, feel free to continue sharing your thoughts or questions. Every
     
     return render_template('create_bot.html', form=form)
 
-
-
-@app.route('/bot-editor/<int:bot_id>', methods=['GET', 'POST'])  
-def bot_editor(bot_id):
-    """Alternative bot editor to test AI generation functionality"""
-    try:
-        logger.info(f"🔥 BOT_EDITOR: Route called with bot_id {bot_id}")
-        
-        bot = Bot.query.get_or_404(bot_id)
-        logger.info(f"🔥 BOT_EDITOR: Bot {bot.name} found")
-        
-        form = EditBotForm()
-        logger.info(f"🔥 BOT_EDITOR: Form created successfully")
-        
-        # Pre-populate form with current values
-        if request.method == 'GET':
-            form.name.data = bot.name
-            form.description.data = bot.description
-            form.platforms.data = bot.platforms or []
-            form.whatsapp_access_token.data = bot.whatsapp_access_token
-            form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
-            form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
-            form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
-            form.telegram_bot_token.data = bot.telegram_bot_token
-            form.telegram_webhook_url.data = bot.telegram_webhook_url
-            form.ai_prompt.data = bot.ai_prompt
-            form.journey_duration_days.data = bot.journey_duration_days
-            form.delivery_interval_minutes.data = bot.delivery_interval_minutes
-            form.help_message.data = bot.help_message
-            form.stop_message.data = bot.stop_message
-            form.human_message.data = bot.human_message
-            form.status.data = bot.status == 'active'
-            
-            # Set default values for AI content generation fields
-            form.enable_ai_content_generation.data = False
-            form.content_generation_duration.data = '30'
-            form.target_audience.data = ''
-            form.audience_language.data = 'English'
-            form.audience_religion.data = ''
-            form.audience_age_group.data = ''
-            form.content_generation_prompt.data = 'Create a gentle, respectful faith journey that introduces Christian concepts to someone from a diverse background. Focus on love, compassion, and spiritual growth.'
-        
-        logger.info(f"🔥 BOT_EDITOR: Form populated, rendering template")
-        return render_template('edit_bot.html', form=form, bot=bot)
-        
-    except Exception as e:
-        logger.error(f"🔥 BOT_EDITOR: Critical error: {e}")
-        import traceback
-        logger.error(f"🔥 BOT_EDITOR: Full traceback: {traceback.format_exc()}")
-        return f"<h1>Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre>"
-
-@app.route('/bots/<int:bot_id>/edit', methods=['GET', 'POST'])  
+@app.route('/bots/<int:bot_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_bot(bot_id):
-    """Edit an existing bot - restored with proper authentication"""
-    logger.info(f"🔥 EDIT_BOT: User {current_user.username} accessing bot {bot_id}")
-    return redirect(f'/bot-editor/{bot_id}')
+    """Edit an existing bot"""
+    bot = Bot.query.get_or_404(bot_id)
+    form = EditBotForm()
     
     # Pre-populate form with current values manually to avoid obj= issues
     if request.method == 'GET':
-        try:
-            form.name.data = bot.name
-            form.description.data = bot.description
-            form.platforms.data = bot.platforms or []
-            form.whatsapp_access_token.data = bot.whatsapp_access_token
-            form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
-            form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
-            form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
-            form.telegram_bot_token.data = bot.telegram_bot_token
-            form.telegram_webhook_url.data = bot.telegram_webhook_url
-            form.ai_prompt.data = bot.ai_prompt
-            form.journey_duration_days.data = bot.journey_duration_days
-            form.delivery_interval_minutes.data = bot.delivery_interval_minutes
-            form.help_message.data = bot.help_message
-            form.stop_message.data = bot.stop_message
-            form.human_message.data = bot.human_message
-            form.status.data = bot.status == 'active'
-            
-            # Set default values for AI content generation fields
-            form.enable_ai_content_generation.data = False
-            form.content_generation_duration.data = '30'
-            form.target_audience.data = ''
-            form.audience_language.data = 'English'
-            form.audience_religion.data = ''
-            form.audience_age_group.data = ''
-            form.content_generation_prompt.data = 'Create a gentle, respectful faith journey that introduces Christian concepts to someone from a diverse background. Focus on love, compassion, and spiritual growth.'
-        except Exception as form_error:
-            logger.error(f"Error populating form for bot {bot_id}: {form_error}")
-            flash(f'Error loading bot form: {str(form_error)}', 'error')
-            return redirect('/bots')
+        form.name.data = bot.name
+        form.description.data = bot.description
+        form.platforms.data = bot.platforms or []
+        form.whatsapp_access_token.data = bot.whatsapp_access_token
+        form.whatsapp_phone_number_id.data = bot.whatsapp_phone_number_id
+        form.whatsapp_webhook_url.data = bot.whatsapp_webhook_url
+        form.whatsapp_verify_token.data = bot.whatsapp_verify_token or 'CVGlobal_WhatsApp_Verify_2024'
+        form.telegram_bot_token.data = bot.telegram_bot_token
+        form.telegram_webhook_url.data = bot.telegram_webhook_url
+        form.ai_prompt.data = bot.ai_prompt
+        form.journey_duration_days.data = bot.journey_duration_days
+        form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+        form.help_message.data = bot.help_message
+        form.stop_message.data = bot.stop_message
+        form.human_message.data = bot.human_message
+        form.status.data = bot.status == 'active'
     
-    # If we get here, form was populated successfully, now handle form submission
     if form.validate_on_submit():
         logger.info(f"Form validation passed for bot {bot_id} ({bot.name})")
     else:
@@ -3090,60 +3021,9 @@ def edit_bot(bot_id):
             # Invalidate service cache for this bot when credentials change
             invalidate_bot_service_cache(bot.id)
             
-            # Handle AI Content Generation if enabled (same as create_bot)
-            content_generation_status = []
-            if hasattr(form, 'enable_ai_content_generation') and form.enable_ai_content_generation.data:
-                try:
-                    from ai_content_generator import AIContentGenerator, ContentGenerationRequest
-                    
-                    # Create content generation request
-                    request = ContentGenerationRequest(
-                        target_audience=form.target_audience.data or "General spiritual seekers",
-                        audience_language=form.audience_language.data or "English",
-                        audience_religion=form.audience_religion.data or "Mixed backgrounds",
-                        audience_age_group=form.audience_age_group.data or "Adults",
-                        content_prompt=form.content_generation_prompt.data,
-                        journey_duration=int(form.content_generation_duration.data)
-                    )
-                    
-                    # Generate content using AI
-                    logger.info(f"Starting AI content generation for bot {bot.id} during edit")
-                    generator = AIContentGenerator()
-                    daily_contents = generator.generate_journey_content(request)
-                    
-                    # Validate generated content
-                    if generator.validate_generated_content(daily_contents, request.journey_duration):
-                        # Delete existing content first (if user wants to regenerate)
-                        Content.query.filter_by(bot_id=bot.id).delete()
-                        
-                        # Save generated content to database
-                        for daily_content in daily_contents:
-                            content = Content()
-                            content.bot_id = bot.id
-                            content.day_number = daily_content.day_number
-                            content.content = daily_content.content
-                            content.media_type = 'text'
-                            content.reflection_question = daily_content.reflection_question
-                            content.title = daily_content.title
-                            
-                            db.session.add(content)
-                        
-                        db.session.commit()
-                        content_generation_status.append(f"✅ AI generated {len(daily_contents)} days of content successfully")
-                        logger.info(f"Successfully saved {len(daily_contents)} days of AI-generated content for bot {bot.id}")
-                    else:
-                        content_generation_status.append("⚠️ AI content validation failed - please review and add content manually")
-                        
-                except Exception as e:
-                    logger.error(f"AI content generation failed for bot {bot.id}: {e}")
-                    content_generation_status.append(f"❌ AI content generation failed: {str(e)}")
-                    # Continue with bot update even if content generation fails
-            
             success_message = f'Bot "{bot.name}" updated successfully!'
             if webhook_messages:
                 success_message += " " + " ".join(webhook_messages)
-            if content_generation_status:
-                success_message += " " + " ".join(content_generation_status)
             
             flash(success_message, 'success')
             return redirect('/bots')
@@ -3154,6 +3034,8 @@ def edit_bot(bot_id):
             logger.error(f"Traceback: {traceback.format_exc()}")
             db.session.rollback()
             flash(f'Error updating bot: {str(e)}', 'error')
+    
+
     
     return render_template('edit_bot.html', form=form, bot=bot)
 
