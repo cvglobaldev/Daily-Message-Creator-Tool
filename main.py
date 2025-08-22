@@ -4042,7 +4042,13 @@ def bot_ai_content_generation(bot_id):
     bot = Bot.query.get_or_404(bot_id)
     form = AIContentGenerationForm()
     
+    print(f"🔥 FORM DEBUG: Request method: {request.method}")
+    print(f"🔥 FORM DEBUG: Form errors: {form.errors}")
+    print(f"🔥 FORM DEBUG: Form data: {form.data}")
+    print(f"🔥 FORM DEBUG: Form validates: {form.validate_on_submit()}")
+    
     if form.validate_on_submit():
+        print(f"🔥 ROUTE DEBUG: Starting AI content generation for bot {bot_id}")
         try:
             from ai_content_generator import AIContentGenerator, ContentGenerationRequest
             
