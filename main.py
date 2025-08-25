@@ -14,7 +14,9 @@ from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm,
 from bot_forms import CreateBotForm, EditBotForm, BotContentForm
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
+import signal
 from location_utils import extract_telegram_user_data, get_ip_location_data
 
 # Configure logging
@@ -26,6 +28,35 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max file size for videos
+
+# Production middleware configuration
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Needed for url_for to generate with https
+
+# Request timeout handling
+class TimeoutError(Exception):
+    pass
+
+def timeout_handler(signum, frame):
+    raise TimeoutError("Request timeout")
+
+# Set request timeout (30 seconds)
+signal.signal(signal.SIGALRM, timeout_handler)
+
+@app.before_request
+def before_request_timeout():
+    # Set 30 second timeout for each request
+    signal.alarm(30)
+
+@app.after_request
+def after_request_timeout(response):
+    # Clear the alarm
+    signal.alarm(0)
+    return response
+
+@app.errorhandler(TimeoutError)
+def handle_timeout(e):
+    logger.error(f"Request timeout: {e}")
+    return jsonify({"error": "Request timeout"}), 408
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -1926,16 +1957,33 @@ def test_telegram_message():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+    """Health check endpoint for deployment services"""
+    try:
+        # Check database connection
+        with app.app_context():
+            db.session.execute(db.text('SELECT 1'))
+            db_status = "connected"
+    except Exception as db_error:
+        logger.error(f"Database health check failed: {db_error}")
+        db_status = "disconnected"
+        
+    # Determine overall health status
+    is_healthy = db_status == "connected"
+    
+    response_data = {
+        "status": "healthy" if is_healthy else "unhealthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "faith-journey-bot",
+        "database": db_status,
         "services": {
-            "database": "operational",
+            "database": db_status,
             "whatsapp": "operational",
+            "telegram": "operational",
             "gemini": "operational"
         }
-    })
+    }
+    
+    return jsonify(response_data), 200 if is_healthy else 503
 
 @app.route('/debug/routes', methods=['GET'])
 def debug_routes():
