@@ -4095,7 +4095,7 @@ def ai_content_generation():
 @app.route('/bots/<int:bot_id>/ai-content-generation', methods=['GET', 'POST'])
 @login_required  
 def bot_ai_content_generation(bot_id):
-    """AI Content Generation setup page (bot-specific)"""
+    """AI Content Generation setup page (bot-specific) - Day by day approach"""
     # Clear any existing timeout for this long-running operation
     signal.alarm(0)
     
@@ -4103,82 +4103,23 @@ def bot_ai_content_generation(bot_id):
     form = AIContentGenerationForm()
     
     if form.validate_on_submit():
-        try:
-            # Check if bot already has content for the selected duration
-            journey_duration = int(form.content_generation_duration.data)
-            existing_content = Content.query.filter_by(bot_id=bot_id).filter(
-                Content.day_number <= journey_duration
-            ).all()
-            
-            if existing_content:
-                # Delete existing content first
-                days_to_delete = [c.day_number for c in existing_content]
-                logger.info(f"Deleting existing content for bot {bot_id}, days: {sorted(days_to_delete)[:10]}{'...' if len(days_to_delete) > 10 else ''}")
-                
-                for content in existing_content:
-                    db.session.delete(content)
-                
-                # Flush the deletions to ensure they're committed before insertions
-                db.session.flush()
-                
-                flash(f'⚠️ Replaced {len(existing_content)} existing content items with new AI-generated content.', 'warning')
-            
-            from ai_content_generator import AIContentGenerator, ContentGenerationRequest
-            
-            # Create content generation request
-            content_request = ContentGenerationRequest(
-                target_audience=form.target_audience.data or "General spiritual seekers",
-                audience_language=form.audience_language.data or "English",
-                audience_religion=form.audience_religion.data or "Mixed backgrounds",
-                audience_age_group=form.audience_age_group.data or "Adults",
-                content_prompt=form.content_generation_prompt.data or "Create meaningful daily content",
-                journey_duration=journey_duration
-            )
-            
-            # Generate content using AI
-            generator = AIContentGenerator()
-            daily_contents = generator.generate_journey_content(content_request)
-            
-            # Save the new content
-            for daily_content in daily_contents:
-                content = Content()
-                content.bot_id = bot_id
-                content.day_number = daily_content.day_number
-                content.content = daily_content.content
-                content.media_type = 'text'
-                # Set media fields to None for text content
-                content.image_filename = None
-                content.video_filename = None
-                content.youtube_url = None
-                content.audio_filename = None
-                content.reflection_question = daily_content.reflection_question
-                content.title = daily_content.title
-                content.is_active = True
-                content.tags = daily_content.tags or []
-                
-                db.session.add(content)
-            
-            db.session.commit()
-            flash(f'✅ AI generated {len(daily_contents)} days of content successfully for {bot.name}!', 'success')
-            return redirect(url_for('bot_content_management', bot_id=bot_id))
-                
-        except Exception as e:
-            logger.error(f"AI content generation failed for bot {bot_id}: {e}")
-            logger.error(f"Full traceback: ", exc_info=True)
-            
-            # More specific error messages
-            error_msg = str(e)
-            if "media_url" in error_msg:
-                error_msg = "Database schema error - Content model issue"
-            elif "timeout" in error_msg.lower():
-                error_msg = "Request timeout - please try with fewer days"
-            elif "json" in error_msg.lower():
-                error_msg = "AI response parsing error - please try again"
-            elif "connection" in error_msg.lower():
-                error_msg = "Network connection error - check your internet"
-            
-            flash(f'❌ AI content generation failed: {error_msg}', 'danger')
-            db.session.rollback()  # Make sure to rollback on error
+        # Start day-by-day generation process
+        journey_duration = int(form.content_generation_duration.data)
+        
+        # Store generation settings in session for day-by-day process
+        session['ai_generation'] = {
+            'bot_id': bot_id,
+            'journey_duration': journey_duration,
+            'target_audience': form.target_audience.data or "General spiritual seekers",
+            'audience_language': form.audience_language.data or "English", 
+            'audience_religion': form.audience_religion.data or "Mixed backgrounds",
+            'audience_age_group': form.audience_age_group.data or "Adults",
+            'content_prompt': form.content_generation_prompt.data or "Create meaningful daily content",
+            'current_day': 1
+        }
+        
+        # Redirect to day-by-day generation
+        return redirect(url_for('bot_ai_content_generation_day_by_day', bot_id=bot_id))
     
     # Check if bot has existing content to show warning
     existing_content_count = Content.query.filter_by(bot_id=bot_id).count()
@@ -4190,6 +4131,121 @@ def bot_ai_content_generation(bot_id):
                          bot=bot,
                          existing_content_count=existing_content_count,
                          has_existing_content=has_existing_content)
+
+@app.route('/bots/<int:bot_id>/ai-content-generation/day-by-day', methods=['GET', 'POST'])
+@login_required
+def bot_ai_content_generation_day_by_day(bot_id):
+    """Day-by-day AI content generation interface"""
+    bot = Bot.query.get_or_404(bot_id)
+    
+    # Check if we have generation settings in session
+    if 'ai_generation' not in session or session['ai_generation']['bot_id'] != bot_id:
+        flash('Please start the AI generation process first.', 'warning')
+        return redirect(url_for('bot_ai_content_generation', bot_id=bot_id))
+    
+    generation_settings = session['ai_generation']
+    current_day = generation_settings['current_day']
+    total_days = generation_settings['journey_duration']
+    
+    generated_content = None
+    error_message = None
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'generate':
+            # Generate content for current day
+            try:
+                from ai_content_generator import AIContentGenerator, ContentGenerationRequest
+                
+                # Create request for single day
+                content_request = ContentGenerationRequest(
+                    target_audience=generation_settings['target_audience'],
+                    audience_language=generation_settings['audience_language'],
+                    audience_religion=generation_settings['audience_religion'],
+                    audience_age_group=generation_settings['audience_age_group'],
+                    content_prompt=generation_settings['content_prompt'],
+                    journey_duration=1  # Generate only 1 day
+                )
+                
+                generator = AIContentGenerator()
+                daily_contents = generator.generate_journey_content(content_request)
+                
+                if daily_contents:
+                    generated_content = daily_contents[0]
+                    # Adjust day number to current day
+                    generated_content.day_number = current_day
+                    
+            except Exception as e:
+                error_message = f"Failed to generate content: {str(e)}"
+                logger.error(f"Day-by-day generation error: {e}")
+        
+        elif action == 'save':
+            # Save the current day's content and move to next day
+            try:
+                # Get content data from form
+                title = request.form.get('title')
+                content_text = request.form.get('content')
+                reflection_question = request.form.get('reflection_question')
+                tags = request.form.get('tags', '').split(',') if request.form.get('tags') else []
+                
+                # Check if content already exists for this day
+                existing = Content.query.filter_by(bot_id=bot_id, day_number=current_day).first()
+                if existing:
+                    db.session.delete(existing)
+                
+                # Create new content
+                content = Content()
+                content.bot_id = bot_id
+                content.day_number = current_day
+                content.title = title
+                content.content = content_text
+                content.reflection_question = reflection_question
+                content.tags = tags
+                content.media_type = 'text'
+                content.image_filename = None
+                content.video_filename = None
+                content.youtube_url = None
+                content.audio_filename = None
+                content.is_active = True
+                
+                db.session.add(content)
+                db.session.commit()
+                
+                flash(f'✅ Day {current_day} content saved successfully!', 'success')
+                
+                # Move to next day
+                if current_day < total_days:
+                    session['ai_generation']['current_day'] = current_day + 1
+                    return redirect(url_for('bot_ai_content_generation_day_by_day', bot_id=bot_id))
+                else:
+                    # All days completed
+                    session.pop('ai_generation', None)
+                    flash(f'🎉 All {total_days} days of content generated successfully!', 'success')
+                    return redirect(url_for('bot_content_management', bot_id=bot_id))
+                    
+            except Exception as e:
+                error_message = f"Failed to save content: {str(e)}"
+                logger.error(f"Day-by-day save error: {e}")
+                db.session.rollback()
+        
+        elif action == 'skip':
+            # Skip to next day without saving
+            if current_day < total_days:
+                session['ai_generation']['current_day'] = current_day + 1
+                return redirect(url_for('bot_ai_content_generation_day_by_day', bot_id=bot_id))
+            else:
+                session.pop('ai_generation', None)
+                return redirect(url_for('bot_content_management', bot_id=bot_id))
+    
+    return render_template('ai_content_generation_day_by_day.html',
+                         bot=bot,
+                         current_day=current_day,
+                         total_days=total_days,
+                         generated_content=generated_content,
+                         error_message=error_message,
+                         generation_settings=generation_settings,
+                         user=current_user)
     
 
 @app.route('/test_day1_delivery', methods=['POST'])
