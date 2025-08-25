@@ -4137,7 +4137,11 @@ def bot_ai_content_generation(bot_id):
                 content.day_number = daily_content.day_number
                 content.content = daily_content.content
                 content.media_type = 'text'
-                content.media_url = None
+                # Set media fields to None for text content
+                content.image_filename = None
+                content.video_filename = None
+                content.youtube_url = None
+                content.audio_filename = None
                 content.reflection_question = daily_content.reflection_question
                 content.title = daily_content.title
                 content.is_active = True
@@ -4151,7 +4155,21 @@ def bot_ai_content_generation(bot_id):
                 
         except Exception as e:
             logger.error(f"AI content generation failed for bot {bot_id}: {e}")
-            flash(f'❌ AI content generation failed: {str(e)}', 'danger')
+            logger.error(f"Full traceback: ", exc_info=True)
+            
+            # More specific error messages
+            error_msg = str(e)
+            if "media_url" in error_msg:
+                error_msg = "Database schema error - Content model issue"
+            elif "timeout" in error_msg.lower():
+                error_msg = "Request timeout - please try with fewer days"
+            elif "json" in error_msg.lower():
+                error_msg = "AI response parsing error - please try again"
+            elif "connection" in error_msg.lower():
+                error_msg = "Network connection error - check your internet"
+            
+            flash(f'❌ AI content generation failed: {error_msg}', 'danger')
+            db.session.rollback()  # Make sure to rollback on error
     
     # Check if bot has existing content to show warning
     existing_content_count = Content.query.filter_by(bot_id=bot_id).count()
