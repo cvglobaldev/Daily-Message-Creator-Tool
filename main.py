@@ -4098,6 +4098,22 @@ def bot_ai_content_generation(bot_id):
     
     if form.validate_on_submit():
         try:
+            # Check if bot already has content for the selected duration
+            journey_duration = int(form.content_generation_duration.data)
+            existing_content = Content.query.filter_by(bot_id=bot_id).filter(
+                Content.day_number <= journey_duration
+            ).all()
+            
+            if existing_content:
+                # Delete existing content first
+                days_to_delete = [c.day_number for c in existing_content]
+                logger.info(f"Deleting existing content for bot {bot_id}, days: {sorted(days_to_delete)[:10]}{'...' if len(days_to_delete) > 10 else ''}")
+                
+                for content in existing_content:
+                    db.session.delete(content)
+                
+                flash(f'⚠️ Replaced {len(existing_content)} existing content items with new AI-generated content.', 'warning')
+            
             from ai_content_generator import AIContentGenerator, ContentGenerationRequest
             
             # Create content generation request
@@ -4107,14 +4123,14 @@ def bot_ai_content_generation(bot_id):
                 audience_religion=form.audience_religion.data or "Mixed backgrounds",
                 audience_age_group=form.audience_age_group.data or "Adults",
                 content_prompt=form.content_generation_prompt.data or "Create meaningful daily content",
-                journey_duration=int(form.content_generation_duration.data)
+                journey_duration=journey_duration
             )
             
-            # Generate content using AI (using mock content for now)
+            # Generate content using AI
             generator = AIContentGenerator()
             daily_contents = generator.generate_journey_content(content_request)
             
-            # Skip validation - just save the content directly
+            # Save the new content
             for daily_content in daily_contents:
                 content = Content()
                 content.bot_id = bot_id
@@ -4137,7 +4153,16 @@ def bot_ai_content_generation(bot_id):
             logger.error(f"AI content generation failed for bot {bot_id}: {e}")
             flash(f'❌ AI content generation failed: {str(e)}', 'danger')
     
-    return render_template('ai_content_generation.html', form=form, user=current_user, bot=bot)
+    # Check if bot has existing content to show warning
+    existing_content_count = Content.query.filter_by(bot_id=bot_id).count()
+    has_existing_content = existing_content_count > 0
+    
+    return render_template('ai_content_generation.html', 
+                         form=form, 
+                         user=current_user, 
+                         bot=bot,
+                         existing_content_count=existing_content_count,
+                         has_existing_content=has_existing_content)
     
 
 @app.route('/test_day1_delivery', methods=['POST'])

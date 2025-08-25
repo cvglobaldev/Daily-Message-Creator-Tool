@@ -158,6 +158,21 @@
                         <form method="POST">
                             {{ form.hidden_tag() }}
                             
+                            {% if has_existing_content %}
+                            <div class="alert alert-warning" role="alert">
+                                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Existing Content Warning</h5>
+                                <p class="mb-2">
+                                    This bot currently has <strong>{{ existing_content_count }} existing content items</strong>. 
+                                    Generating new AI content will <strong>replace all existing content</strong> for the selected duration.
+                                </p>
+                                <hr>
+                                <p class="mb-0">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <small>This action cannot be undone. Make sure you want to replace the current content before proceeding.</small>
+                                </p>
+                            </div>
+                            {% endif %}
+                            
                             <div class="ai-content-section p-4 mb-4">
                                 <div class="row mb-3">
                                     <div class="col-md-6">
