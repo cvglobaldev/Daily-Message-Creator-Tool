@@ -4297,8 +4297,14 @@ with app.app_context():
         db.session.commit()
         logger.info("Default admin user created: admin / admin123")
 
-# Start background scheduler for both Gunicorn and development
-start_scheduler()
+# Start background scheduler only on main worker (prevent multiple schedulers)
+import os
+worker_id = os.environ.get('GUNICORN_WORKER_ID', '0')
+if worker_id == '0' or not os.environ.get('GUNICORN_WORKER_ID'):
+    logger.info(f"🚀 Starting scheduler on worker {worker_id}")
+    start_scheduler()
+else:
+    logger.info(f"⏸️ Skipping scheduler on worker {worker_id} (only worker 0 runs scheduler)")
 
 if __name__ == '__main__':
     # Start Flask app only when running directly (development mode)
