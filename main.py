@@ -3328,16 +3328,18 @@ def test_image_delivery():
         telegram_service.simulate_mode = True
         
         # Test image delivery
-        media_url = content_dict.get('media_url')
-        if media_url and content_dict.get('media_type') == 'image':
+        # Check for image content
+        if content_dict.get('media_type') == 'image' and content_dict.get('image_filename'):
             # Test photo sending
+            # Build image URL from filename
+            media_url = f"/static/uploads/images/{content_dict.get('image_filename')}"
             result = telegram_service.send_photo('test123', media_url)
             
             return jsonify({
                 'success': True,
                 'media_url': media_url,
                 'media_type': content_dict.get('media_type'),
-                'file_exists': 'eedc82fc-a7f5-4f0a-8f92-995d8532aca4_jc-ups2-psd2.jpeg' in media_url,
+                'file_exists': content_dict.get('image_filename') is not None,
                 'simulation_result': result
             })
         else:
@@ -4065,7 +4067,11 @@ def ai_content_generation():
                     content.day_number = daily_content.day_number
                     content.content = daily_content.content
                     content.media_type = 'text'
-                    content.media_url = None
+                    # Set media fields to None for text content
+                    content.image_filename = None
+                    content.video_filename = None
+                    content.youtube_url = None
+                    content.audio_filename = None
                     content.reflection_question = daily_content.reflection_question
                     content.title = daily_content.title
                     content.is_active = True
@@ -4111,6 +4117,9 @@ def bot_ai_content_generation(bot_id):
                 
                 for content in existing_content:
                     db.session.delete(content)
+                
+                # Flush the deletions to ensure they're committed before insertions
+                db.session.flush()
                 
                 flash(f'⚠️ Replaced {len(existing_content)} existing content items with new AI-generated content.', 'warning')
             
