@@ -135,8 +135,8 @@ class AIContentGenerator:
     
     def _generate_ai_content_in_batches(self, request: ContentGenerationRequest, config: Dict) -> List[DailyContent]:
         """Generate AI content in smaller batches to avoid timeouts"""
-        # Use smaller batches for faster generation
-        batch_size = 3 if request.journey_duration > 10 else 5  # Generate 3 days at a time for longer journeys
+        # Use smaller batches for faster generation and to prevent timeouts
+        batch_size = 2 if request.journey_duration > 5 else 3  # Generate 2 days at a time for longer journeys
         all_daily_contents = []
         
         total_days = request.journey_duration
