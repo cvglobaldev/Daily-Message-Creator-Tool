@@ -21,211 +21,180 @@
             padding-left: 15px;
             margin: 20px 0 15px 0;
         }
-        .ai-content-section {
-            background-color: var(--bs-secondary);
+        
+        .new-approach-info {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            border: 1px solid #00ff88;
             border-radius: 0.5rem;
-            border: 1px solid var(--bs-border-color);
-        }
-        
-        /* Loading Animation Styles */
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .loading-container {
-            text-align: center;
-            color: white;
-            max-width: 500px;
-            padding: 30px;
-        }
-        
-        .loading-spinner {
-            border: 4px solid #333;
-            border-top: 4px solid #00ff88;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .progress-text {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-        
-        .progress-details {
-            font-size: 0.9rem;
-            opacity: 0.8;
+            padding: 20px;
             margin-bottom: 20px;
         }
         
-        .progress-steps {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-        
-        .progress-step {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-        }
-        
-        .progress-step i {
-            width: 20px;
-            margin-right: 10px;
-        }
-        
-        .step-completed {
+        .approach-highlight {
             color: #00ff88;
+            font-weight: bold;
         }
         
-        .step-current {
-            color: #ffc107;
+        .benefits-list {
+            list-style: none;
+            padding-left: 0;
         }
         
-        .step-pending {
-            color: #666;
+        .benefits-list li {
+            padding: 8px 0;
+            border-left: 3px solid #00ff88;
+            padding-left: 15px;
+            margin-bottom: 5px;
+            background: rgba(0, 255, 136, 0.1);
+        }
+        
+        .btn-start-generation {
+            background: linear-gradient(135deg, #00ff88, #007744);
+            border: none;
+            padding: 12px 30px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .existing-content-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            border-radius: 0.5rem;
+            padding: 15px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
-<body>
-    <nav class="navbar navbar-dark bg-primary mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
-                Daily Message Creator - AI Content Generation
+<body class="dark-theme">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <img src="/static/logo.png" alt="CV Global" height="30" class="me-2">
+                Daily Message Creator
             </a>
-            <div class="navbar-nav flex-row">
-                <a class="nav-link me-3" href="/dashboard">
-                    <i class="fas fa-chart-line me-1"></i>Dashboard
-                </a>
-                <a class="nav-link me-3" href="/cms">
-                    <i class="fas fa-arrow-left me-1"></i>Back to CMS
-                </a>
-                <a class="nav-link me-3" href="/bots">
-                    <i class="fas fa-robot me-1"></i>Bot Management
-                </a>
-                <a class="nav-link" href="/logout">
-                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+            
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user"></i> {{ user.username }}
+                </span>
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </div>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-fluid mt-4">
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="row">
+                    <div class="col-12">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
 
         <div class="row">
             <div class="col-12">
+                <!-- Page Header -->
                 <div class="cv-section-header">
-                    <h2><i class="fas fa-robot me-3 cv-text-primary"></i>AI Content Generation Setup{% if bot %} - {{ bot.name }}{% endif %}</h2>
-                    <p class="text-muted">Configure and generate daily spiritual content using AI based on your audience and requirements{% if bot %} for bot: {{ bot.name }}{% endif %}</p>
+                    <h1 class="display-6 mb-0">
+                        <i class="fas fa-robot text-success me-3"></i>AI Content Generation
+                        {% if bot %}
+                            <span class="text-muted">- {{ bot.name }}</span>
+                        {% endif %}
+                    </h1>
                 </div>
 
-                <div class="card cv-card">
-                    <div class="card-header cv-bg-secondary">
-                        <h5 class="mb-0 cv-text-primary"><i class="fas fa-magic me-2"></i>AI Content Configuration</h5>
+                <!-- New Day-by-Day Approach Info -->
+                <div class="new-approach-info">
+                    <h4><i class="fas fa-star text-warning me-2"></i>Improved Day-by-Day AI Generation</h4>
+                    <p class="mb-3">We've completely redesigned the AI content generation to give you better control and eliminate errors:</p>
+                    
+                    <ul class="benefits-list">
+                        <li><i class="fas fa-check-circle me-2 text-success"></i> <span class="approach-highlight">Generate 1 day at a time</span> - No more timeouts or server errors!</li>
+                        <li><i class="fas fa-eye me-2 text-info"></i> <span class="approach-highlight">Preview & edit</span> each day's content before saving</li>
+                        <li><i class="fas fa-sliders-h me-2 text-primary"></i> <span class="approach-highlight">Full control</span> - Save, regenerate, or skip any day</li>
+                        <li><i class="fas fa-chart-line me-2 text-warning"></i> <span class="approach-highlight">Progress tracking</span> - See your journey completion</li>
+                    </ul>
+                </div>
+
+                <!-- Existing Content Warning -->
+                {% if has_existing_content %}
+                    <div class="existing-content-warning">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Existing Content Found</h5>
+                        <p class="mb-2">This bot has <strong>{{ existing_content_count }}</strong> existing content items. When you generate new content for specific days, the existing content for those days will be replaced.</p>
+                        <small class="text-muted">You can review and edit each day individually before saving.</small>
+                    </div>
+                {% endif %}
+
+                <!-- AI Content Generation Setup Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-cog me-2"></i>Content Generation Settings
+                        </h4>
+                        <small class="text-muted">Configure your content preferences, then start the day-by-day generation</small>
                     </div>
                     <div class="card-body">
-                        <form method="POST">
+                        <form method="POST" id="setupForm">
                             {{ form.hidden_tag() }}
                             
-                            {% if has_existing_content %}
-                            <div class="alert alert-warning" role="alert">
-                                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Existing Content Warning</h5>
-                                <p class="mb-2">
-                                    This bot currently has <strong>{{ existing_content_count }} existing content items</strong>. 
-                                    Generating new AI content will <strong>replace all existing content</strong> for the selected duration.
-                                </p>
-                                <hr>
-                                <p class="mb-0">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    <small>This action cannot be undone. Make sure you want to replace the current content before proceeding.</small>
-                                </p>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="ai-content-section p-4 mb-4">
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
                                         {{ form.content_generation_duration.label(class="form-label") }}
                                         {{ form.content_generation_duration(class="form-select") }}
-                                        <div class="form-text">Choose how many days of content to generate</div>
+                                        <div class="form-text">Number of days of content to generate</div>
                                     </div>
-                                    <div class="col-md-6">
+                                    
+                                    <div class="mb-3">
+                                        {{ form.target_audience.label(class="form-label") }}
+                                        {{ form.target_audience(class="form-control", placeholder="e.g., Young Muslim adults, Christian seekers") }}
+                                        <div class="form-text">{{ form.target_audience.description }}</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
                                         {{ form.audience_language.label(class="form-label") }}
-                                        {{ form.audience_language(class="form-control") }}
+                                        {{ form.audience_language(class="form-select") }}
                                         <div class="form-text">{{ form.audience_language.description }}</div>
                                     </div>
                                 </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        {{ form.target_audience.label(class="form-label") }}
-                                        {{ form.target_audience(class="form-control", placeholder="Young Muslim adults seeking spiritual guidance") }}
-                                        <div class="form-text">{{ form.target_audience.description }}</div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.audience_religion.label(class="form-label") }}
+                                        {{ form.audience_religion(class="form-control", placeholder="e.g., Islam, Christianity, Hindu, Secular") }}
+                                        <div class="form-text">{{ form.audience_religion.description }}</div>
                                     </div>
-                                    <div class="col-md-6">
+                                    
+                                    <div class="mb-3">
                                         {{ form.audience_age_group.label(class="form-label") }}
-                                        {{ form.audience_age_group(class="form-control", placeholder="18-25") }}
+                                        {{ form.audience_age_group(class="form-control", placeholder="e.g., 18-25, 25-35, Adults") }}
                                         <div class="form-text">{{ form.audience_age_group.description }}</div>
                                     </div>
                                 </div>
-
-                                <div class="mb-3">
-                                    {{ form.audience_religion.label(class="form-label") }}
-                                    {{ form.audience_religion(class="form-control", placeholder="Islam") }}
-                                    <div class="form-text">{{ form.audience_religion.description }}</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    {{ form.content_generation_prompt.label(class="form-label") }}
-                                    {{ form.content_generation_prompt(class="form-control", rows="6", placeholder="Create a gentle, respectful faith journey that introduces Christian concepts...") }}
-                                    <div class="form-text">{{ form.content_generation_prompt.description }}</div>
-                                </div>
-
-                                <div class="alert alert-info">
-                                    <i class="fas fa-lightbulb me-2"></i>
-                                    <strong>Content Generation Tips:</strong>
-                                    <ul class="mb-0 mt-2">
-                                        <li>Be specific about your target audience's background and needs</li>
-                                        <li>Describe the tone you want (gentle, encouraging, respectful, etc.)</li>
-                                        <li>Mention any specific topics or themes to focus on</li>
-                                        <li>Consider cultural sensitivities and religious backgrounds</li>
-                                        <li>Content will include daily messages with reflection questions</li>
-                                    </ul>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-4">
+                                        {{ form.content_generation_prompt.label(class="form-label") }}
+                                        {{ form.content_generation_prompt(class="form-control", rows="4") }}
+                                        <div class="form-text">{{ form.content_generation_prompt.description }}</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-center">
                                 {% if bot %}
                                 <a href="{{ url_for('bot_content_management', bot_id=bot.id) }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-1"></i>Back to {{ bot.name }} CMS
@@ -235,102 +204,63 @@
                                     <i class="fas fa-arrow-left me-1"></i>Back to CMS
                                 </a>
                                 {% endif %}
-                                <button type="submit" class="btn cv-btn-success">
-                                    <i class="fas fa-magic me-1"></i>{{ form.submit.label.text }}
+                                
+                                <button type="submit" class="btn btn-start-generation">
+                                    <i class="fas fa-play me-2"></i>Start Day-by-Day Generation
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <!-- How it Works -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>How the Day-by-Day Process Works</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="h1 text-primary"><i class="fas fa-1"></i></div>
+                                <h6>Generate</h6>
+                                <p class="small text-muted">AI creates content for Day 1 based on your settings</p>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="h1 text-info"><i class="fas fa-2"></i></div>
+                                <h6>Preview</h6>
+                                <p class="small text-muted">Review the title, content, and reflection question</p>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="h1 text-warning"><i class="fas fa-3"></i></div>
+                                <h6>Edit & Save</h6>
+                                <p class="small text-muted">Modify if needed, then save to continue to Day 2</p>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="h1 text-success"><i class="fas fa-4"></i></div>
+                                <h6>Repeat</h6>
+                                <p class="small text-muted">Continue day by day until your journey is complete</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <div class="progress-text">Generating AI Content...</div>
-            <div class="progress-details">Please wait while we create your customized content</div>
-            
-            <div class="progress-steps">
-                <div class="progress-step" id="step1">
-                    <i class="fas fa-cog step-current"></i>
-                    <span>Analyzing your audience requirements</span>
-                </div>
-                <div class="progress-step" id="step2">
-                    <i class="fas fa-brain step-pending"></i>
-                    <span>Generating AI content in batches (5 days each)</span>
-                </div>
-                <div class="progress-step" id="step3">
-                    <i class="fas fa-database step-pending"></i>
-                    <span>Saving content to your bot</span>
-                </div>
-                <div class="progress-step" id="step4">
-                    <i class="fas fa-check-circle step-pending"></i>
-                    <span>Completing setup</span>
-                </div>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <small style="opacity: 0.7;">This process may take 2-3 minutes for 30 days of content</small>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form');
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            const submitButton = document.querySelector('button[type="submit"]');
-            
+            const form = document.getElementById('setupForm');
             if (form) {
                 form.addEventListener('submit', function(e) {
-                    // Show loading overlay
-                    loadingOverlay.style.display = 'flex';
-                    
-                    // Disable submit button
+                    const submitButton = document.querySelector('button[type="submit"]');
                     if (submitButton) {
                         submitButton.disabled = true;
-                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting Day-by-Day Generation...';
                     }
-                    
-                    // Start progress animation
-                    startProgressAnimation();
                 });
             }
         });
-        
-        function startProgressAnimation() {
-            const steps = [
-                { id: 'step1', delay: 500 },
-                { id: 'step2', delay: 3000 },
-                { id: 'step3', delay: 8000 },
-                { id: 'step4', delay: 12000 }
-            ];
-            
-            steps.forEach((step, index) => {
-                setTimeout(() => {
-                    // Mark previous steps as completed
-                    for (let i = 0; i < index; i++) {
-                        const prevStep = document.getElementById(steps[i].id);
-                        const icon = prevStep.querySelector('i');
-                        icon.className = 'fas fa-check-circle step-completed';
-                    }
-                    
-                    // Mark current step as current
-                    const currentStep = document.getElementById(step.id);
-                    const icon = currentStep.querySelector('i');
-                    if (index < steps.length - 1) {
-                        icon.className = 'fas fa-cog fa-spin step-current';
-                    } else {
-                        icon.className = 'fas fa-check-circle step-completed';
-                    }
-                }, step.delay);
-            });
-        }
     </script>
 </body>
 </html>
