@@ -26,6 +26,85 @@
             border-radius: 0.5rem;
             border: 1px solid var(--bs-border-color);
         }
+        
+        /* Loading Animation Styles */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-container {
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            padding: 30px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .progress-details {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+        
+        .progress-steps {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .progress-step i {
+            width: 20px;
+            margin-right: 10px;
+        }
+        
+        .step-completed {
+            color: #00ff88;
+        }
+        
+        .step-current {
+            color: #ffc107;
+        }
+        
+        .step-pending {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -152,6 +231,91 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="progress-text">Generating AI Content...</div>
+            <div class="progress-details">Please wait while we create your customized content</div>
+            
+            <div class="progress-steps">
+                <div class="progress-step" id="step1">
+                    <i class="fas fa-cog step-current"></i>
+                    <span>Analyzing your audience requirements</span>
+                </div>
+                <div class="progress-step" id="step2">
+                    <i class="fas fa-brain step-pending"></i>
+                    <span>Generating AI content in batches (5 days each)</span>
+                </div>
+                <div class="progress-step" id="step3">
+                    <i class="fas fa-database step-pending"></i>
+                    <span>Saving content to your bot</span>
+                </div>
+                <div class="progress-step" id="step4">
+                    <i class="fas fa-check-circle step-pending"></i>
+                    <span>Completing setup</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <small style="opacity: 0.7;">This process may take 2-3 minutes for 30 days of content</small>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const submitButton = document.querySelector('button[type="submit"]');
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    // Show loading overlay
+                    loadingOverlay.style.display = 'flex';
+                    
+                    // Disable submit button
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+                    }
+                    
+                    // Start progress animation
+                    startProgressAnimation();
+                });
+            }
+        });
+        
+        function startProgressAnimation() {
+            const steps = [
+                { id: 'step1', delay: 500 },
+                { id: 'step2', delay: 3000 },
+                { id: 'step3', delay: 8000 },
+                { id: 'step4', delay: 12000 }
+            ];
+            
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    // Mark previous steps as completed
+                    for (let i = 0; i < index; i++) {
+                        const prevStep = document.getElementById(steps[i].id);
+                        const icon = prevStep.querySelector('i');
+                        icon.className = 'fas fa-check-circle step-completed';
+                    }
+                    
+                    // Mark current step as current
+                    const currentStep = document.getElementById(step.id);
+                    const icon = currentStep.querySelector('i');
+                    if (index < steps.length - 1) {
+                        icon.className = 'fas fa-cog fa-spin step-current';
+                    } else {
+                        icon.className = 'fas fa-check-circle step-completed';
+                    }
+                }, step.delay);
+            });
+        }
+    </script>
 </body>
 </html>
