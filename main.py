@@ -44,7 +44,10 @@ signal.signal(signal.SIGALRM, timeout_handler)
 
 @app.before_request
 def before_request_timeout():
-    # Set 30 second timeout for each request
+    # Skip timeout for AI content generation endpoints (they need more time)
+    if request.endpoint and 'ai_content_generation' in request.endpoint:
+        return
+    # Set 30 second timeout for other requests
     signal.alarm(30)
 
 @app.after_request
@@ -4087,6 +4090,9 @@ def ai_content_generation():
 @login_required  
 def bot_ai_content_generation(bot_id):
     """AI Content Generation setup page (bot-specific)"""
+    # Clear any existing timeout for this long-running operation
+    signal.alarm(0)
+    
     bot = Bot.query.get_or_404(bot_id)
     form = AIContentGenerationForm()
     
