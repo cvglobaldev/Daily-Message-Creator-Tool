@@ -122,31 +122,45 @@ class ContentScheduler:
                 self._complete_user_journey(phone_number, user)
                 return True
             
-            # Stronger duplicate prevention - check last 2 hours instead of 12 hours
+            # ULTRA-STRONG duplicate prevention - multiple layers of protection
             from datetime import datetime, timedelta
-            two_hours_ago = datetime.now() - timedelta(hours=2)
-            recent_messages = self.db.get_user_messages_by_id(user.id, limit=5)
+            
+            # Check recent messages for any outgoing content
+            recent_messages = self.db.get_user_messages_by_id(user.id, limit=10)
             if recent_messages:
-                # Check if any recent message contains content for the current day within the last 2 hours
+                now = datetime.now()
+                
+                # Layer 1: Check for exact day content within last 24 hours
                 day_content_text = f"Day {current_day}"
+                day_content_emoji = f"📖 Day {current_day}"
+                twenty_four_hours_ago = now - timedelta(hours=24)
+                
                 for msg in recent_messages:
                     if (msg.direction == 'outgoing' and 
-                        day_content_text in msg.raw_text and 
-                        msg.timestamp > two_hours_ago):
-                        logger.info(f"✅ DUPLICATE PREVENTION: User {phone_number} already received content for day {current_day} recently, skipping duplicate")
+                        msg.timestamp > twenty_four_hours_ago and 
+                        (day_content_text in msg.raw_text or day_content_emoji in msg.raw_text)):
+                        logger.info(f"🚫 DAY DUPLICATE PREVENTION: User {phone_number} already received Day {current_day} content in last 24h, skipping")
                         return True
-                        
-            # Additional check: prevent multiple sends within the bot's delivery interval
-            bot_id = user.bot_id
-            from models import Bot
-            bot = Bot.query.get(bot_id)
-            if bot and bot.delivery_interval_minutes:
-                interval_ago = datetime.now() - timedelta(minutes=bot.delivery_interval_minutes)
+                
+                # Layer 2: Check for ANY outgoing message within last 5 minutes (prevents rapid-fire duplicates)
+                five_minutes_ago = now - timedelta(minutes=5)
                 for msg in recent_messages:
                     if (msg.direction == 'outgoing' and 
-                        msg.timestamp > interval_ago):
-                        logger.info(f"⚡ RATE LIMIT: User {phone_number} received content within bot interval ({bot.delivery_interval_minutes} min), skipping")
+                        msg.timestamp > five_minutes_ago):
+                        logger.info(f"🚫 RAPID-FIRE PREVENTION: User {phone_number} received message within 5 min, skipping (timestamp: {msg.timestamp})")
                         return True
+                
+                # Layer 3: Bot-specific delivery interval check  
+                bot_id = user.bot_id
+                from models import Bot
+                bot = Bot.query.get(bot_id)
+                if bot and bot.delivery_interval_minutes:
+                    interval_ago = now - timedelta(minutes=bot.delivery_interval_minutes)
+                    for msg in recent_messages:
+                        if (msg.direction == 'outgoing' and 
+                            msg.timestamp > interval_ago):
+                            logger.info(f"🚫 BOT INTERVAL PREVENTION: User {phone_number} within {bot.delivery_interval_minutes}min interval, skipping")
+                            return True
                 
             # Get content for current day
             content = self.db.get_content_by_day(current_day, bot_id=user.bot_id)
