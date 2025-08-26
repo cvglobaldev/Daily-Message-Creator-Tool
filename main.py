@@ -4103,23 +4103,31 @@ def bot_ai_content_generation(bot_id):
     form = AIContentGenerationForm()
     
     if form.validate_on_submit():
-        # Start day-by-day generation process
-        journey_duration = int(form.content_generation_duration.data)
-        
-        # Store generation settings in session for day-by-day process
-        session['ai_generation'] = {
-            'bot_id': bot_id,
-            'journey_duration': journey_duration,
-            'target_audience': form.target_audience.data or "General spiritual seekers",
-            'audience_language': form.audience_language.data or "English", 
-            'audience_religion': form.audience_religion.data or "Mixed backgrounds",
-            'audience_age_group': form.audience_age_group.data or "Adults",
-            'content_prompt': form.content_generation_prompt.data or "Create meaningful daily content",
-            'current_day': 1
-        }
-        
-        # Redirect to day-by-day generation
-        return redirect(url_for('bot_ai_content_generation_day_by_day', bot_id=bot_id))
+        try:
+            # Start day-by-day generation process
+            journey_duration = int(form.content_generation_duration.data)
+            
+            # Store generation settings in session for day-by-day process
+            session['ai_generation'] = {
+                'bot_id': bot_id,
+                'journey_duration': journey_duration,
+                'target_audience': form.target_audience.data or "General spiritual seekers",
+                'audience_language': form.audience_language.data or "English", 
+                'audience_religion': form.audience_religion.data or "Mixed backgrounds",
+                'audience_age_group': form.audience_age_group.data or "Adults",
+                'content_prompt': form.content_generation_prompt.data or "Create meaningful daily content",
+                'current_day': 1
+            }
+            
+            logger.info(f"🎯 Starting day-by-day AI generation for bot {bot_id} with {journey_duration} days")
+            
+            # Redirect to day-by-day generation
+            return redirect(url_for('bot_ai_content_generation_day_by_day', bot_id=bot_id))
+            
+        except Exception as e:
+            logger.error(f"Error starting day-by-day generation for bot {bot_id}: {e}")
+            flash(f'❌ Error starting AI generation: {str(e)}', 'danger')
+            return redirect(url_for('bot_ai_content_generation', bot_id=bot_id))
     
     # Check if bot has existing content to show warning
     existing_content_count = Content.query.filter_by(bot_id=bot_id).count()
