@@ -620,12 +620,15 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
     except Exception as e:
         logger.error(f"Error processing message from {phone_number}: {e}")
-        # Send error message to user
-        send_message_to_platform(
-            phone_number, platform,
-            "Sorry, there was an error processing your message. Please try again or type HELP for assistance.",
-            bot_id=bot_id
-        )
+        # Send bot-specific error message to user
+        from models import Bot
+        bot = Bot.query.get(bot_id) if bot_id else None
+        if bot and bot.name and "indonesia" in bot.name.lower():
+            error_message = "Maaf, ada masalah saat memproses pesan Anda. Silakan coba lagi atau ketik HELP untuk bantuan."
+        else:
+            error_message = "Sorry, there was an error processing your message. Please try again or type HELP for assistance."
+        
+        send_message_to_platform(phone_number, platform, error_message, bot_id=bot_id)
 
 def send_message_with_buttons(phone_number: str, platform: str, message: str, bot_id: int = 1) -> bool:
     """Send message with Yes/No buttons for human connection choice"""
@@ -1719,10 +1722,10 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                     if bot and bot.name and "indonesia" in bot.name.lower():
                         contextual_response = "Terima kasih sudah berbagi. Saya Bang Kris di sini untuk membantu Anda dalam perjalanan spiritual ini. Ada yang ingin Anda tanyakan tentang materi hari ini?"
                     else:
-                        contextual_response = "Thank you for sharing. I'm here to guide you through this spiritual journey. Do you have any questions about today's content?"
+                        contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
             else:
-                # No bot found, use generic contextual
-                contextual_response = "Thank you for your reflection. I'm here to help you explore today's spiritual content. What are your thoughts?"
+                # No bot found, use bot-specific fallback
+                contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
         
         # Send the contextual response
         send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
@@ -1746,7 +1749,7 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
             if bot and bot.name and "indonesia" in bot.name.lower():
                 fallback_message = "Maaf, ada sedikit masalah teknis. Terima kasih sudah berbagi pemikiran Anda. Ada yang bisa saya bantu?"
             else:
-                fallback_message = "Thank you for your message. I'm here to help with any questions about your spiritual journey."
+                fallback_message = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
             send_message_to_platform(phone_number, platform, fallback_message, bot_id=bot_id)
         except:
             logger.error(f"Failed to send fallback message to {phone_number}")
