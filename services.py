@@ -857,12 +857,12 @@ class GeminiService:
             "confidence": 0.6  # Medium confidence for fallback analysis
         }
     
-    def generate_contextual_response(self, user_reflection: str, day_number: int, content_title: str, content_text: str, reflection_question: str) -> str:
+    def generate_contextual_response(self, user_reflection: str, day_number: int, content_title: str, content_text: str, reflection_question: str, bot_id: int = None) -> str:
         """Generate a contextual response to user's reflection based on current day's content"""
         try:
             if not self.client:
                 # Fallback response if Gemini is not available
-                return self._get_fallback_contextual_response(user_reflection)
+                return self._get_bot_specific_fallback_response(user_reflection, bot_id=bot_id)
             
             from prompts import CONTEXTUAL_RESPONSE_PROMPT
             
@@ -886,11 +886,11 @@ class GeminiService:
                 logger.info(f"Generated contextual response for reflection (length: {len(contextual_response)})")
                 return contextual_response
             else:
-                return self._get_fallback_contextual_response(user_reflection)
+                return self._get_bot_specific_fallback_response(user_reflection, bot_id=bot_id)
                 
         except Exception as e:
             logger.error(f"Error generating contextual response: {e}")
-            return self._get_fallback_contextual_response(user_reflection)
+            return self._get_bot_specific_fallback_response(user_reflection, bot_id=bot_id)
     
     def _get_fallback_contextual_response(self, user_reflection: str) -> str:
         """Enhanced fallback contextual response that addresses spiritual concerns meaningfully"""

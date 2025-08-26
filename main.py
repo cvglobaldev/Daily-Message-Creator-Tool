@@ -1850,14 +1850,11 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
                         bot_id=bot_id
                     )
                 except:
-                    # Last resort fallback using bot language
-                    if bot and bot.name and "indonesia" in bot.name.lower():
-                        contextual_response = "Terima kasih sudah berbagi refleksi Anda. Keterbukaan Anda menunjukkan hati yang tulus mencari kebenaan."
-                    else:
-                        contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
+                    # Last resort fallback using bot-specific responses
+                    contextual_response = gemini_service._get_bot_specific_fallback_response(f"User reflected: {message_text}", bot_id)
             else:
-                # No bot found, use generic
-                contextual_response = "Thank you for sharing your thoughtful reflection. Your openness to explore these questions shows a sincere heart seeking truth."
+                # No bot found, use bot-specific fallback
+                contextual_response = gemini_service._get_bot_specific_fallback_response(f"User reflected: {message_text}", bot_id)
         
         # Send the contextual response
         send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
@@ -1877,8 +1874,8 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
         
     except Exception as e:
         logger.error(f"Error handling reflection response from {phone_number}: {e}")
-        # Still acknowledge the user's response with fallback
-        fallback_response = "Thank you for your reflection. Your thoughtfulness is appreciated."
+        # Still acknowledge the user's response with bot-specific fallback
+        fallback_response = gemini_service._get_bot_specific_fallback_response(f"User reflected: {message_text}", bot_id)
         send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
 
 @app.route('/telegram/setup', methods=['POST'])
