@@ -976,7 +976,8 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                     welcome_message = gemini_service.generate_bot_response(
                         user_message="User just started their spiritual journey. Please welcome them and explain what they can expect.",
                         ai_prompt=bot.ai_prompt,
-                        content_context=None
+                        content_context=None,
+                        bot_id=bot_id
                     )
                 except:
                     # Fallback to default message if AI generation fails
@@ -1088,7 +1089,8 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                         message = gemini_service.generate_bot_response(
                             user_message="User wants to stop receiving messages. Please acknowledge their request and let them know they can restart anytime.",
                             ai_prompt=bot.ai_prompt,
-                            content_context=None
+                            content_context=None,
+                            bot_id=bot_id
                         )
                     except:
                         # Fallback message with Indonesian support for Bot 2
@@ -1114,7 +1116,8 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                     message = gemini_service.generate_bot_response(
                         user_message="User wants to stop but they are not subscribed. Please let them know they can start their journey anytime.",
                         ai_prompt=bot.ai_prompt,
-                        content_context=None
+                        content_context=None,
+                        bot_id=bot_id
                     )
                 except:
                     if bot_id == 2:
@@ -1192,7 +1195,8 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                     help_message = gemini_service.generate_bot_response(
                         user_message="User needs help. Please explain what you offer and what commands are available.",
                         ai_prompt=bot.ai_prompt,
-                        content_context=None
+                        content_context=None,
+                        bot_id=bot_id
                     )
                 except:
                     # Fallback message
@@ -1296,7 +1300,8 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
                     response_message = gemini_service.generate_bot_response(
                         user_message="User wants to speak with a human. Please acknowledge their request and let them know a team member will help them.",
                         ai_prompt=bot.ai_prompt,
-                        content_context=None
+                        content_context=None,
+                        bot_id=bot_id
                     )
                 except:
                     # Fallback message in Indonesian for Bot 2
@@ -1544,7 +1549,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
             contextual_response = gemini_service.generate_bot_response(
                 user_message=message_text,
                 ai_prompt=ai_prompt,
-                content_context=None
+                content_context=None,
+                bot_id=bot_id
             )
             
             logger.info(f"Generated general conversation response for {phone_number} using bot AI prompt")
@@ -1563,7 +1569,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
                     contextual_response = gemini_service.generate_bot_response(
                         user_message=message_text,
                         ai_prompt=bot.ai_prompt,
-                        content_context=None
+                        content_context=None,
+                        bot_id=bot_id
                     )
                 except:
                     # Last resort fallback using bot language
@@ -1680,7 +1687,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
             contextual_response = gemini_service.generate_bot_response(
                 user_message=message_text,
                 ai_prompt=ai_prompt,
-                content_context=content
+                content_context=content,
+                bot_id=bot_id
             )
             
             if content:
@@ -1703,7 +1711,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                     contextual_response = gemini_service.generate_bot_response(
                         user_message=message_text,
                         ai_prompt=bot.ai_prompt,
-                        content_context=content
+                        content_context=content,
+                        bot_id=bot_id
                     )
                 except:
                     # Last resort fallback with bot-specific language
@@ -1812,7 +1821,8 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
             contextual_response = gemini_service.generate_bot_response(
                 user_message=message_text,
                 ai_prompt=ai_prompt,
-                content_context=content
+                content_context=content,
+                bot_id=bot_id
             )
             
 
@@ -1836,7 +1846,8 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
                     contextual_response = gemini_service.generate_bot_response(
                         user_message=f"User reflected: {message_text}",
                         ai_prompt=bot.ai_prompt,
-                        content_context=content
+                        content_context=content,
+                        bot_id=bot_id
                     )
                 except:
                     # Last resort fallback using bot language
