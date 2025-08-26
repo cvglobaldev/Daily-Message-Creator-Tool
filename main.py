@@ -609,13 +609,27 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         # Enhanced contextual routing based on user's journey stage
         user = db_manager.get_user_by_phone(phone_number)
-        if user and user.current_day > 1:
-            # Users beyond Day 1 should always get contextual responses based on their current content
-            logger.info(f"User {phone_number} (Day {user.current_day}) sending message, providing contextual response based on current journey")
-            handle_contextual_conversation(phone_number, message_text, platform, bot_id)
+        if user:
+            # Check if user has completed their journey
+            from models import Bot
+            bot = Bot.query.get(user.bot_id)
+            journey_duration = bot.journey_duration_days if bot else 30
+            
+            if user.current_day > journey_duration:
+                # Users who have completed their journey get specialized graduated user handling
+                logger.info(f"User {phone_number} (Day {user.current_day}/{journey_duration}) completed journey, using graduated user handler")
+                handle_graduated_user_conversation(phone_number, message_text, platform, bot_id)
+            elif user.current_day > 1:
+                # Users beyond Day 1 should always get contextual responses based on their current content
+                logger.info(f"User {phone_number} (Day {user.current_day}) sending message, providing contextual response based on current journey")
+                handle_contextual_conversation(phone_number, message_text, platform, bot_id)
+            else:
+                # Day 1 users get general conversation
+                logger.info(f"User {phone_number} (Day 1) routing to general conversation")
+                handle_general_conversation(phone_number, message_text, platform, bot_id)
         else:
-            # Day 1 users or new users get general conversation
-            logger.info(f"User {phone_number} (Day 1 or new) routing to general conversation")
+            # New users get general conversation
+            logger.info(f"User {phone_number} (new) routing to general conversation")
             handle_general_conversation(phone_number, message_text, platform, bot_id)
         
     except Exception as e:
@@ -1753,6 +1767,158 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
             send_message_to_platform(phone_number, platform, fallback_message, bot_id=bot_id)
         except:
             logger.error(f"Failed to send fallback message to {phone_number}")
+
+def handle_graduated_user_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+    """Handle conversation for users who have completed their journey - always provide AI response + human connection offer"""
+    try:
+        # Analyze the response with Gemini
+        analysis = gemini_service.analyze_response(message_text)
+        
+        # Get or create user with bot_id
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
+        # Update existing user to use correct bot_id if different
+        elif user.bot_id != bot_id:
+            db_manager.update_user_bot_id(phone_number, bot_id)
+            user.bot_id = bot_id
+
+        # Log the user's message
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='incoming',
+                raw_text=message_text,
+                sentiment=analysis['sentiment'],
+                tags=analysis['tags'],
+                confidence=analysis.get('confidence')
+            )
+        
+        # Check if message is related to Christianity/spiritual topics
+        is_spiritual_topic = _is_spiritual_or_christian_topic(message_text, analysis)
+        
+        # Generate AI response for graduated users
+        try:
+            # Get the bot's configuration for AI prompt
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            
+            if is_spiritual_topic:
+                # Spiritual topics get comprehensive AI response
+                ai_prompt = bot.ai_prompt if bot else "You are a helpful spiritual guide chatbot."
+                
+                # Add context for graduated users
+                graduated_context = """
+IMPORTANT: This user has completed their spiritual journey program and is now seeking ongoing spiritual guidance. 
+- They have already gone through the full content series
+- Provide thoughtful, mature spiritual responses
+- You can reference concepts they've learned during their journey
+- Encourage continued spiritual growth and exploration
+- Be available for deeper theological discussions
+"""
+                enhanced_prompt = ai_prompt + graduated_context
+                
+                logger.info(f"Generating graduated user response for spiritual topic from {phone_number}")
+                
+                contextual_response = gemini_service.generate_bot_response(
+                    user_message=message_text,
+                    ai_prompt=enhanced_prompt,
+                    content_context=None,  # No specific daily content for graduated users
+                    bot_id=bot_id
+                )
+            else:
+                # Non-spiritual topics get brief acknowledgment
+                if bot and bot.name and "indonesia" in bot.name.lower():
+                    contextual_response = "Terima kasih sudah berbagi. Saya Bang Kris di sini jika Anda ingin membahas topik spiritual atau ada pertanyaan tentang Isa Al-Masih."
+                else:
+                    contextual_response = "Thank you for sharing. I'm here if you'd like to discuss spiritual topics or have questions about Jesus Christ."
+                
+        except Exception as ai_error:
+            logger.error(f"Failed to generate graduated user AI response for {phone_number}: {ai_error}")
+            # Fallback response
+            contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
+        
+        # Send the AI response
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
+        
+        # Log the outgoing AI response
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=contextual_response,
+                sentiment='positive',
+                tags=['AI_RESPONSE', 'GRADUATED_USER']
+            )
+        
+        # Always offer human connection for graduated users (as follow-up message)
+        from models import Bot
+        bot = Bot.query.get(bot_id)
+        
+        if bot and bot.name and "indonesia" in bot.name.lower():
+            human_offer = ("🤝 Sebagai seseorang yang telah menyelesaikan perjalanan spiritual, "
+                          "apakah Anda ingin terhubung dengan konselor spiritual kami untuk "
+                          "diskusi yang lebih mendalam tentang Isa Al-Masih?")
+        else:
+            human_offer = ("🤝 As someone who has completed the spiritual journey, "
+                          "would you like to connect with our spiritual counselor for "
+                          "deeper discussions about Jesus Christ?")
+        
+        # Send human connection offer with buttons
+        send_message_with_buttons(phone_number, platform, human_offer, bot_id=bot_id)
+        
+        # Log the human connection offer
+        if user:
+            db_manager.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=human_offer,
+                sentiment='positive',
+                tags=['HUMAN_OFFER', 'GRADUATED_USER']
+            )
+            
+        logger.info(f"Processed graduated user message from {phone_number}: spiritual_topic={is_spiritual_topic}, sentiment={analysis['sentiment']}")
+        
+    except Exception as e:
+        logger.error(f"Error handling graduated user conversation from {phone_number}: {e}")
+        # Fallback message
+        try:
+            fallback_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
+            send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
+        except:
+            logger.error(f"Failed to send fallback message to graduated user {phone_number}")
+
+def _is_spiritual_or_christian_topic(message_text: str, analysis: dict) -> bool:
+    """Determine if a message is related to Christianity or spiritual topics"""
+    message_lower = message_text.lower()
+    
+    # Check analysis tags for spiritual content
+    spiritual_tags = ['Introduction to Jesus (ITJ)', 'Prayer', 'Bible Exposure', 'Christian Learning']
+    has_spiritual_tags = any(tag in analysis.get('tags', []) for tag in spiritual_tags)
+    
+    # Check for spiritual keywords
+    spiritual_keywords = [
+        # Christian/Jesus terms
+        'jesus', 'christ', 'isa', 'al-masih', 'god', 'allah', 'lord', 'savior',
+        'bible', 'scripture', 'gospel', 'church', 'faith', 'believe', 'salvation',
+        'prayer', 'pray', 'heaven', 'eternal', 'forgiveness', 'sin', 'grace',
+        'holy', 'spirit', 'cross', 'resurrection', 'disciple', 'christian',
+        
+        # Indonesian spiritual terms  
+        'tuhan', 'doa', 'iman', 'percaya', 'rohani', 'spiritual', 'keselamatan',
+        'pengampunan', 'dosa', 'kasih', 'injil', 'alkitab', 'gereja', 'kudus',
+        
+        # Question indicators about spirituality
+        'why did god', 'how can i', 'what does the bible', 'is it true that',
+        'kenapa allah', 'bagaimana cara', 'apa kata alkitab', 'apakah benar'
+    ]
+    
+    has_spiritual_keywords = any(keyword in message_lower for keyword in spiritual_keywords)
+    
+    # Consider it spiritual if it has spiritual tags OR keywords OR is longer than 20 chars (likely thoughtful)
+    is_spiritual = has_spiritual_tags or has_spiritual_keywords or (len(message_text.strip()) > 20 and any(word in message_lower for word in ['isa', 'jesus', 'god', 'allah', 'tuhan']))
+    
+    return is_spiritual
 
 def _should_offer_human_connection(message_text: str, analysis: dict) -> bool:
     """Determine if we should offer human connection based on message content and analysis"""
