@@ -550,6 +550,45 @@ def debug_whatsapp():
         logger.error(f"Error in debug endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
+def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: int = 30) -> bool:
+    """Check if this message is a duplicate within the time window"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Get recent messages from this user
+        user = db_manager.get_user_by_phone(phone_number)
+        if not user:
+            return False
+            
+        # Check for identical messages within the time window
+        cutoff_time = datetime.now() - timedelta(seconds=window_seconds)
+        
+        # Query recent incoming messages
+        from models import db
+        recent_messages = db.session.execute(
+            """SELECT raw_text, timestamp FROM message_logs 
+               WHERE user_id = :user_id 
+               AND direction = 'incoming' 
+               AND timestamp > :cutoff_time 
+               AND raw_text = :message_text
+               ORDER BY timestamp DESC LIMIT 1""",
+            {
+                'user_id': user.id,
+                'cutoff_time': cutoff_time,
+                'message_text': message_text
+            }
+        ).fetchone()
+        
+        if recent_messages:
+            logger.warning(f"🚫 Duplicate message detected from {phone_number}: '{message_text[:30]}...' within {window_seconds}s")
+            return True
+            
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error checking for duplicate message: {e}")
+        return False  # Default to processing the message if check fails
+
 def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Process incoming message from user"""
     try:
@@ -564,6 +603,11 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         elif platform == "telegram" and phone_number.startswith('+tg_'):
             # Remove incorrect '+' prefix from Telegram IDs
             phone_number = phone_number[1:]
+        
+        # **DUPLICATE MESSAGE PREVENTION** - Check for recent identical messages
+        if _is_duplicate_message(phone_number, message_text):
+            logger.info(f"⏭️ Ignoring duplicate message from {phone_number}: '{message_text[:30]}...'")
+            return
         
         message_lower = message_text.lower().strip()
         
