@@ -550,20 +550,42 @@ def debug_whatsapp():
         logger.error(f"Error in debug endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
-def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: int = 30) -> bool:
-    """Check if this message is a duplicate within the time window"""
+# Global cache for recent messages to handle concurrent processing
+_recent_messages_cache = {}
+
+def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: int = 60) -> bool:
+    """Enhanced duplicate detection with memory cache for concurrent processing"""
     try:
         from datetime import datetime, timedelta
+        import hashlib
         
-        # Get recent messages from this user
+        # Create a unique key for this message
+        message_key = f"{phone_number}:{hashlib.md5(message_text.encode()).hexdigest()}"
+        current_time = datetime.now()
+        
+        # Check memory cache first for immediate duplicates (handles concurrent processing)
+        if message_key in _recent_messages_cache:
+            cached_time = _recent_messages_cache[message_key]
+            time_diff = (current_time - cached_time).total_seconds()
+            if time_diff < window_seconds:
+                logger.warning(f"🚫 CONCURRENT duplicate detected from {phone_number}: '{message_text[:30]}...' (cached {time_diff:.1f}s ago)")
+                return True
+        
+        # Add current message to cache
+        _recent_messages_cache[message_key] = current_time
+        
+        # Clean up old cache entries (keep cache small)
+        cutoff_time = current_time - timedelta(seconds=window_seconds)
+        keys_to_remove = [k for k, v in _recent_messages_cache.items() if v < cutoff_time]
+        for key in keys_to_remove:
+            del _recent_messages_cache[key]
+        
+        # Check database for historical duplicates
         user = db_manager.get_user_by_phone(phone_number)
         if not user:
             return False
             
-        # Check for identical messages within the time window
-        cutoff_time = datetime.now() - timedelta(seconds=window_seconds)
-        
-        # Query recent incoming messages
+        # Query recent incoming messages in database
         from models import db
         recent_messages = db.session.execute(
             """SELECT raw_text, timestamp FROM message_logs 
@@ -580,7 +602,8 @@ def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: 
         ).fetchone()
         
         if recent_messages:
-            logger.warning(f"🚫 Duplicate message detected from {phone_number}: '{message_text[:30]}...' within {window_seconds}s")
+            time_diff = (current_time - recent_messages[1]).total_seconds()
+            logger.warning(f"🚫 DATABASE duplicate detected from {phone_number}: '{message_text[:30]}...' ({time_diff:.1f}s ago)")
             return True
             
         return False
