@@ -440,6 +440,12 @@ def whatsapp_webhook(bot_id=1):
                                 for message_data in value['messages']:
                                     phone_number = message_data.get('from', '')
                                     message_type = message_data.get('type', '')
+                                    whatsapp_message_id = message_data.get('id', '')  # Unique WhatsApp message ID
+                                    
+                                    # **WEBHOOK DEDUPLICATION** - Check WhatsApp message ID first
+                                    if whatsapp_message_id and _is_duplicate_webhook(whatsapp_message_id):
+                                        logger.info(f"🚫 Duplicate WhatsApp webhook ignored: {whatsapp_message_id} from {phone_number}")
+                                        continue
                                     
                                     message_text = ''
                                     if message_type == 'text':
@@ -553,6 +559,9 @@ def debug_whatsapp():
 # Global cache for recent messages to handle concurrent processing
 _recent_messages_cache = {}
 
+# Global cache for processed WhatsApp webhook message IDs
+_processed_webhook_ids = {}
+
 def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: int = 60) -> bool:
     """Enhanced duplicate detection with memory cache for concurrent processing"""
     try:
@@ -611,6 +620,36 @@ def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: 
     except Exception as e:
         logger.error(f"Error checking for duplicate message: {e}")
         return False  # Default to processing the message if check fails
+
+def _is_duplicate_webhook(whatsapp_message_id: str, window_seconds: int = 300) -> bool:
+    """Check if this WhatsApp message ID has already been processed"""
+    try:
+        from datetime import datetime, timedelta
+        
+        current_time = datetime.now()
+        
+        # Check if we've already processed this webhook message ID
+        if whatsapp_message_id in _processed_webhook_ids:
+            processed_time = _processed_webhook_ids[whatsapp_message_id]
+            time_diff = (current_time - processed_time).total_seconds()
+            if time_diff < window_seconds:
+                logger.warning(f"🚫 WEBHOOK duplicate detected: {whatsapp_message_id} (processed {time_diff:.1f}s ago)")
+                return True
+        
+        # Add this message ID to processed cache
+        _processed_webhook_ids[whatsapp_message_id] = current_time
+        
+        # Clean up old webhook IDs (keep cache manageable)
+        cutoff_time = current_time - timedelta(seconds=window_seconds)
+        ids_to_remove = [wid for wid, processed_time in _processed_webhook_ids.items() if processed_time < cutoff_time]
+        for wid in ids_to_remove:
+            del _processed_webhook_ids[wid]
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error checking for duplicate webhook: {e}")
+        return False  # Default to processing if check fails
 
 def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
     """Process incoming message from user"""
