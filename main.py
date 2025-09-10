@@ -1673,7 +1673,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
                 user_message=message_text,
                 ai_prompt=ai_prompt,
                 content_context=None,
-                bot_id=bot_id
+                bot_id=bot_id,
+                phone_number=phone_number
             )
             
             logger.info(f"Generated general conversation response for {phone_number} using bot AI prompt")
@@ -1693,12 +1694,13 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
                         user_message=message_text,
                         ai_prompt=bot.ai_prompt,
                         content_context=None,
-                        bot_id=bot_id
+                        bot_id=bot_id,
+                        phone_number=phone_number
                     )
                 except:
                     # Last resort fallback using bot language
                     if bot and bot.name and "indonesia" in bot.name.lower():
-                        contextual_response = "Terima kasih sudah mengirim pesan. Saya Bang Kris di sini untuk membantu Anda belajar tentang Isa Al-Masih. Ada yang ingin Anda tanyakan?"
+                        contextual_response = "Terima kasih sudah mengirim pesan. Ada yang ingin Anda tanyakan tentang Isa Al-Masih?"
                     else:
                         contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
             else:
@@ -1811,7 +1813,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 user_message=message_text,
                 ai_prompt=ai_prompt,
                 content_context=content,
-                bot_id=bot_id
+                bot_id=bot_id,
+                phone_number=phone_number
             )
             
             if content:
@@ -1835,12 +1838,13 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                         user_message=message_text,
                         ai_prompt=bot.ai_prompt,
                         content_context=content,
-                        bot_id=bot_id
+                        bot_id=bot_id,
+                        phone_number=phone_number
                     )
                 except:
                     # Last resort fallback with bot-specific language
                     if bot and bot.name and "indonesia" in bot.name.lower():
-                        contextual_response = "Terima kasih sudah berbagi. Saya Bang Kris di sini untuk membantu Anda dalam perjalanan spiritual ini. Ada yang ingin Anda tanyakan tentang materi hari ini?"
+                        contextual_response = "Terima kasih sudah berbagi. Ada yang ingin Anda tanyakan tentang materi hari ini?"
                     else:
                         contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
             else:
@@ -1930,12 +1934,13 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
                     user_message=message_text,
                     ai_prompt=enhanced_prompt,
                     content_context=None,  # No specific daily content for graduated users
-                    bot_id=bot_id
+                    bot_id=bot_id,
+                    phone_number=phone_number
                 )
             else:
                 # Non-spiritual topics get brief acknowledgment
                 if bot and bot.name and "indonesia" in bot.name.lower():
-                    contextual_response = "Terima kasih sudah berbagi. Saya Bang Kris di sini jika Anda ingin membahas topik spiritual atau ada pertanyaan tentang Isa Al-Masih."
+                    contextual_response = "Terima kasih sudah berbagi. Jika Anda ingin membahas topik spiritual atau ada pertanyaan tentang Isa Al-Masih, saya siap membantu."
                 else:
                     contextual_response = "Thank you for sharing. I'm here if you'd like to discuss spiritual topics or have questions about Jesus Christ."
                 

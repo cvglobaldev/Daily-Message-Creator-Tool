@@ -912,27 +912,27 @@ class GeminiService:
                         
                         if any(word in message_lower for word in ["terima kasih", "makasih", "thanks"]):
                             responses = [
-                                "Sama-sama! Saya Bang Kris di sini untuk membantu Anda memahami lebih dalam tentang Isa Al-Masih. Ada yang ingin Anda tanyakan?",
+                                "Sama-sama! Ada yang ingin Anda tanyakan lebih lanjut?",
                                 "Alhamdulillah, senang bisa membantu. Bagaimana perasaan Anda setelah merenungkan materi hari ini?",
                                 "Dengan senang hati! Mari kita lanjutkan perjalanan spiritual ini bersama. Apa yang paling menarik perhatian Anda?"
                             ]
                         elif any(word in message_lower for word in ["bingung", "tidak mengerti", "confused"]):
                             responses = [
-                                "Wajar sekali jika ada kebingungan, ini adalah perjalanan spiritual yang mendalam. Saya Bang Kris di sini untuk membantu menjawab pertanyaan Anda tentang Isa Al-Masih.",
+                                "Wajar sekali jika ada kebingungan, ini adalah perjalanan spiritual yang mendalam. Mari kita bahas bagian yang membuat Anda penasaran?",
                                 "Tidak apa-apa merasa bingung, itu tandanya Anda benar-benar merenungkan hal ini. Coba ceritakan bagian mana yang membuat Anda penasaran?",
                                 "Kebingungan adalah bagian normal dari pencarian spiritual. Mari kita bahas bersama-sama, apa yang ingin Anda pahami lebih lanjut?"
                             ]
                         elif any(word in message_lower for word in ["setuju", "iya", "benar", "yes"]):
                             responses = [
                                 "Subhanallah, senang mendengar refleksi Anda! Apa yang paling berkesan dari pembahasan kita hari ini?",
-                                "Alhamdulillah, terima kasih sudah berbagi pemikiran Anda. Saya Bang Kris senang bisa berdiskusi dengan Anda.",
+                                "Alhamdulillah, terima kasih sudah berbagi pemikiran Anda. Senang bisa berdiskusi dengan Anda.",
                                 "Wah, bagus sekali! Mari kita terus menggali lebih dalam tentang Isa Al-Masih. Ada pertanyaan lain yang muncul?"
                             ]
                         else:
                             responses = [
-                                "Terima kasih sudah berbagi. Saya Bang Kris di sini untuk membantu Anda dalam perjalanan spiritual ini. Ada yang ingin Anda tanyakan?",
+                                "Terima kasih sudah berbagi. Ada yang ingin Anda tanyakan tentang perjalanan spiritual ini?",
                                 "Alhamdulillah, senang bisa ngobrol dengan Anda. Bagaimana perasaan Anda tentang materi yang kita bahas hari ini?",
-                                "Subhanallah, pemikiran Anda sangat menarik. Saya Bang Kris siap membantu menjawab pertanyaan Anda tentang Isa Al-Masih.",
+                                "Subhanallah, pemikiran Anda sangat menarik. Ada yang ingin Anda dalami lebih lanjut?",
                                 "Terima kasih sudah meluangkan waktu untuk merenungkan hal ini. Apa yang paling membuat Anda tertarik dari pembahasan kita?"
                             ]
                         
