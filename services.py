@@ -980,7 +980,58 @@ class GeminiService:
             # Final fallback
             return "Thank you for your message. I'm here to help you on your spiritual journey."
     
-    def generate_bot_response(self, user_message: str, ai_prompt: str, content_context=None, bot_id: int = None) -> str:
+    def _get_user_conversation_context(self, phone_number: str) -> dict:
+        """Get conversation context for a user to avoid repetitive greetings"""
+        try:
+            from models import db
+            from datetime import datetime, timedelta
+            
+            # Get user and message count
+            user = db.session.execute(
+                "SELECT id, current_day, created_at FROM users WHERE phone_number = :phone",
+                {'phone': phone_number}
+            ).fetchone()
+            
+            if not user:
+                return {'is_new_user': True, 'message_count': 0, 'relationship_type': 'new'}
+            
+            # Get conversation metrics
+            conversation_stats = db.session.execute(
+                """SELECT 
+                    COUNT(*) as message_count,
+                    MIN(timestamp) as first_message,
+                    MAX(timestamp) as last_message
+                   FROM message_logs 
+                   WHERE user_id = :user_id AND direction = 'incoming'""",
+                {'user_id': user[0]}
+            ).fetchone()
+            
+            message_count = conversation_stats[0] if conversation_stats else 0
+            account_age_days = (datetime.now() - user[2]).days if user[2] else 0
+            
+            # Determine relationship type
+            if message_count == 0:
+                relationship_type = 'new'
+            elif message_count < 3:
+                relationship_type = 'getting_acquainted'  
+            elif account_age_days < 2:
+                relationship_type = 'recent'
+            else:
+                relationship_type = 'ongoing'
+                
+            return {
+                'is_new_user': message_count == 0,
+                'message_count': message_count,
+                'current_day': user[1],
+                'account_age_days': account_age_days,
+                'relationship_type': relationship_type
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting conversation context: {e}")
+            return {'is_new_user': True, 'message_count': 0, 'relationship_type': 'new'}
+
+    def generate_bot_response(self, user_message: str, ai_prompt: str, content_context=None, bot_id: int = None, phone_number: str = None) -> str:
         """Generate a bot-specific response using the bot's AI prompt and optional content context"""
         try:
             if not self.client:
@@ -989,6 +1040,28 @@ class GeminiService:
             
             # Build the context-aware prompt
             system_instruction = ai_prompt
+            
+            # Add conversation history context to avoid repetitive greetings
+            if phone_number:
+                conv_context = self._get_user_conversation_context(phone_number)
+                
+                if conv_context['relationship_type'] != 'new':
+                    conversation_context = f"""
+
+CONVERSATION HISTORY CONTEXT:
+- Relationship: {conv_context['relationship_type']} conversation ({conv_context['message_count']} previous messages)
+- User Journey Day: {conv_context['current_day']}
+- Account Age: {conv_context['account_age_days']} days
+
+IMPORTANT CONVERSATION GUIDELINES:
+- This is an ONGOING conversation, not a first meeting
+- Do NOT include greetings, introductions, or "I am [name]" statements
+- Do NOT say "I'm here to help you learn about..." - they already know
+- Respond naturally as if continuing an existing dialogue
+- Focus directly on their message content and spiritual growth
+- Use conversational tone appropriate for an established relationship
+"""
+                    system_instruction += conversation_context
             
             # Add content context if available
             if content_context:
