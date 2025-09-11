@@ -232,9 +232,9 @@ class UniversalMediaPreventionSystem:
             # Generate bot-specific unique filename with UUID
             unique_id = str(uuid.uuid4())
             if ext:
-                return f"{unique_id}_{name}.{ext}"
+                return f"bot{bot_id}_{unique_id}_{name}.{ext}"
             else:
-                return f"{unique_id}_{name}"
+                return f"bot{bot_id}_{unique_id}_{name}"
                 
         except Exception as e:
             logger.error(f"Filename generation failed: {e}")

@@ -148,8 +148,7 @@ class MediaIntegrityService:
             Repair statistics
         """
         try:
-            from models import Content
-            from app import db
+            from models import Content, db
             
             repair_stats = {
                 'content_items_checked': 0,
