@@ -141,6 +141,11 @@
                                                     </div>
                                                 </div>
                                                 <input type="hidden" name="selected_image" id="selectedImageFile">
+                                                <!-- Preview area for selected image -->
+                                                <div id="selectedImagePreview" class="mt-3" style="display: none;">
+                                                    <small class="text-muted">Selected image:</small><br>
+                                                    <img id="selectedImagePreviewImg" class="img-thumbnail mt-2" style="max-width: 300px; max-height: 200px;">
+                                                </div>
                                             </div>
                                         </div>
 
@@ -206,6 +211,13 @@
                                                     </div>
                                                 </div>
                                                 <input type="hidden" name="selected_video" id="selectedVideoFile">
+                                                <!-- Preview area for selected video -->
+                                                <div id="selectedVideoPreview" class="mt-3" style="display: none;">
+                                                    <small class="text-muted">Selected video:</small><br>
+                                                    <video id="selectedVideoPreviewVid" controls class="mt-2" style="max-width: 400px; width: 100%; border-radius: 0.375rem;">
+                                                        Your browser does not support the video element.
+                                                    </video>
+                                                </div>
                                             </div>
                                             
                                             <!-- YouTube URL Tab -->
@@ -294,6 +306,13 @@
                                                     </div>
                                                 </div>
                                                 <input type="hidden" name="selected_audio" id="selectedAudioFile">
+                                                <!-- Preview area for selected audio -->
+                                                <div id="selectedAudioPreview" class="mt-3" style="display: none;">
+                                                    <small class="text-muted">Selected audio:</small><br>
+                                                    <audio id="selectedAudioPreviewAud" controls class="mt-2" style="max-width: 400px; width: 100%;">
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -513,26 +532,44 @@
         const chooseExistingVideoTab = document.getElementById('choose-existing-video-tab');
         const chooseExistingAudioTab = document.getElementById('choose-existing-audio-tab');
         
+        // Prevent duplicate loading with a simple guard
+        const loadingStates = new Set();
+        
+        function guardedLoadMediaFiles(mediaType) {
+            const key = `loading-${mediaType}`;
+            if (loadingStates.has(key)) {
+                console.log(`${mediaType} files already loading, skipping duplicate request`);
+                return;
+            }
+            loadingStates.add(key);
+            loadMediaFiles(mediaType).finally(() => {
+                loadingStates.delete(key);
+            });
+        }
+        
         if (chooseExistingImageTab) {
-            chooseExistingImageTab.addEventListener('shown.bs.tab', function() {
-                loadMediaFiles('image');
+            chooseExistingImageTab.addEventListener('shown.bs.tab', function(e) {
+                console.log('Image tab shown, loading files...');
+                setTimeout(() => guardedLoadMediaFiles('image'), 100);
             });
         }
         
         if (chooseExistingVideoTab) {
-            chooseExistingVideoTab.addEventListener('shown.bs.tab', function() {
-                loadMediaFiles('video');
+            chooseExistingVideoTab.addEventListener('shown.bs.tab', function(e) {
+                console.log('Video tab shown, loading files...');
+                setTimeout(() => guardedLoadMediaFiles('video'), 100);
             });
         }
         
         if (chooseExistingAudioTab) {
-            chooseExistingAudioTab.addEventListener('shown.bs.tab', function() {
-                loadMediaFiles('audio');
+            chooseExistingAudioTab.addEventListener('shown.bs.tab', function(e) {
+                console.log('Audio tab shown, loading files...');
+                setTimeout(() => guardedLoadMediaFiles('audio'), 100);
             });
         }
     });
 
-    // Load media files function
+    // Load media files function  
     async function loadMediaFiles(mediaType) {
         const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
                            mediaType === 'video' ? 'existingVideosContainer' : 'existingAudioContainer';
@@ -553,97 +590,197 @@
             const data = await response.json();
             
             if (data.success && data.files && data.files.length > 0) {
-                let html = '<div class="row g-2">';
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'row g-2';
                 
                 data.files.forEach(file => {
                     const isSelected = false; // Could check against current file
                     const cardClass = isSelected ? 'border-primary' : '';
                     
                     if (mediaType === 'image') {
-                        html += `
-                            <div class="col-md-4 col-sm-6">
-                                <div class="card ${cardClass} media-file-card" 
-                                     style="cursor: pointer;" 
-                                     onclick="selectMediaFile('${file.filename}', '${mediaType}', this)">
-                                    <img src="${file.url}" class="card-img-top" style="height: 120px; object-fit: cover;">
-                                    <div class="card-body p-2">
-                                        <small class="text-muted d-block text-truncate" title="${file.display_name}">
-                                            ${file.display_name}
-                                        </small>
-                                        <small class="text-muted">
-                                            ${file.size_display} • ${file.modified_display}
-                                        </small>
-                                        ${file.bot_id ? `<span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        const colDiv = document.createElement('div');
+                        colDiv.className = 'col-md-4 col-sm-6';
+                        
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = `card ${cardClass} media-file-card`;
+                        cardDiv.style.cursor = 'pointer';
+                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
+                        
+                        const img = document.createElement('img');
+                        img.src = file.url;
+                        img.className = 'card-img-top';
+                        img.style.height = '120px';
+                        img.style.objectFit = 'cover';
+                        
+                        const cardBody = document.createElement('div');
+                        cardBody.className = 'card-body p-2';
+                        
+                        const titleSmall = document.createElement('small');
+                        titleSmall.className = 'text-muted d-block text-truncate';
+                        titleSmall.title = file.display_name;
+                        titleSmall.textContent = file.display_name; // Safe text content
+                        
+                        const metaSmall = document.createElement('small');
+                        metaSmall.className = 'text-muted';
+                        metaSmall.textContent = `${file.size_display} • ${file.modified_display}`;
+                        
+                        cardBody.appendChild(titleSmall);
+                        cardBody.appendChild(metaSmall);
+                        
+                        if (file.bot_id) {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-secondary';
+                            badge.textContent = `Bot ${file.bot_id}`;
+                            cardBody.appendChild(badge);
+                        }
+                        
+                        cardDiv.appendChild(img);
+                        cardDiv.appendChild(cardBody);
+                        colDiv.appendChild(cardDiv);
+                        rowDiv.appendChild(colDiv);
+                        
                     } else if (mediaType === 'video') {
-                        html += `
-                            <div class="col-md-6">
-                                <div class="card ${cardClass} media-file-card" 
-                                     style="cursor: pointer;" 
-                                     onclick="selectMediaFile('${file.filename}', '${mediaType}', this)">
-                                    <div class="card-body p-3">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <div class="me-3">
-                                                <i class="fas fa-file-video fa-2x text-danger"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold text-truncate" title="${file.display_name}">
-                                                    ${file.display_name}
-                                                </div>
-                                                <small class="text-muted">
-                                                    ${file.size_display} • ${file.modified_display}
-                                                </small>
-                                                ${file.bot_id ? `<br><span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            <video controls style="width: 100%; max-width: 300px; border-radius: 0.375rem;" preload="none">
-                                                <source src="${file.url}" type="video/mp4">
-                                                Your browser does not support the video element.
-                                            </video>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        const colDiv = document.createElement('div');
+                        colDiv.className = 'col-md-6';
+                        
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = `card ${cardClass} media-file-card`;
+                        cardDiv.style.cursor = 'pointer';
+                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
+                        
+                        const cardBody = document.createElement('div');
+                        cardBody.className = 'card-body p-3';
+                        
+                        const flexDiv = document.createElement('div');
+                        flexDiv.className = 'd-flex align-items-center mb-2';
+                        
+                        const iconDiv = document.createElement('div');
+                        iconDiv.className = 'me-3';
+                        iconDiv.innerHTML = '<i class="fas fa-file-video fa-2x text-danger"></i>';
+                        
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'flex-grow-1';
+                        
+                        const titleDiv = document.createElement('div');
+                        titleDiv.className = 'fw-bold text-truncate';
+                        titleDiv.title = file.display_name;
+                        titleDiv.textContent = file.display_name;
+                        
+                        const metaSmall = document.createElement('small');
+                        metaSmall.className = 'text-muted';
+                        metaSmall.textContent = `${file.size_display} • ${file.modified_display}`;
+                        
+                        contentDiv.appendChild(titleDiv);
+                        contentDiv.appendChild(metaSmall);
+                        
+                        if (file.bot_id) {
+                            const br = document.createElement('br');
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-secondary';
+                            badge.textContent = `Bot ${file.bot_id}`;
+                            contentDiv.appendChild(br);
+                            contentDiv.appendChild(badge);
+                        }
+                        
+                        flexDiv.appendChild(iconDiv);
+                        flexDiv.appendChild(contentDiv);
+                        
+                        const videoDiv = document.createElement('div');
+                        videoDiv.className = 'mt-2';
+                        
+                        const video = document.createElement('video');
+                        video.controls = true;
+                        video.style.width = '100%';
+                        video.style.maxWidth = '300px';
+                        video.style.borderRadius = '0.375rem';
+                        video.preload = 'none';
+                        
+                        const source = document.createElement('source');
+                        source.src = file.url;
+                        source.type = 'video/mp4';
+                        
+                        video.appendChild(source);
+                        video.appendChild(document.createTextNode('Your browser does not support the video element.'));
+                        videoDiv.appendChild(video);
+                        
+                        cardBody.appendChild(flexDiv);
+                        cardBody.appendChild(videoDiv);
+                        cardDiv.appendChild(cardBody);
+                        colDiv.appendChild(cardDiv);
+                        rowDiv.appendChild(colDiv);
+                        
                     } else if (mediaType === 'audio') {
-                        html += `
-                            <div class="col-md-6">
-                                <div class="card ${cardClass} media-file-card" 
-                                     style="cursor: pointer;" 
-                                     onclick="selectMediaFile('${file.filename}', '${mediaType}', this)">
-                                    <div class="card-body p-3">
-                                        <div class="d-flex align-items-center">
-                                            <div class="me-3">
-                                                <i class="fas fa-file-audio fa-2x text-warning"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold text-truncate" title="${file.display_name}">
-                                                    ${file.display_name}
-                                                </div>
-                                                <small class="text-muted">
-                                                    ${file.size_display} • ${file.modified_display}
-                                                </small>
-                                                ${file.bot_id ? `<br><span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            <audio controls style="width: 100%; max-width: 300px;" preload="none">
-                                                <source src="${file.url}" type="audio/mpeg">
-                                            </audio>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        const colDiv = document.createElement('div');
+                        colDiv.className = 'col-md-6';
+                        
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = `card ${cardClass} media-file-card`;
+                        cardDiv.style.cursor = 'pointer';
+                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
+                        
+                        const cardBody = document.createElement('div');
+                        cardBody.className = 'card-body p-3';
+                        
+                        const flexDiv = document.createElement('div');
+                        flexDiv.className = 'd-flex align-items-center';
+                        
+                        const iconDiv = document.createElement('div');
+                        iconDiv.className = 'me-3';
+                        iconDiv.innerHTML = '<i class="fas fa-file-audio fa-2x text-warning"></i>';
+                        
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'flex-grow-1';
+                        
+                        const titleDiv = document.createElement('div');
+                        titleDiv.className = 'fw-bold text-truncate';
+                        titleDiv.title = file.display_name;
+                        titleDiv.textContent = file.display_name;
+                        
+                        const metaSmall = document.createElement('small');
+                        metaSmall.className = 'text-muted';
+                        metaSmall.textContent = `${file.size_display} • ${file.modified_display}`;
+                        
+                        contentDiv.appendChild(titleDiv);
+                        contentDiv.appendChild(metaSmall);
+                        
+                        if (file.bot_id) {
+                            const br = document.createElement('br');
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-secondary';
+                            badge.textContent = `Bot ${file.bot_id}`;
+                            contentDiv.appendChild(br);
+                            contentDiv.appendChild(badge);
+                        }
+                        
+                        flexDiv.appendChild(iconDiv);
+                        flexDiv.appendChild(contentDiv);
+                        
+                        const audioDiv = document.createElement('div');
+                        audioDiv.className = 'mt-2';
+                        
+                        const audio = document.createElement('audio');
+                        audio.controls = true;
+                        audio.style.width = '100%';
+                        audio.style.maxWidth = '300px';
+                        audio.preload = 'none';
+                        
+                        const source = document.createElement('source');
+                        source.src = file.url;
+                        source.type = 'audio/mpeg';
+                        
+                        audio.appendChild(source);
+                        audioDiv.appendChild(audio);
+                        
+                        cardBody.appendChild(flexDiv);
+                        cardBody.appendChild(audioDiv);
+                        cardDiv.appendChild(cardBody);
+                        colDiv.appendChild(cardDiv);
+                        rowDiv.appendChild(colDiv);
                     }
                 });
                 
-                html += '</div>';
-                container.innerHTML = html;
+                container.innerHTML = '';
+                container.appendChild(rowDiv);
             } else {
                 container.innerHTML = `
                     <div class="text-center text-muted py-4">
@@ -666,9 +803,10 @@
     }
 
     // Select media file function
-    function selectMediaFile(filename, mediaType, element) {
-        // Remove selection from other cards
-        const cards = element.closest('.row').querySelectorAll('.media-file-card');
+    function selectMediaFile(filename, mediaType, element, fileUrl) {
+        // Remove selection from other cards in this container
+        const container = element.closest('.row') || element.parentElement;
+        const cards = container.querySelectorAll('.media-file-card');
         cards.forEach(card => {
             card.classList.remove('border-primary', 'border-2');
         });
@@ -684,12 +822,70 @@
             hiddenInput.value = filename;
         }
         
+        // Show preview of selected media using the file URL directly
+        showSelectedMediaPreview(fileUrl || filename, mediaType);
+        
         // Clear file input since we're using existing file
         const fileInputId = mediaType === 'image' ? 'image_file' : 
                           mediaType === 'video' ? 'video_file' : 'audio_file';
         const fileInput = document.getElementById(fileInputId);
         if (fileInput) {
             fileInput.value = '';
+        }
+    }
+    
+    // Show preview of selected media
+    function showSelectedMediaPreview(mediaUrl, mediaType) {
+        // Validate and sanitize the URL for security
+        if (!mediaUrl) return;
+        
+        // Use provided URL or construct one if needed
+        if (!mediaUrl.startsWith('/') && !mediaUrl.startsWith('http')) {
+            mediaUrl = `/static/uploads/${mediaType === 'image' ? 'images' : mediaType === 'video' ? 'videos' : 'audio'}/${encodeURIComponent(mediaUrl)}`;
+        }
+        
+        // Basic same-origin validation - only allow our static uploads
+        if (!mediaUrl.startsWith('/static/uploads/')) {
+            console.error('Invalid media URL - must be from /static/uploads/');
+            return;
+        }
+        
+        if (mediaType === 'image') {
+            const previewDiv = document.getElementById('selectedImagePreview');
+            const previewImg = document.getElementById('selectedImagePreviewImg');
+            if (previewDiv && previewImg) {
+                previewImg.src = mediaUrl;
+                previewDiv.style.display = 'block';
+            }
+            // Hide other previews
+            const videoPreview = document.getElementById('selectedVideoPreview');
+            const audioPreview = document.getElementById('selectedAudioPreview');
+            if (videoPreview) videoPreview.style.display = 'none';
+            if (audioPreview) audioPreview.style.display = 'none';
+        } else if (mediaType === 'video') {
+            const previewDiv = document.getElementById('selectedVideoPreview');
+            const previewVid = document.getElementById('selectedVideoPreviewVid');
+            if (previewDiv && previewVid) {
+                previewVid.src = mediaUrl;
+                previewDiv.style.display = 'block';
+            }
+            // Hide other previews
+            const imagePreview = document.getElementById('selectedImagePreview');
+            const audioPreview = document.getElementById('selectedAudioPreview');
+            if (imagePreview) imagePreview.style.display = 'none';
+            if (audioPreview) audioPreview.style.display = 'none';
+        } else if (mediaType === 'audio') {
+            const previewDiv = document.getElementById('selectedAudioPreview');
+            const previewAud = document.getElementById('selectedAudioPreviewAud');
+            if (previewDiv && previewAud) {
+                previewAud.src = mediaUrl;
+                previewDiv.style.display = 'block';
+            }
+            // Hide other previews
+            const imagePreview = document.getElementById('selectedImagePreview');
+            const videoPreview = document.getElementById('selectedVideoPreview');
+            if (imagePreview) imagePreview.style.display = 'none';
+            if (videoPreview) videoPreview.style.display = 'none';
         }
     }
 
