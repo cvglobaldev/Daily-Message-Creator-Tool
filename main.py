@@ -19,6 +19,7 @@ import uuid
 import signal
 from location_utils import extract_telegram_user_data, get_ip_location_data
 from universal_media_prevention_system import validate_and_upload_with_prevention
+from media_file_browser import MediaFileBrowser
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,9 +27,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "faith-journey-secret-key")
+app.secret_key = os.environ.get("SESSION_SECRET")
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max file size for videos
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size for videos
 
 # Production middleware configuration
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Needed for url_for to generate with https
@@ -3767,7 +3768,10 @@ def edit_user(user_id):
 def cms_create_content():
     """Handle CMS content creation with file uploads"""
     try:
-        # Handle file uploads first
+        # Get bot_id from form data (defaults to 1 for backward compatibility)
+        bot_id = int(request.form.get('bot_id', 1))
+        
+        # Handle file uploads using the proper validation system with bot isolation
         image_filename = None
         video_filename = None
         audio_filename = None
@@ -3776,37 +3780,37 @@ def cms_create_content():
         if 'image_file' in request.files:
             image_file = request.files['image_file']
             if image_file and image_file.filename:
-                filename = secure_filename(image_file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                image_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'images')
-                os.makedirs(image_dir, exist_ok=True)
-                image_file.save(os.path.join(image_dir, unique_filename))
-                image_filename = unique_filename
-                logger.info(f"Image uploaded for content: {unique_filename}")
+                upload_result = validate_and_upload_with_prevention(image_file, 'image', bot_id)
+                if upload_result['success']:
+                    image_filename = upload_result['filename']
+                    logger.info(f"✅ Image uploaded for new content bot {bot_id}: {image_filename}")
+                else:
+                    logger.error(f"❌ Image upload failed: {upload_result['errors']}")
+                    return jsonify({'success': False, 'error': f"Image upload failed: {', '.join(upload_result['errors'])}"}), 400
         
         # Process video upload
         if 'video_file' in request.files:
             video_file = request.files['video_file']
             if video_file and video_file.filename:
-                filename = secure_filename(video_file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                video_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
-                os.makedirs(video_dir, exist_ok=True)
-                video_file.save(os.path.join(video_dir, unique_filename))
-                video_filename = unique_filename
-                logger.info(f"Video uploaded for content: {unique_filename}")
+                upload_result = validate_and_upload_with_prevention(video_file, 'video', bot_id)
+                if upload_result['success']:
+                    video_filename = upload_result['filename']
+                    logger.info(f"✅ Video uploaded for new content bot {bot_id}: {video_filename}")
+                else:
+                    logger.error(f"❌ Video upload failed: {upload_result['errors']}")
+                    return jsonify({'success': False, 'error': f"Video upload failed: {', '.join(upload_result['errors'])}"}), 400
         
         # Process audio upload
         if 'audio_file' in request.files:
             audio_file = request.files['audio_file']
             if audio_file and audio_file.filename:
-                filename = secure_filename(audio_file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                audio_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'audio')
-                os.makedirs(audio_dir, exist_ok=True)
-                audio_file.save(os.path.join(audio_dir, unique_filename))
-                audio_filename = unique_filename
-                logger.info(f"Audio uploaded for content: {unique_filename}")
+                upload_result = validate_and_upload_with_prevention(audio_file, 'audio', bot_id)
+                if upload_result['success']:
+                    audio_filename = upload_result['filename']
+                    logger.info(f"✅ Audio uploaded for new content bot {bot_id}: {audio_filename}")
+                else:
+                    logger.error(f"❌ Audio upload failed: {upload_result['errors']}")
+                    return jsonify({'success': False, 'error': f"Audio upload failed: {', '.join(upload_result['errors'])}"}), 400
         
         # Parse form data
         day_number = int(request.form.get('day_number'))
@@ -4053,6 +4057,7 @@ def cms_content_create():
     if form.validate_on_submit():
         # Handle file uploads
         image_filename = None
+        video_filename = None
         audio_filename = None
         youtube_url = None
         
@@ -4114,8 +4119,39 @@ def cms_content_create():
                     logger.error(f"❌ New content audio upload failed: {upload_result['errors']}")
                     flash(f"Audio upload failed: {'; '.join(upload_result['errors'])}", 'danger')
         
-        if form.media_type.data == 'video' and form.youtube_url.data:
-            youtube_url = form.youtube_url.data.strip()
+        if form.media_type.data == 'video':
+            # Check if using existing video file, uploading new, or using YouTube URL
+            existing_video = request.form.get('existing_video_file')
+            if existing_video:
+                # Use existing video file
+                from media_file_browser import validate_media_file_exists
+                if validate_media_file_exists(existing_video, 'video'):
+                    video_filename = existing_video
+                    logger.info(f"✅ Using existing video file: {video_filename}")
+                else:
+                    logger.error(f"❌ Selected existing video file not found: {existing_video}")
+                    flash("Selected video file not found. Please choose another or upload new.", 'danger')
+            elif 'video_file' in request.files and request.files['video_file'].filename:
+                # Upload new video file
+                video_file = request.files['video_file']
+                bot_id = getattr(form, 'bot_id', None)
+                if hasattr(form.bot_id, 'data'):
+                    bot_id = form.bot_id.data
+                
+                # Use universal prevention system for upload validation
+                from universal_media_prevention_system import validate_and_upload_with_prevention
+                upload_result = validate_and_upload_with_prevention(video_file, 'video', bot_id or 1)
+                
+                if upload_result['success']:
+                    video_filename = upload_result['filename']
+                    logger.info(f"✅ New content video upload successful: {video_filename}")
+                else:
+                    logger.error(f"❌ New content video upload failed: {upload_result['errors']}")
+                    flash(f"Video upload failed: {'; '.join(upload_result['errors'])}", 'danger')
+            elif form.youtube_url.data:
+                # Use YouTube URL
+                youtube_url = form.youtube_url.data.strip()
+                logger.info(f"✅ Using YouTube URL: {youtube_url}")
         
         # Process tags
         tags = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()] if form.tags.data else []

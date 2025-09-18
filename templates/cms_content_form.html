@@ -155,25 +155,84 @@
                                 </div>
                             </div>
 
-                            <!-- Video URL Section -->
+                            <!-- Video Upload Section -->
                             <div id="videoSection" class="mb-3" style="display: none;">
                                 <div class="card border-danger">
                                     <div class="card-header bg-danger">
-                                        <i class="fab fa-youtube me-2"></i>YouTube Video
+                                        <i class="fas fa-video me-2"></i>Video Content
                                     </div>
                                     <div class="card-body">
-                                        {{ form.youtube_url.label(class="form-label") }}
-                                        {{ form.youtube_url(class="form-control", placeholder="https://www.youtube.com/watch?v=VIDEO_ID") }}
-                                        <div class="form-text">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Enter the full YouTube URL. The video will be embedded in the message.
-                                        </div>
-                                        {% if form.youtube_url.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.youtube_url.errors[0] }}
+                                        <!-- Upload New File Tab -->
+                                        <ul class="nav nav-tabs mb-3" id="videoUploadTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="upload-new-video-tab" data-bs-toggle="tab" data-bs-target="#upload-new-video" type="button" role="tab">
+                                                    <i class="fas fa-upload me-1"></i>Upload New
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="choose-existing-video-tab" data-bs-toggle="tab" data-bs-target="#choose-existing-video" type="button" role="tab">
+                                                    <i class="fas fa-folder-open me-1"></i>Choose Existing
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="youtube-url-tab" data-bs-toggle="tab" data-bs-target="#youtube-url" type="button" role="tab">
+                                                    <i class="fab fa-youtube me-1"></i>YouTube URL
+                                                </button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content" id="videoUploadTabsContent">
+                                            <!-- Upload New Tab -->
+                                            <div class="tab-pane fade show active" id="upload-new-video" role="tabpanel">
+                                                <label for="video_file" class="form-label">Upload Video File</label>
+                                                <input type="file" class="form-control" name="video_file" id="video_file" accept="video/*">
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Supported formats: MP4, MOV, AVI (Max 100MB). Videos will be displayed in the message.
+                                                </div>
                                             </div>
-                                        {% endif %}
-                                        {% if content and content.youtube_url %}
+                                            
+                                            <!-- Choose Existing Tab -->
+                                            <div class="tab-pane fade" id="choose-existing-video" role="tabpanel">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <label class="form-label mb-0">Select from existing videos:</label>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="loadMediaFiles('video')">
+                                                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                                                    </button>
+                                                </div>
+                                                <div id="existingVideosContainer" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                                    <div class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading videos...
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" name="selected_video" id="selectedVideoFile">
+                                            </div>
+                                            
+                                            <!-- YouTube URL Tab -->
+                                            <div class="tab-pane fade" id="youtube-url" role="tabpanel">
+                                                {{ form.youtube_url.label(class="form-label") }}
+                                                {{ form.youtube_url(class="form-control", placeholder="https://www.youtube.com/watch?v=VIDEO_ID") }}
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Enter the full YouTube URL. The video will be embedded in the message.
+                                                </div>
+                                                {% if form.youtube_url.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.youtube_url.errors[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        {% if content and content.video_filename %}
+                                            <div class="mt-3">
+                                                <small class="text-muted">Current video:</small><br>
+                                                <video controls class="mt-2" style="max-width: 400px; width: 100%; border-radius: 0.375rem;">
+                                                    <source src="{{ url_for('uploaded_file', filename='videos/' + content.video_filename) }}" type="video/mp4">
+                                                    Your browser does not support the video element.
+                                                </video>
+                                            </div>
+                                        {% elif content and content.youtube_url %}
                                             <div class="mt-3">
                                                 <small class="text-muted">Current video:</small><br>
                                                 {% set video_id = content.youtube_url.split('v=')[1].split('&')[0] if 'v=' in content.youtube_url %}
@@ -424,6 +483,8 @@
             // Load media files when section becomes visible
             if (selectedType === 'image') {
                 setTimeout(() => loadMediaFiles('image'), 100);
+            } else if (selectedType === 'video') {
+                setTimeout(() => loadMediaFiles('video'), 100);
             } else if (selectedType === 'audio') {
                 setTimeout(() => loadMediaFiles('audio'), 100);
             }
@@ -450,7 +511,8 @@
 
     // Load media files function
     async function loadMediaFiles(mediaType) {
-        const containerId = mediaType === 'image' ? 'existingImagesContainer' : 'existingAudioContainer';
+        const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
+                           mediaType === 'video' ? 'existingVideosContainer' : 'existingAudioContainer';
         const container = document.getElementById(containerId);
         
         if (!container) return;
@@ -458,8 +520,13 @@
         // Show loading state
         container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading ' + mediaType + ' files...</div>';
         
+        // Get bot_id from the form if available
+        const botIdInput = document.querySelector('input[name="bot_id"]') || document.querySelector('select[name="bot_id"]');
+        const botId = botIdInput ? botIdInput.value : null;
+        
         try {
-            const response = await fetch(`/api/media/browse?media_type=${mediaType}`);
+            const url = `/api/media/browse?media_type=${mediaType}${botId ? '&bot_id=' + botId : ''}`;
+            const response = await fetch(url);
             const data = await response.json();
             
             if (data.success && data.files && data.files.length > 0) {
@@ -484,6 +551,37 @@
                                             ${file.size_display} • ${file.modified_display}
                                         </small>
                                         ${file.bot_id ? `<span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (mediaType === 'video') {
+                        html += `
+                            <div class="col-md-6">
+                                <div class="card ${cardClass} media-file-card" 
+                                     style="cursor: pointer;" 
+                                     onclick="selectMediaFile('${file.filename}', '${mediaType}', this)">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="me-3">
+                                                <i class="fas fa-file-video fa-2x text-danger"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold text-truncate" title="${file.display_name}">
+                                                    ${file.display_name}
+                                                </div>
+                                                <small class="text-muted">
+                                                    ${file.size_display} • ${file.modified_display}
+                                                </small>
+                                                ${file.bot_id ? `<br><span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <video controls style="width: 100%; max-width: 300px; border-radius: 0.375rem;" preload="none">
+                                                <source src="${file.url}" type="video/mp4">
+                                                Your browser does not support the video element.
+                                            </video>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -556,14 +654,16 @@
         element.classList.add('border-primary', 'border-2');
         
         // Set hidden input value
-        const inputId = mediaType === 'image' ? 'selectedImageFile' : 'selectedAudioFile';
+        const inputId = mediaType === 'image' ? 'selectedImageFile' : 
+                       mediaType === 'video' ? 'selectedVideoFile' : 'selectedAudioFile';
         const hiddenInput = document.getElementById(inputId);
         if (hiddenInput) {
             hiddenInput.value = filename;
         }
         
         // Clear file input since we're using existing file
-        const fileInputId = mediaType === 'image' ? 'image_file' : 'audio_file';
+        const fileInputId = mediaType === 'image' ? 'image_file' : 
+                          mediaType === 'video' ? 'video_file' : 'audio_file';
         const fileInput = document.getElementById(fileInputId);
         if (fileInput) {
             fileInput.value = '';
@@ -573,6 +673,7 @@
     // Handle form submission to include selected files
     document.getElementById('contentForm').addEventListener('submit', function(e) {
         const selectedImage = document.getElementById('selectedImageFile');
+        const selectedVideo = document.getElementById('selectedVideoFile');
         const selectedAudio = document.getElementById('selectedAudioFile');
         
         if (selectedImage && selectedImage.value) {
@@ -581,6 +682,15 @@
             input.type = 'hidden';
             input.name = 'existing_image_file';
             input.value = selectedImage.value;
+            this.appendChild(input);
+        }
+        
+        if (selectedVideo && selectedVideo.value) {
+            // Add selected video as hidden input
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'existing_video_file';
+            input.value = selectedVideo.value;
             this.appendChild(input);
         }
         
