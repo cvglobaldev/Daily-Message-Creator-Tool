@@ -543,8 +543,98 @@ Day 1 content will arrive in 10 seconds!`;
                     document.getElementById('reflectionQuestion').value = ''; // No reflection for greeting
                     document.getElementById('isActive').checked = greeting ? greeting.is_active : true;
                     
-                    // Set multimedia type to text for greeting
-                    document.getElementById('mediaType').value = 'text';
+                    // Set multimedia type from database (or default to text for new greeting)
+                    document.getElementById('mediaType').value = greeting ? (greeting.media_type || 'text') : 'text';
+                    
+                    // Handle existing media files for greeting
+                    if (greeting) {
+                        // Clear any previous file inputs and preview containers
+                        document.getElementById('imageFile').value = '';
+                        document.getElementById('videoFile').value = '';
+                        document.getElementById('audioFile').value = '';
+                        document.getElementById('imagePreview').innerHTML = '';
+                        document.getElementById('videoPreview').innerHTML = '';
+                        document.getElementById('audioPreview').innerHTML = '';
+                        
+                        // Show existing media if present - using secure DOM manipulation
+                        if (greeting.media_type === 'video' && greeting.video_filename) {
+                            const videoPreview = document.getElementById('videoPreview');
+                            const container = document.createElement('div');
+                            container.className = 'mt-2';
+                            
+                            const title = document.createElement('strong');
+                            title.textContent = '✓ Current video: ';
+                            const filename = document.createElement('span');
+                            filename.textContent = greeting.video_filename;
+                            
+                            const videoContainer = document.createElement('div');
+                            videoContainer.className = 'mt-2';
+                            const video = document.createElement('video');
+                            video.controls = true;
+                            video.style.cssText = 'max-width: 100%; max-height: 300px; border-radius: 0.375rem;';
+                            video.preload = 'none';
+                            const source = document.createElement('source');
+                            source.src = `/static/uploads/videos/${greeting.video_filename}`;
+                            source.type = 'video/mp4';
+                            video.appendChild(source);
+                            video.textContent = 'Your browser does not support the video element.';
+                            videoContainer.appendChild(video);
+                            
+                            container.appendChild(title);
+                            container.appendChild(filename);
+                            container.appendChild(videoContainer);
+                            videoPreview.appendChild(container);
+                        } else if (greeting.media_type === 'image' && greeting.image_filename) {
+                            const imagePreview = document.getElementById('imagePreview');
+                            const container = document.createElement('div');
+                            container.className = 'mt-2';
+                            
+                            const title = document.createElement('strong');
+                            title.textContent = '✓ Current image: ';
+                            const filename = document.createElement('span');
+                            filename.textContent = greeting.image_filename;
+                            
+                            const imageContainer = document.createElement('div');
+                            imageContainer.className = 'mt-2';
+                            const img = document.createElement('img');
+                            img.src = `/static/uploads/images/${greeting.image_filename}`;
+                            img.className = 'img-thumbnail';
+                            img.style.cssText = 'max-width: 100%; max-height: 300px;';
+                            imageContainer.appendChild(img);
+                            
+                            container.appendChild(title);
+                            container.appendChild(filename);
+                            container.appendChild(imageContainer);
+                            imagePreview.appendChild(container);
+                        } else if (greeting.media_type === 'audio' && greeting.audio_filename) {
+                            const audioPreview = document.getElementById('audioPreview');
+                            const container = document.createElement('div');
+                            container.className = 'mt-2';
+                            
+                            const title = document.createElement('strong');
+                            title.textContent = '✓ Current audio: ';
+                            const filename = document.createElement('span');
+                            filename.textContent = greeting.audio_filename;
+                            
+                            const audioContainer = document.createElement('div');
+                            audioContainer.className = 'mt-2';
+                            const audio = document.createElement('audio');
+                            audio.controls = true;
+                            audio.style.cssText = 'width: 100%; max-width: 400px;';
+                            audio.preload = 'none';
+                            const source = document.createElement('source');
+                            source.src = `/static/uploads/audio/${greeting.audio_filename}`;
+                            source.type = 'audio/mpeg';
+                            audio.appendChild(source);
+                            audio.textContent = 'Your browser does not support the audio element.';
+                            audioContainer.appendChild(audio);
+                            
+                            container.appendChild(title);
+                            container.appendChild(filename);
+                            container.appendChild(audioContainer);
+                            audioPreview.appendChild(container);
+                        }
+                    }
                     
                     // Set tags - greeting should have Introduction to Jesus tag
                     setSelectedTags(greeting ? greeting.tags : ['Introduction to Jesus (ITJ)']);
