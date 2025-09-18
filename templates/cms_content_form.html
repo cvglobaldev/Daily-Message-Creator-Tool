@@ -548,104 +548,112 @@
         }
         
         if (chooseExistingImageTab) {
+            console.log('✅ Image tab element found, attaching listener...');
             chooseExistingImageTab.addEventListener('shown.bs.tab', function(e) {
-                console.log('Image tab shown, loading files...');
+                console.log('🔄 Image tab shown event fired, loading files...');
                 setTimeout(() => guardedLoadMediaFiles('image'), 100);
             });
+        } else {
+            console.log('❌ Image tab element not found');
         }
         
         if (chooseExistingVideoTab) {
+            console.log('✅ Video tab element found, attaching listener...');
             chooseExistingVideoTab.addEventListener('shown.bs.tab', function(e) {
-                console.log('Video tab shown, loading files...');
+                console.log('🔄 Video tab shown event fired, loading files...');
                 setTimeout(() => guardedLoadMediaFiles('video'), 100);
             });
+        } else {
+            console.log('❌ Video tab element not found');
         }
         
         if (chooseExistingAudioTab) {
+            console.log('✅ Audio tab element found, attaching listener...');
             chooseExistingAudioTab.addEventListener('shown.bs.tab', function(e) {
-                console.log('Audio tab shown, loading files...');
+                console.log('🔄 Audio tab shown event fired, loading files...');
                 setTimeout(() => guardedLoadMediaFiles('audio'), 100);
             });
+        } else {
+            console.log('❌ Audio tab element not found');
         }
-    });
 
-    // Generate safe URL from filename and media type
-    function createSafeMediaUrl(filename, mediaType) {
-        if (!filename || typeof filename !== 'string') {
-            console.warn('Invalid filename provided:', filename);
-            return null;
-        }
-        
-        const folder = mediaType === 'image' ? 'images' : 
-                      mediaType === 'video' ? 'videos' : 
-                      mediaType === 'audio' ? 'audio' : null;
-        
-        if (!folder) {
-            console.warn('Invalid media type:', mediaType);
-            return null;
-        }
-        
-        // Create safe URL from trusted filename - no path traversal possible
-        return `/static/uploads/${folder}/${encodeURIComponent(filename)}`;
-    }
-    
-    // Enhanced URL sanitization function with double-encoding protection
-    function sanitizeMediaUrl(url, mediaType) {
-        if (!url || typeof url !== 'string') {
-            console.warn('Invalid URL provided:', url);
-            return null;
-        }
-        
-        try {
-            // Normalize the URL to prevent path traversal attacks
-            const normalizedUrl = new URL(url, location.origin);
-            let pathname = normalizedUrl.pathname;
+        // Generate safe URL from filename and media type
+        function createSafeMediaUrl(filename, mediaType) {
+            if (!filename || typeof filename !== 'string') {
+                console.warn('Invalid filename provided:', filename);
+                return null;
+            }
             
-            // Iteratively decode to handle double-encoding attacks
-            let previousPath = '';
-            let attempts = 0;
-            while (pathname !== previousPath && attempts < 5) {
-                previousPath = pathname;
-                try {
-                    pathname = decodeURIComponent(pathname);
-                } catch (e) {
-                    console.warn('Malformed URL encoding:', url);
+            const folder = mediaType === 'image' ? 'images' : 
+                          mediaType === 'video' ? 'videos' : 
+                          mediaType === 'audio' ? 'audio' : null;
+            
+            if (!folder) {
+                console.warn('Invalid media type:', mediaType);
+                return null;
+            }
+            
+            // Create safe URL from trusted filename - no path traversal possible
+            return `/static/uploads/${folder}/${encodeURIComponent(filename)}`;
+        }
+        
+        // Enhanced URL sanitization function with double-encoding protection
+        function sanitizeMediaUrl(url, mediaType) {
+            if (!url || typeof url !== 'string') {
+                console.warn('Invalid URL provided:', url);
+                return null;
+            }
+            
+            try {
+                // Normalize the URL to prevent path traversal attacks
+                const normalizedUrl = new URL(url, location.origin);
+                let pathname = normalizedUrl.pathname;
+                
+                // Iteratively decode to handle double-encoding attacks
+                let previousPath = '';
+                let attempts = 0;
+                while (pathname !== previousPath && attempts < 5) {
+                    previousPath = pathname;
+                    try {
+                        pathname = decodeURIComponent(pathname);
+                    } catch (e) {
+                        console.warn('Malformed URL encoding:', url);
+                        return null;
+                    }
+                    attempts++;
+                }
+                
+                // Reject any path with traversal patterns after full decoding
+                if (pathname.includes('../') || pathname.includes('%') || url.toLowerCase().includes('%2e')) {
+                    console.warn('Path traversal or encoding attempt detected:', url);
                     return null;
                 }
-                attempts++;
-            }
-            
-            // Reject any path with traversal patterns after full decoding
-            if (pathname.includes('../') || pathname.includes('%') || url.toLowerCase().includes('%2e')) {
-                console.warn('Path traversal or encoding attempt detected:', url);
+                
+                // Only allow same-origin URLs starting with /static/uploads/
+                if (!pathname.startsWith('/static/uploads/')) {
+                    console.warn('URL must start with /static/uploads/, rejecting:', pathname);
+                    return null;
+                }
+                
+                // Validate the path matches the expected media type folder
+                const expectedFolder = mediaType === 'image' ? 'images' : 
+                                      mediaType === 'video' ? 'videos' : 
+                                      mediaType === 'audio' ? 'audio' : null;
+                
+                if (expectedFolder && !pathname.startsWith(`/static/uploads/${expectedFolder}/`)) {
+                    console.warn(`URL path does not match expected folder for ${mediaType}:`, pathname);
+                    return null;
+                }
+                
+                return pathname; // Return the sanitized pathname
+            } catch (e) {
+                console.warn('Invalid URL format:', url, e);
                 return null;
             }
-            
-            // Only allow same-origin URLs starting with /static/uploads/
-            if (!pathname.startsWith('/static/uploads/')) {
-                console.warn('URL must start with /static/uploads/, rejecting:', pathname);
-                return null;
-            }
-            
-            // Validate the path matches the expected media type folder
-            const expectedFolder = mediaType === 'image' ? 'images' : 
-                                  mediaType === 'video' ? 'videos' : 
-                                  mediaType === 'audio' ? 'audio' : null;
-            
-            if (expectedFolder && !pathname.startsWith(`/static/uploads/${expectedFolder}/`)) {
-                console.warn(`URL path does not match expected folder for ${mediaType}:`, pathname);
-                return null;
-            }
-            
-            return pathname; // Return the sanitized pathname
-        } catch (e) {
-            console.warn('Invalid URL format:', url, e);
-            return null;
         }
-    }
 
-    // Load media files function  
-    async function loadMediaFiles(mediaType) {
+        // Load media files function  
+        async function loadMediaFiles(mediaType) {
         const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
                            mediaType === 'video' ? 'existingVideosContainer' : 'existingAudioContainer';
         const container = document.getElementById(containerId);
