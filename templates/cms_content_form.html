@@ -507,6 +507,29 @@
             aiGenerationCheckbox.addEventListener('change', toggleAISettings);
             toggleAISettings(); // Initialize on page load
         }
+        
+        // Add automatic refresh when clicking "Choose Existing" tabs
+        const chooseExistingImageTab = document.getElementById('choose-existing-image-tab');
+        const chooseExistingVideoTab = document.getElementById('choose-existing-video-tab');
+        const chooseExistingAudioTab = document.getElementById('choose-existing-audio-tab');
+        
+        if (chooseExistingImageTab) {
+            chooseExistingImageTab.addEventListener('shown.bs.tab', function() {
+                loadMediaFiles('image');
+            });
+        }
+        
+        if (chooseExistingVideoTab) {
+            chooseExistingVideoTab.addEventListener('shown.bs.tab', function() {
+                loadMediaFiles('video');
+            });
+        }
+        
+        if (chooseExistingAudioTab) {
+            chooseExistingAudioTab.addEventListener('shown.bs.tab', function() {
+                loadMediaFiles('audio');
+            });
+        }
     });
 
     // Load media files function
