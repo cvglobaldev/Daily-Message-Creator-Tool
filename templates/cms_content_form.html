@@ -569,6 +569,81 @@
         }
     });
 
+    // Generate safe URL from filename and media type
+    function createSafeMediaUrl(filename, mediaType) {
+        if (!filename || typeof filename !== 'string') {
+            console.warn('Invalid filename provided:', filename);
+            return null;
+        }
+        
+        const folder = mediaType === 'image' ? 'images' : 
+                      mediaType === 'video' ? 'videos' : 
+                      mediaType === 'audio' ? 'audio' : null;
+        
+        if (!folder) {
+            console.warn('Invalid media type:', mediaType);
+            return null;
+        }
+        
+        // Create safe URL from trusted filename - no path traversal possible
+        return `/static/uploads/${folder}/${encodeURIComponent(filename)}`;
+    }
+    
+    // Enhanced URL sanitization function with double-encoding protection
+    function sanitizeMediaUrl(url, mediaType) {
+        if (!url || typeof url !== 'string') {
+            console.warn('Invalid URL provided:', url);
+            return null;
+        }
+        
+        try {
+            // Normalize the URL to prevent path traversal attacks
+            const normalizedUrl = new URL(url, location.origin);
+            let pathname = normalizedUrl.pathname;
+            
+            // Iteratively decode to handle double-encoding attacks
+            let previousPath = '';
+            let attempts = 0;
+            while (pathname !== previousPath && attempts < 5) {
+                previousPath = pathname;
+                try {
+                    pathname = decodeURIComponent(pathname);
+                } catch (e) {
+                    console.warn('Malformed URL encoding:', url);
+                    return null;
+                }
+                attempts++;
+            }
+            
+            // Reject any path with traversal patterns after full decoding
+            if (pathname.includes('../') || pathname.includes('%') || url.toLowerCase().includes('%2e')) {
+                console.warn('Path traversal or encoding attempt detected:', url);
+                return null;
+            }
+            
+            // Only allow same-origin URLs starting with /static/uploads/
+            if (!pathname.startsWith('/static/uploads/')) {
+                console.warn('URL must start with /static/uploads/, rejecting:', pathname);
+                return null;
+            }
+            
+            // Validate the path matches the expected media type folder
+            const expectedFolder = mediaType === 'image' ? 'images' : 
+                                  mediaType === 'video' ? 'videos' : 
+                                  mediaType === 'audio' ? 'audio' : null;
+            
+            if (expectedFolder && !pathname.startsWith(`/static/uploads/${expectedFolder}/`)) {
+                console.warn(`URL path does not match expected folder for ${mediaType}:`, pathname);
+                return null;
+            }
+            
+            return pathname; // Return the sanitized pathname
+        } catch (e) {
+            console.warn('Invalid URL format:', url, e);
+            return null;
+        }
+    }
+
     // Load media files function  
     async function loadMediaFiles(mediaType) {
         const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
@@ -604,15 +679,14 @@
                         const cardDiv = document.createElement('div');
                         cardDiv.className = `card ${cardClass} media-file-card`;
                         cardDiv.style.cursor = 'pointer';
-                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
+                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv));
                         
                         const img = document.createElement('img');
-                        // Validate URL before setting src
-                        if (file.url && file.url.startsWith('/static/uploads/')) {
-                            img.src = file.url;
+                        const sanitizedUrl = sanitizeMediaUrl(file.url, mediaType);
+                        if (sanitizedUrl) {
+                            img.src = sanitizedUrl;
                         } else {
-                            console.warn('Invalid image URL, skipping:', file.url);
-                            continue;
+                            continue; // Skip this file if URL is invalid
                         }
                         img.className = 'card-img-top';
                         img.style.height = '120px';
@@ -652,7 +726,7 @@
                         const cardDiv = document.createElement('div');
                         cardDiv.className = `card ${cardClass} media-file-card`;
                         cardDiv.style.cursor = 'pointer';
-                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
+                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv));
                         
                         const cardBody = document.createElement('div');
                         cardBody.className = 'card-body p-3';
@@ -702,12 +776,11 @@
                         video.preload = 'none';
                         
                         const source = document.createElement('source');
-                        // Validate URL before setting src
-                        if (file.url && file.url.startsWith('/static/uploads/')) {
-                            source.src = file.url;
+                        const sanitizedUrl = sanitizeMediaUrl(file.url, mediaType);
+                        if (sanitizedUrl) {
+                            source.src = sanitizedUrl;
                         } else {
-                            console.warn('Invalid video URL, skipping:', file.url);
-                            continue;
+                            continue; // Skip this file if URL is invalid
                         }
                         source.type = 'video/mp4';
                         
@@ -728,7 +801,7 @@
                         const cardDiv = document.createElement('div');
                         cardDiv.className = `card ${cardClass} media-file-card`;
                         cardDiv.style.cursor = 'pointer';
-                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
+                        cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv));
                         
                         const cardBody = document.createElement('div');
                         cardBody.className = 'card-body p-3';
@@ -777,12 +850,11 @@
                         audio.preload = 'none';
                         
                         const source = document.createElement('source');
-                        // Validate URL before setting src
-                        if (file.url && file.url.startsWith('/static/uploads/')) {
-                            source.src = file.url;
+                        const sanitizedUrl = sanitizeMediaUrl(file.url, mediaType);
+                        if (sanitizedUrl) {
+                            source.src = sanitizedUrl;
                         } else {
-                            console.warn('Invalid audio URL, skipping:', file.url);
-                            continue;
+                            continue; // Skip this file if URL is invalid
                         }
                         source.type = 'audio/mpeg';
                         
@@ -820,8 +892,8 @@
         }
     }
 
-    // Select media file function
-    function selectMediaFile(filename, mediaType, element, fileUrl) {
+    // Select media file function - creates safe URL from filename
+    function selectMediaFile(filename, mediaType, element) {
         // Remove selection from other cards in this container
         const container = element.closest('.row') || element.parentElement;
         const cards = container.querySelectorAll('.media-file-card');
@@ -832,7 +904,7 @@
         // Add selection to clicked card
         element.classList.add('border-primary', 'border-2');
         
-        // Set hidden input value
+        // Set hidden input value with filename only (not URL)
         const inputId = mediaType === 'image' ? 'selectedImageFile' : 
                        mediaType === 'video' ? 'selectedVideoFile' : 'selectedAudioFile';
         const hiddenInput = document.getElementById(inputId);
@@ -840,8 +912,13 @@
             hiddenInput.value = filename;
         }
         
-        // Show preview of selected media using the file URL directly
-        showSelectedMediaPreview(fileUrl || filename, mediaType);
+        // Create safe URL from trusted filename - no external URL trusted
+        const safeUrl = createSafeMediaUrl(filename, mediaType);
+        if (safeUrl) {
+            showSelectedMediaPreview(safeUrl, mediaType);
+        } else {
+            console.error('Cannot create safe URL for', filename, mediaType);
+        }
         
         // Clear file input since we're using existing file
         const fileInputId = mediaType === 'image' ? 'image_file' : 
@@ -852,19 +929,11 @@
         }
     }
     
-    // Show preview of selected media
-    function showSelectedMediaPreview(mediaUrl, mediaType) {
-        // Validate and sanitize the URL for security
-        if (!mediaUrl) return;
-        
-        // Use provided URL or construct one if needed
-        if (!mediaUrl.startsWith('/') && !mediaUrl.startsWith('http')) {
-            mediaUrl = `/static/uploads/${mediaType === 'image' ? 'images' : mediaType === 'video' ? 'videos' : 'audio'}/${encodeURIComponent(mediaUrl)}`;
-        }
-        
-        // Basic same-origin validation - only allow our static uploads
-        if (!mediaUrl.startsWith('/static/uploads/')) {
-            console.error('Invalid media URL - must be from /static/uploads/');
+    // Show preview of selected media (expects already sanitized URL)
+    function showSelectedMediaPreview(sanitizedUrl, mediaType) {
+        // URL should already be sanitized by caller
+        if (!sanitizedUrl) {
+            console.error('No URL provided for preview');
             return;
         }
         
