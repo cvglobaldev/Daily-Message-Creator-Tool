@@ -131,7 +131,7 @@
                                             <div class="tab-pane fade" id="choose-existing-image" role="tabpanel">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                                     <label class="form-label mb-0">Select from existing images:</label>
-                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadMediaFiles('image')">
+                                                    <button type="button" class="btn btn-sm btn-outline-info" id="refreshImageBtn">
                                                         <i class="fas fa-sync-alt me-1"></i>Refresh
                                                     </button>
                                                 </div>
@@ -201,7 +201,7 @@
                                             <div class="tab-pane fade" id="choose-existing-video" role="tabpanel">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                                     <label class="form-label mb-0">Select from existing videos:</label>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="loadMediaFiles('video')">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" id="refreshVideoBtn">
                                                         <i class="fas fa-sync-alt me-1"></i>Refresh
                                                     </button>
                                                 </div>
@@ -296,7 +296,7 @@
                                             <div class="tab-pane fade" id="choose-existing-audio" role="tabpanel">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                                     <label class="form-label mb-0">Select from existing audio files:</label>
-                                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="loadMediaFiles('audio')">
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" id="refreshAudioBtn">
                                                         <i class="fas fa-sync-alt me-1"></i>Refresh
                                                     </button>
                                                 </div>
@@ -577,6 +577,32 @@
             console.log('❌ Audio tab element not found');
         }
 
+        // Add event listeners for manual refresh buttons
+        const refreshImageBtn = document.getElementById('refreshImageBtn');
+        const refreshVideoBtn = document.getElementById('refreshVideoBtn');
+        const refreshAudioBtn = document.getElementById('refreshAudioBtn');
+        
+        if (refreshImageBtn) {
+            refreshImageBtn.addEventListener('click', function() {
+                console.log('🔄 Image refresh button clicked');
+                loadMediaFiles('image');
+            });
+        }
+        
+        if (refreshVideoBtn) {
+            refreshVideoBtn.addEventListener('click', function() {
+                console.log('🔄 Video refresh button clicked');
+                loadMediaFiles('video');
+            });
+        }
+        
+        if (refreshAudioBtn) {
+            refreshAudioBtn.addEventListener('click', function() {
+                console.log('🔄 Audio refresh button clicked');
+                loadMediaFiles('audio');
+            });
+        }
+
         // Generate safe URL from filename and media type
         function createSafeMediaUrl(filename, mediaType) {
             if (!filename || typeof filename !== 'string') {
@@ -654,33 +680,36 @@
 
         // Load media files function  
         async function loadMediaFiles(mediaType) {
-        const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
-                           mediaType === 'video' ? 'existingVideosContainer' : 'existingAudioContainer';
-        const container = document.getElementById(containerId);
-        
-        if (!container) return;
-        
-        // Show loading state
-        container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading ' + mediaType + ' files...</div>';
-        
-        // Get bot_id from the form if available
-        const botIdInput = document.querySelector('input[name="bot_id"]') || document.querySelector('select[name="bot_id"]');
-        const botId = botIdInput ? botIdInput.value : null;
-        
-        try {
-            const url = `/api/media/browse?media_type=${mediaType}${botId ? '&bot_id=' + botId : ''}`;
-            const response = await fetch(url);
-            const data = await response.json();
+            const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
+                               mediaType === 'video' ? 'existingVideosContainer' : 'existingAudioContainer';
+            const container = document.getElementById(containerId);
             
-            if (data.success && data.files && data.files.length > 0) {
-                const rowDiv = document.createElement('div');
-                rowDiv.className = 'row g-2';
+            if (!container) return;
+            
+            // Show loading state
+            container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading ' + mediaType + ' files...</div>';
+        
+            
+            // Get bot_id from the form if available
+            const botIdInput = document.querySelector('input[name="bot_id"]') || document.querySelector('select[name="bot_id"]');
+            const botId = botIdInput ? botIdInput.value : null;
+            
+            try {
+                const url = `/api/media/browse?media_type=${mediaType}${botId ? '&bot_id=' + botId : ''}`;
+                const response = await fetch(url);
+                const data = await response.json();
+            
                 
-                data.files.forEach(file => {
-                    const isSelected = false; // Could check against current file
-                    const cardClass = isSelected ? 'border-primary' : '';
+                if (data.success && data.files && data.files.length > 0) {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'row g-2';
+                
                     
-                    if (mediaType === 'image') {
+                    data.files.forEach(file => {
+                        const isSelected = false; // Could check against current file
+                        const cardClass = isSelected ? 'border-primary' : '';
+                        
+                        if (mediaType === 'image') {
                         const colDiv = document.createElement('div');
                         colDiv.className = 'col-md-4 col-sm-6';
                         
@@ -898,10 +927,9 @@
                 </div>
             `;
         }
-    }
 
-    // Select media file function - creates safe URL from filename
-    function selectMediaFile(filename, mediaType, element) {
+        // Select media file function - creates safe URL from filename
+        function selectMediaFile(filename, mediaType, element) {
         // Remove selection from other cards in this container
         const container = element.closest('.row') || element.parentElement;
         const cards = container.querySelectorAll('.media-file-card');
