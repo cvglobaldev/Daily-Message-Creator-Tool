@@ -607,7 +607,13 @@
                         cardDiv.addEventListener('click', () => selectMediaFile(file.filename, mediaType, cardDiv, file.url));
                         
                         const img = document.createElement('img');
-                        img.src = file.url;
+                        // Validate URL before setting src
+                        if (file.url && file.url.startsWith('/static/uploads/')) {
+                            img.src = file.url;
+                        } else {
+                            console.warn('Invalid image URL, skipping:', file.url);
+                            continue;
+                        }
                         img.className = 'card-img-top';
                         img.style.height = '120px';
                         img.style.objectFit = 'cover';
@@ -696,7 +702,13 @@
                         video.preload = 'none';
                         
                         const source = document.createElement('source');
-                        source.src = file.url;
+                        // Validate URL before setting src
+                        if (file.url && file.url.startsWith('/static/uploads/')) {
+                            source.src = file.url;
+                        } else {
+                            console.warn('Invalid video URL, skipping:', file.url);
+                            continue;
+                        }
                         source.type = 'video/mp4';
                         
                         video.appendChild(source);
@@ -765,7 +777,13 @@
                         audio.preload = 'none';
                         
                         const source = document.createElement('source');
-                        source.src = file.url;
+                        // Validate URL before setting src
+                        if (file.url && file.url.startsWith('/static/uploads/')) {
+                            source.src = file.url;
+                        } else {
+                            console.warn('Invalid audio URL, skipping:', file.url);
+                            continue;
+                        }
                         source.type = 'audio/mpeg';
                         
                         audio.appendChild(source);
