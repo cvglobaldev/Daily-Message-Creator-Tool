@@ -88,6 +88,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
+# Enable template debugging
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['EXPLAIN_TEMPLATE_LOADING'] = True
+
 # Initialize database
 db.init_app(app)
 
@@ -2408,6 +2412,7 @@ def test_interface():
 @login_required
 def cms():
     """Content Management System for 30-day journey content with multimedia support"""
+    logger.info("🔍 DEBUG: CMS route accessed - serving cms.html template")
     return render_template('cms.html', user=current_user)
 
 @app.route('/api/content', methods=['GET'])
