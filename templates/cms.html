@@ -1063,7 +1063,18 @@ Day 1 content will arrive in 10 seconds!`;
             
             try {
                 const url = `/api/media/browse?media_type=${mediaType}${botId ? '&bot_id=' + botId : ''}`;
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'same-origin',  // Include session cookies for authentication
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.success && data.files && data.files.length > 0) {
