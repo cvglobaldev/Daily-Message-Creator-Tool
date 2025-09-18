@@ -3414,6 +3414,7 @@ def toggle_bot_status(bot_id):
 @login_required
 def bot_content_management(bot_id):
     """Bot-specific content management"""
+    logger.info(f"🔍 DEBUG: Bot content management accessed for bot_id {bot_id} - serving cms.html template")
     bot = Bot.query.get_or_404(bot_id)
     content_items = Content.query.filter_by(bot_id=bot_id).order_by(Content.day_number).all()
     return render_template('cms.html', bot=bot, content_items=content_items, bot_specific=True)
