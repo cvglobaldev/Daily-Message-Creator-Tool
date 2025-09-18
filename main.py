@@ -25,6 +25,9 @@ from media_file_browser import MediaFileBrowser
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# Reduce urllib3 logging to prevent token leakage in logs
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
@@ -4156,14 +4159,44 @@ def cms_content_create():
         # Process tags
         tags = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()] if form.tags.data else []
         
+        # SERVER-SIDE MEDIA TYPE NORMALIZATION - Fix for type persistence bug
+        actual_media_type = form.media_type.data
+        if video_filename or youtube_url:
+            actual_media_type = 'video'
+            # Clear conflicting media files to prevent mixed-state records
+            image_filename = None
+            audio_filename = None
+        elif image_filename:
+            actual_media_type = 'image'
+            # Clear conflicting media files
+            video_filename = None
+            audio_filename = None
+            youtube_url = None
+        elif audio_filename:
+            actual_media_type = 'audio'
+            # Clear conflicting media files
+            image_filename = None
+            video_filename = None
+            youtube_url = None
+        else:
+            actual_media_type = 'text'
+            # Clear all media files for text-only content
+            image_filename = None
+            video_filename = None
+            audio_filename = None
+            youtube_url = None
+            
+        logger.info(f"✅ Server-side media type normalization: {form.media_type.data} → {actual_media_type}")
+        
         content_id = db_manager.create_content(
             day_number=form.day_number.data,
             title=form.title.data,
             content=form.content.data,
             reflection_question=form.reflection_question.data,
             tags=tags,
-            media_type=form.media_type.data,
+            media_type=actual_media_type,
             image_filename=image_filename,
+            video_filename=video_filename,
             youtube_url=youtube_url,
             audio_filename=audio_filename,
             is_active=form.is_active.data
