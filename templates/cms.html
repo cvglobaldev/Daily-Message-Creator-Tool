@@ -153,8 +153,46 @@
                                         <i class="fas fa-image me-2"></i>Image Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="imageFile" accept="image/*">
-                                        <div class="form-text">Supported: JPG, PNG, GIF (Max 16MB)</div>
+                                        <!-- Upload New File Tab -->
+                                        <ul class="nav nav-tabs mb-3" id="imageUploadTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="upload-new-image-tab" data-bs-toggle="tab" data-bs-target="#upload-new-image" type="button" role="tab">
+                                                    <i class="fas fa-upload me-1"></i>Upload New
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="choose-existing-image-tab" data-bs-toggle="tab" data-bs-target="#choose-existing-image" type="button" role="tab">
+                                                    <i class="fas fa-folder-open me-1"></i>Choose Existing
+                                                </button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content" id="imageUploadTabsContent">
+                                            <!-- Upload New Tab -->
+                                            <div class="tab-pane fade show active" id="upload-new-image" role="tabpanel">
+                                                <input type="file" class="form-control" id="imageFile" accept="image/*">
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Supported formats: JPG, PNG, GIF (Max 16MB). Images will be displayed in the message.
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Choose Existing Tab -->
+                                            <div class="tab-pane fade" id="choose-existing-image" role="tabpanel">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <label class="form-label mb-0">Select from existing images:</label>
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadMediaFilesModal('image')">
+                                                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                                                    </button>
+                                                </div>
+                                                <div id="existingImagesContainer" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                                    <div class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading images...
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" id="selectedImageFile">
+                                            </div>
+                                        </div>
                                         <div id="imagePreview" class="mt-2"></div>
                                     </div>
                                 </div>
@@ -164,11 +202,64 @@
                             <div id="videoSection" class="mb-3" style="display: none;">
                                 <div class="card border-danger">
                                     <div class="card-header bg-danger">
-                                        <i class="fas fa-video me-2"></i>Video Upload
+                                        <i class="fas fa-video me-2"></i>Video Content
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="videoFile" accept="video/*">
-                                        <div class="form-text">Supported: MP4, MOV, AVI, MKV, WebM (Max 200MB)</div>
+                                        <!-- Upload New File Tab -->
+                                        <ul class="nav nav-tabs mb-3" id="videoUploadTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="upload-new-video-tab" data-bs-toggle="tab" data-bs-target="#upload-new-video" type="button" role="tab">
+                                                    <i class="fas fa-upload me-1"></i>Upload New
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="choose-existing-video-tab" data-bs-toggle="tab" data-bs-target="#choose-existing-video" type="button" role="tab">
+                                                    <i class="fas fa-folder-open me-1"></i>Choose Existing
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="youtube-url-tab" data-bs-toggle="tab" data-bs-target="#youtube-url" type="button" role="tab">
+                                                    <i class="fab fa-youtube me-1"></i>YouTube URL
+                                                </button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content" id="videoUploadTabsContent">
+                                            <!-- Upload New Tab -->
+                                            <div class="tab-pane fade show active" id="upload-new-video" role="tabpanel">
+                                                <input type="file" class="form-control" id="videoFile" accept="video/*">
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Supported formats: MP4, MOV, AVI (Max 100MB). Videos will be displayed in the message.
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Choose Existing Tab -->
+                                            <div class="tab-pane fade" id="choose-existing-video" role="tabpanel">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <label class="form-label mb-0">Select from existing videos:</label>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="loadMediaFilesModal('video')">
+                                                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                                                    </button>
+                                                </div>
+                                                <div id="existingVideosContainer" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                                    <div class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading videos...
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" id="selectedVideoFile">
+                                            </div>
+                                            
+                                            <!-- YouTube URL Tab -->
+                                            <div class="tab-pane fade" id="youtube-url" role="tabpanel">
+                                                <label for="youtubeUrl" class="form-label">YouTube URL</label>
+                                                <input type="url" class="form-control" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=VIDEO_ID">
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Enter the full YouTube URL. The video will be embedded in the message.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div id="videoPreview" class="mt-2"></div>
                                     </div>
                                 </div>
@@ -181,8 +272,46 @@
                                         <i class="fas fa-volume-up me-2"></i>Audio Upload
                                     </div>
                                     <div class="card-body">
-                                        <input type="file" class="form-control" id="audioFile" accept="audio/*">
-                                        <div class="form-text">Supported: MP3, WAV, OGG, M4A (Max 16MB)</div>
+                                        <!-- Upload New File Tab -->
+                                        <ul class="nav nav-tabs mb-3" id="audioUploadTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="upload-new-audio-tab" data-bs-toggle="tab" data-bs-target="#upload-new-audio" type="button" role="tab">
+                                                    <i class="fas fa-upload me-1"></i>Upload New
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="choose-existing-audio-tab" data-bs-toggle="tab" data-bs-target="#choose-existing-audio" type="button" role="tab">
+                                                    <i class="fas fa-folder-open me-1"></i>Choose Existing
+                                                </button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content" id="audioUploadTabsContent">
+                                            <!-- Upload New Tab -->
+                                            <div class="tab-pane fade show active" id="upload-new-audio" role="tabpanel">
+                                                <input type="file" class="form-control" id="audioFile" accept="audio/*">
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Supported formats: MP3, WAV, OGG, M4A (Max 16MB). Great for prayers, music, or voice messages.
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Choose Existing Tab -->
+                                            <div class="tab-pane fade" id="choose-existing-audio" role="tabpanel">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <label class="form-label mb-0">Select from existing audio files:</label>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="loadMediaFilesModal('audio')">
+                                                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                                                    </button>
+                                                </div>
+                                                <div id="existingAudioContainer" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                                    <div class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading audio files...
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" id="selectedAudioFile">
+                                            </div>
+                                        </div>
                                         <div id="audioPreview" class="mt-2"></div>
                                     </div>
                                 </div>
@@ -911,6 +1040,171 @@ Day 1 content will arrive in 10 seconds!`;
                     alertDiv.remove();
                 }
             }, 5000);
+        }
+
+        // Media Files Modal Management Functions
+        async function loadMediaFilesModal(mediaType) {
+            const containerId = mediaType === 'image' ? 'existingImagesContainer' : 
+                               mediaType === 'video' ? 'existingVideosContainer' : 'existingAudioContainer';
+            const container = document.getElementById(containerId);
+            
+            if (!container) return;
+            
+            // Show loading state
+            container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading ' + mediaType + ' files...</div>';
+            
+            // Get bot_id if available
+            let botId = null;
+            {% if bot %}
+            botId = {{ bot.id }};
+            {% endif %}
+            
+            try {
+                const url = `/api/media/browse?media_type=${mediaType}${botId ? '&bot_id=' + botId : ''}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.files && data.files.length > 0) {
+                    let html = '<div class="row g-2">';
+                    
+                    data.files.forEach(file => {
+                        const cardClass = '';
+                        
+                        if (mediaType === 'image') {
+                            html += `
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="card ${cardClass} media-file-card" 
+                                         style="cursor: pointer;" 
+                                         onclick="selectMediaFileModal('${file.filename}', '${mediaType}', this)">
+                                        <img src="${file.url}" class="card-img-top" style="height: 120px; object-fit: cover;">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted d-block text-truncate" title="${file.display_name}">
+                                                ${file.display_name}
+                                            </small>
+                                            <small class="text-muted">
+                                                ${file.size_display} • ${file.modified_display}
+                                            </small>
+                                            ${file.bot_id ? `<span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (mediaType === 'video') {
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="card ${cardClass} media-file-card" 
+                                         style="cursor: pointer;" 
+                                         onclick="selectMediaFileModal('${file.filename}', '${mediaType}', this)">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="me-3">
+                                                    <i class="fas fa-file-video fa-2x text-danger"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold text-truncate" title="${file.display_name}">
+                                                        ${file.display_name}
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        ${file.size_display} • ${file.modified_display}
+                                                    </small>
+                                                    ${file.bot_id ? `<br><span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <video controls style="width: 100%; max-width: 300px; border-radius: 0.375rem;" preload="none">
+                                                    <source src="${file.url}" type="video/mp4">
+                                                    Your browser does not support the video element.
+                                                </video>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (mediaType === 'audio') {
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="card ${cardClass} media-file-card" 
+                                         style="cursor: pointer;" 
+                                         onclick="selectMediaFileModal('${file.filename}', '${mediaType}', this)">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <i class="fas fa-file-audio fa-2x text-warning"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold text-truncate" title="${file.display_name}">
+                                                        ${file.display_name}
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        ${file.size_display} • ${file.modified_display}
+                                                    </small>
+                                                    ${file.bot_id ? `<br><span class="badge bg-secondary">Bot ${file.bot_id}</span>` : ''}
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <audio controls style="width: 100%; max-width: 300px;" preload="none">
+                                                    <source src="${file.url}" type="audio/mpeg">
+                                                </audio>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-folder-open fa-3x mb-3"></i>
+                            <div>No ${mediaType} files found</div>
+                            <small>Upload some ${mediaType} files first to see them here</small>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading media files:', error);
+                container.innerHTML = `
+                    <div class="text-center text-danger py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <div>Error loading files</div>
+                        <small>Please try again</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Select media file function for modal
+        function selectMediaFileModal(filename, mediaType, element) {
+            // Remove selection from other cards
+            const cards = element.closest('.row').querySelectorAll('.media-file-card');
+            cards.forEach(card => {
+                card.classList.remove('border-primary', 'border-2');
+            });
+            
+            // Add selection to clicked card
+            element.classList.add('border-primary', 'border-2');
+            
+            // Set hidden input value
+            const inputId = mediaType === 'image' ? 'selectedImageFile' : 
+                           mediaType === 'video' ? 'selectedVideoFile' : 'selectedAudioFile';
+            const hiddenInput = document.getElementById(inputId);
+            if (hiddenInput) {
+                hiddenInput.value = filename;
+            }
+            
+            // Clear file input since we're using existing file
+            const fileInputId = mediaType === 'image' ? 'imageFile' : 
+                              mediaType === 'video' ? 'videoFile' : 'audioFile';
+            const fileInput = document.getElementById(fileInputId);
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            
+            // Update preview
+            updatePreview();
         }
     </script>
 </body>
