@@ -18,6 +18,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
 import signal
 from location_utils import extract_telegram_user_data, get_ip_location_data
+from universal_media_prevention_system import validate_and_upload_with_prevention
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -3857,7 +3858,14 @@ def cms_create_content():
 def cms_edit_content(content_id):
     """Handle CMS content editing with file uploads"""
     try:
-        # Handle file uploads first
+        # Get the existing content to determine bot_id for proper file isolation
+        existing_content = db_manager.get_content_by_id(content_id)
+        if not existing_content:
+            return jsonify({'success': False, 'error': 'Content not found'}), 404
+        
+        bot_id = existing_content.bot_id
+        
+        # Handle file uploads using the proper validation system with bot isolation
         image_filename = None
         video_filename = None
         audio_filename = None
@@ -3866,37 +3874,37 @@ def cms_edit_content(content_id):
         if 'image_file' in request.files:
             image_file = request.files['image_file']
             if image_file and image_file.filename:
-                filename = secure_filename(image_file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                image_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'images')
-                os.makedirs(image_dir, exist_ok=True)
-                image_file.save(os.path.join(image_dir, unique_filename))
-                image_filename = unique_filename
-                logger.info(f"Image uploaded for content update: {unique_filename}")
+                upload_result = validate_and_upload_with_prevention(image_file, 'image', bot_id)
+                if upload_result['success']:
+                    image_filename = upload_result['filename']
+                    logger.info(f"✅ Image uploaded for content {content_id}: {image_filename}")
+                else:
+                    logger.error(f"❌ Image upload failed: {upload_result['errors']}")
+                    return jsonify({'success': False, 'error': f"Image upload failed: {', '.join(upload_result['errors'])}"}), 400
         
         # Process video upload
         if 'video_file' in request.files:
             video_file = request.files['video_file']
             if video_file and video_file.filename:
-                filename = secure_filename(video_file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                video_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
-                os.makedirs(video_dir, exist_ok=True)
-                video_file.save(os.path.join(video_dir, unique_filename))
-                video_filename = unique_filename
-                logger.info(f"Video uploaded for content update: {unique_filename}")
+                upload_result = validate_and_upload_with_prevention(video_file, 'video', bot_id)
+                if upload_result['success']:
+                    video_filename = upload_result['filename']
+                    logger.info(f"✅ Video uploaded for content {content_id}: {video_filename}")
+                else:
+                    logger.error(f"❌ Video upload failed: {upload_result['errors']}")
+                    return jsonify({'success': False, 'error': f"Video upload failed: {', '.join(upload_result['errors'])}"}), 400
         
         # Process audio upload
         if 'audio_file' in request.files:
             audio_file = request.files['audio_file']
             if audio_file and audio_file.filename:
-                filename = secure_filename(audio_file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                audio_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'audio')
-                os.makedirs(audio_dir, exist_ok=True)
-                audio_file.save(os.path.join(audio_dir, unique_filename))
-                audio_filename = unique_filename
-                logger.info(f"Audio uploaded for content update: {unique_filename}")
+                upload_result = validate_and_upload_with_prevention(audio_file, 'audio', bot_id)
+                if upload_result['success']:
+                    audio_filename = upload_result['filename']
+                    logger.info(f"✅ Audio uploaded for content {content_id}: {audio_filename}")
+                else:
+                    logger.error(f"❌ Audio upload failed: {upload_result['errors']}")
+                    return jsonify({'success': False, 'error': f"Audio upload failed: {', '.join(upload_result['errors'])}"}), 400
         
         # Parse form data
         title = request.form.get('title')

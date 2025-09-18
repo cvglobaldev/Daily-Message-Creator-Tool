@@ -186,6 +186,14 @@ class DatabaseManager:
             logger.error(f"Error getting content for day {day}: {e}")
             return None
     
+    def get_content_by_id(self, content_id: int) -> Optional[Content]:
+        """Get content by ID"""
+        try:
+            return Content.query.filter_by(id=content_id, is_active=True).first()
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting content by ID {content_id}: {e}")
+            return None
+    
     def get_greeting_content(self, bot_id: int = 1) -> Optional[Content]:
         """Get greeting content for a specific bot"""
         try:
