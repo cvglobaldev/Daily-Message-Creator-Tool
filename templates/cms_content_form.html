@@ -471,6 +471,30 @@
                                 </div>
                             </div>
 
+                            <!-- Content Preview Section -->
+                            <div class="card border-info mb-4">
+                                <div class="card-header bg-info">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-eye me-2"></i>Content Preview:
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Media Preview Area -->
+                                    <div id="mainContentPreview" class="mb-3">
+                                        <!-- Selected media will be displayed here -->
+                                    </div>
+                                    
+                                    <!-- Text Content Preview -->
+                                    <div id="textContentPreview" class="mt-3">
+                                        <!-- Text content will be shown here -->
+                                    </div>
+                                    
+                                    <small class="text-muted">
+                                        This text will accompany any multimedia content selected above.
+                                    </small>
+                                </div>
+                            </div>
+
                             <div class="d-flex justify-content-between">
                                 <a href="{{ url_for('cms') }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>Back to CMS
@@ -991,12 +1015,100 @@
             console.error('Cannot create safe URL for', filename, mediaType);
         }
         
+        // Update main content preview when media is selected
+        updateMainContentPreview();
+        
         // Clear file input since we're using existing file
         const fileInputId = mediaType === 'image' ? 'image_file' : 
                           mediaType === 'video' ? 'video_file' : 'audio_file';
         const fileInput = document.getElementById(fileInputId);
         if (fileInput) {
             fileInput.value = '';
+        }
+    }
+    
+    // Update main content preview with current form data
+    function updateMainContentPreview() {
+        const mainPreview = document.getElementById('mainContentPreview');
+        const textPreview = document.getElementById('textContentPreview');
+        
+        if (!mainPreview || !textPreview) return;
+        
+        // Get current form values
+        const mediaType = document.getElementById('mediaType')?.value || 'text';
+        const title = document.getElementById('title')?.value || '';
+        const content = document.getElementById('content')?.value || '';
+        
+        // Get selected media files
+        const selectedImage = document.getElementById('selectedImageFile')?.value || '';
+        const selectedVideo = document.getElementById('selectedVideoFile')?.value || '';
+        const selectedAudio = document.getElementById('selectedAudioFile')?.value || '';
+        
+        // Clear main preview
+        mainPreview.innerHTML = '';
+        
+        // Show media type indicator and selected media
+        if (mediaType !== 'text') {
+            let mediaIcon = '';
+            let mediaLabel = '';
+            let selectedFile = '';
+            
+            if (mediaType === 'image') {
+                mediaIcon = '📷';
+                mediaLabel = 'Image Content';
+                selectedFile = selectedImage;
+            } else if (mediaType === 'video') {
+                mediaIcon = '🎬';
+                mediaLabel = 'Video Content';
+                selectedFile = selectedVideo;
+            } else if (mediaType === 'audio') {
+                mediaIcon = '🎵';
+                mediaLabel = 'Audio Content';
+                selectedFile = selectedAudio;
+            }
+            
+            // Create media header
+            const mediaHeader = document.createElement('div');
+            mediaHeader.className = 'alert alert-info mb-2';
+            mediaHeader.innerHTML = `${mediaIcon} ${mediaLabel}`;
+            mainPreview.appendChild(mediaHeader);
+            
+            // Show selected media if available
+            if (selectedFile) {
+                const mediaContainer = document.createElement('div');
+                mediaContainer.className = 'mb-3';
+                
+                if (mediaType === 'image') {
+                    mediaContainer.innerHTML = `<img src="${createSafeMediaUrl(selectedFile, 'image')}" class="img-fluid rounded" style="max-width: 400px;">`;
+                } else if (mediaType === 'video') {
+                    mediaContainer.innerHTML = `<video controls class="img-fluid rounded" style="max-width: 400px; width: 100%;">
+                        <source src="${createSafeMediaUrl(selectedFile, 'video')}" type="video/mp4">
+                        Your browser does not support the video element.
+                    </video>`;
+                } else if (mediaType === 'audio') {
+                    mediaContainer.innerHTML = `<audio controls class="w-100" style="max-width: 400px;">
+                        <source src="${createSafeMediaUrl(selectedFile, 'audio')}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>`;
+                }
+                
+                mainPreview.appendChild(mediaContainer);
+            }
+            
+            // Show title if available
+            if (title.trim()) {
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'alert alert-secondary mb-2';
+                titleDiv.innerHTML = `📹 ${title}`;
+                mainPreview.appendChild(titleDiv);
+            }
+        }
+        
+        // Update text content preview
+        if (content.trim()) {
+            textPreview.innerHTML = `<div class="border rounded p-3 bg-light">${content.replace(/\n/g, '<br>')}</div>`;
+        } else {
+            textPreview.innerHTML = '<p class="text-muted">No content text entered yet...</p>';
         }
     }
     
@@ -1012,7 +1124,7 @@
             const previewDiv = document.getElementById('selectedImagePreview');
             const previewImg = document.getElementById('selectedImagePreviewImg');
             if (previewDiv && previewImg) {
-                previewImg.src = mediaUrl;
+                previewImg.src = sanitizedUrl;
                 previewDiv.style.display = 'block';
             }
             // Hide other previews
@@ -1024,7 +1136,7 @@
             const previewDiv = document.getElementById('selectedVideoPreview');
             const previewVid = document.getElementById('selectedVideoPreviewVid');
             if (previewDiv && previewVid) {
-                previewVid.src = mediaUrl;
+                previewVid.src = sanitizedUrl;
                 previewDiv.style.display = 'block';
             }
             // Hide other previews
@@ -1036,7 +1148,7 @@
             const previewDiv = document.getElementById('selectedAudioPreview');
             const previewAud = document.getElementById('selectedAudioPreviewAud');
             if (previewDiv && previewAud) {
-                previewAud.src = mediaUrl;
+                previewAud.src = sanitizedUrl;
                 previewDiv.style.display = 'block';
             }
             // Hide other previews
@@ -1062,6 +1174,24 @@
         // already have the correct names (selected_image, selected_video, selected_audio)
         // and they should be automatically included in the form submission
         console.log('🔍 Existing hidden inputs will be submitted automatically with correct names');
+        
+        // Initialize main content preview
+        updateMainContentPreview();
+        
+        // Update main preview when content changes
+        const contentTextarea = document.getElementById('content');
+        if (contentTextarea) {
+            contentTextarea.addEventListener('input', updateMainContentPreview);
+        }
+        
+        // Update main preview when title changes  
+        const titleInput = document.getElementById('title');
+        if (titleInput) {
+            titleInput.addEventListener('input', updateMainContentPreview);
+        }
+        
+        // Update main preview when media type changes
+        mediaTypeSelect.addEventListener('change', updateMainContentPreview);
         // Add form submission debugging to track hidden inputs
         document.getElementById('contentForm').addEventListener('submit', function(e) {
             console.log('📤 Form being submitted');
