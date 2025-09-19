@@ -41,7 +41,7 @@ class MediaFileBrowser:
             }
         }
     
-    def get_available_files(self, media_type: str = None, bot_id: int = None) -> List[Dict[str, Any]]:
+    def get_available_files(self, media_type: Optional[str] = None, bot_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get list of available media files with metadata"""
         available_files = []
         
@@ -157,7 +157,7 @@ class MediaFileBrowser:
         else:
             return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
     
-    def get_files_for_bot(self, bot_id: int, media_type: str = None) -> List[Dict[str, Any]]:
+    def get_files_for_bot(self, bot_id: int, media_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get files specifically for a bot"""
         return self.get_available_files(media_type=media_type, bot_id=bot_id)
     
@@ -240,7 +240,7 @@ class MediaFileBrowser:
 # Global browser instance
 media_browser = MediaFileBrowser()
 
-def get_available_media_files(media_type: str = None, bot_id: int = None):
+def get_available_media_files(media_type: Optional[str] = None, bot_id: Optional[int] = None):
     """Get available media files for selection"""
     return media_browser.get_available_files(media_type=media_type, bot_id=bot_id)
 

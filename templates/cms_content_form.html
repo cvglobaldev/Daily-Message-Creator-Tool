@@ -57,6 +57,11 @@
                         <form method="POST" enctype="multipart/form-data" id="contentForm">
                             {{ form.hidden_tag() }}
                             
+                            <!-- Hidden inputs for selected existing media files - at form level for proper submission -->
+                            <input type="hidden" name="selected_image" id="selectedImageFile">
+                            <input type="hidden" name="selected_video" id="selectedVideoFile">
+                            <input type="hidden" name="selected_audio" id="selectedAudioFile">
+                            
                             <div class="row">
                                 <div class="col-md-3">
                                     <div class="mb-3">
@@ -140,7 +145,6 @@
                                                         <i class="fas fa-spinner fa-spin"></i> Loading images...
                                                     </div>
                                                 </div>
-                                                <input type="hidden" name="selected_image" id="selectedImageFile">
                                                 <!-- Preview area for selected image -->
                                                 <div id="selectedImagePreview" class="mt-3" style="display: none;">
                                                     <small class="text-muted">Selected image:</small><br>
@@ -210,7 +214,6 @@
                                                         <i class="fas fa-spinner fa-spin"></i> Loading videos...
                                                     </div>
                                                 </div>
-                                                <input type="hidden" name="selected_video" id="selectedVideoFile">
                                                 <!-- Preview area for selected video -->
                                                 <div id="selectedVideoPreview" class="mt-3" style="display: none;">
                                                     <small class="text-muted">Selected video:</small><br>
@@ -305,7 +308,6 @@
                                                         <i class="fas fa-spinner fa-spin"></i> Loading audio files...
                                                     </div>
                                                 </div>
-                                                <input type="hidden" name="selected_audio" id="selectedAudioFile">
                                                 <!-- Preview area for selected audio -->
                                                 <div id="selectedAudioPreview" class="mt-3" style="display: none;">
                                                     <small class="text-muted">Selected audio:</small><br>
@@ -487,6 +489,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 CMS Content Form JavaScript loaded');
+        
+        // Add global error handler to catch silent JS errors
+        window.addEventListener('error', function(e) {
+            console.error('🚨 JavaScript Error:', e.error, 'at', e.filename + ':' + e.lineno);
+        });
+        
         const mediaTypeSelect = document.getElementById('mediaType');
         const imageSection = document.getElementById('imageSection');
         const videoSection = document.getElementById('videoSection');
@@ -930,12 +939,28 @@
 
         // Select media file function - creates safe URL from filename
         function selectMediaFile(filename, mediaType, element) {
+        console.log(`🎯 selectMediaFile called: filename="${filename}", mediaType="${mediaType}"`);
+        
+        // Defensive: ensure element is valid, try to find it if missing
+        if (!element) {
+            console.warn(`⚠️ Element not provided, trying to find card for ${filename}`);
+            element = document.querySelector(`[data-filename="${filename}"]`) || 
+                     document.querySelector('.media-file-card.border-primary');
+        }
+        
+        if (!element) {
+            console.error(`❌ Cannot find element for ${filename}, aborting selection`);
+            return;
+        }
+        
         // Remove selection from other cards in this container
         const container = element.closest('.row') || element.parentElement;
-        const cards = container.querySelectorAll('.media-file-card');
-        cards.forEach(card => {
-            card.classList.remove('border-primary', 'border-2');
-        });
+        if (container) {
+            const cards = container.querySelectorAll('.media-file-card');
+            cards.forEach(card => {
+                card.classList.remove('border-primary', 'border-2');
+            });
+        }
         
         // Add selection to clicked card
         element.classList.add('border-primary', 'border-2');
@@ -943,14 +968,24 @@
         // Set hidden input value with filename only (not URL)
         const inputId = mediaType === 'image' ? 'selectedImageFile' : 
                        mediaType === 'video' ? 'selectedVideoFile' : 'selectedAudioFile';
+        console.log(`🔍 Looking for hidden input with ID: ${inputId}`);
+        
         const hiddenInput = document.getElementById(inputId);
         if (hiddenInput) {
             hiddenInput.value = filename;
+            console.log(`✅ Hidden input found and set: ${inputId} = "${filename}"`);
+            console.log(`🔍 Hidden input details: name="${hiddenInput.name}", value="${hiddenInput.value}"`);
+        } else {
+            console.error(`❌ Hidden input NOT found: ${inputId}`);
+            // Debug: List all inputs in the form
+            const allInputs = document.querySelectorAll('input[type="hidden"]');
+            console.log(`🔍 Available hidden inputs:`, Array.from(allInputs).map(inp => ({id: inp.id, name: inp.name})));
         }
         
         // Create safe URL from trusted filename - no external URL trusted
         const safeUrl = createSafeMediaUrl(filename, mediaType);
         if (safeUrl) {
+            console.log(`📺 Showing preview for: ${safeUrl}`);
             showSelectedMediaPreview(safeUrl, mediaType);
         } else {
             console.error('Cannot create safe URL for', filename, mediaType);
@@ -1018,32 +1053,32 @@
         const selectedVideo = document.getElementById('selectedVideoFile');
         const selectedAudio = document.getElementById('selectedAudioFile');
         
-        if (selectedImage && selectedImage.value) {
-            // Add selected image as hidden input
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'existing_image_file';
-            input.value = selectedImage.value;
-            this.appendChild(input);
-        }
+        console.log('🔍 Form submit - checking selected media files:');
+        console.log('🔍   selectedImage:', selectedImage ? selectedImage.value : 'not found');
+        console.log('🔍   selectedVideo:', selectedVideo ? selectedVideo.value : 'not found');
+        console.log('🔍   selectedAudio:', selectedAudio ? selectedAudio.value : 'not found');
         
-        if (selectedVideo && selectedVideo.value) {
-            // Add selected video as hidden input
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'existing_video_file';
-            input.value = selectedVideo.value;
-            this.appendChild(input);
-        }
-        
-        if (selectedAudio && selectedAudio.value) {
-            // Add selected audio as hidden input  
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'existing_audio_file';
-            input.value = selectedAudio.value;
-            this.appendChild(input);
-        }
+        // Note: We don't need to create new inputs since the existing hidden inputs 
+        // already have the correct names (selected_image, selected_video, selected_audio)
+        // and they should be automatically included in the form submission
+        console.log('🔍 Existing hidden inputs will be submitted automatically with correct names');
+        // Add form submission debugging to track hidden inputs
+        document.getElementById('contentForm').addEventListener('submit', function(e) {
+            console.log('📤 Form being submitted');
+            
+            // Debug: Log all form data before submission
+            const formData = new FormData(this);
+            console.log('🔍 Form data being submitted:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: "${value}"`);
+            }
+            
+            // Debug: Check hidden inputs specifically
+            console.log('🔍 Hidden input values:');
+            console.log(`  selectedImageFile: "${document.getElementById('selectedImageFile').value}"`);
+            console.log(`  selectedVideoFile: "${document.getElementById('selectedVideoFile').value}"`);
+            console.log(`  selectedAudioFile: "${document.getElementById('selectedAudioFile').value}"`);
+        });
     });
     </script>
 </body>

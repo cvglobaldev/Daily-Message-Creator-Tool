@@ -3826,6 +3826,58 @@ def cms_edit_content(content_id):
                     logger.error(f"❌ Audio upload failed: {upload_result['errors']}")
                     return jsonify({'success': False, 'error': f"Audio upload failed: {', '.join(upload_result['errors'])}"}), 400
         
+        # Debug: Log all form data received
+        logger.info(f"🔍 Content edit debug for ID {content_id}:")
+        logger.info(f"🔍 Form data keys: {list(request.form.keys())}")
+        for key, value in request.form.items():
+            logger.info(f"🔍   {key}: {value}")
+        
+        # Handle selection of existing files (not uploads) - only if no new upload was processed
+        if not image_filename and 'selected_image' in request.form:
+            selected_image = request.form.get('selected_image', '').strip()
+            logger.info(f"🔍 Processing selected_image: '{selected_image}'")
+            if selected_image:
+                # Validate that the selected image file exists
+                from media_file_browser import validate_media_file_exists
+                if validate_media_file_exists(selected_image, 'image'):
+                    image_filename = selected_image
+                    logger.info(f"✅ Existing image selected for content {content_id}: {image_filename}")
+                else:
+                    logger.warning(f"❌ Selected image file does not exist: {selected_image}")
+        
+        if not video_filename and 'selected_video' in request.form:
+            selected_video = request.form.get('selected_video', '').strip()
+            logger.info(f"🔍 Processing selected_video: '{selected_video}'")
+            if selected_video:
+                # Validate that the selected video file exists
+                from media_file_browser import validate_media_file_exists
+                if validate_media_file_exists(selected_video, 'video'):
+                    video_filename = selected_video
+                    logger.info(f"✅ Existing video selected for content {content_id}: {video_filename}")
+                else:
+                    logger.warning(f"❌ Selected video file does not exist: {selected_video}")
+            else:
+                logger.info(f"🔍 selected_video field is empty")
+        else:
+            if video_filename:
+                logger.info(f"🔍 video_filename already set from upload: {video_filename}")
+            else:
+                logger.info(f"🔍 selected_video not in form data")
+        
+        if not audio_filename and 'selected_audio' in request.form:
+            selected_audio = request.form.get('selected_audio', '').strip()
+            logger.info(f"🔍 Processing selected_audio: '{selected_audio}'")
+            if selected_audio:
+                # Validate that the selected audio file exists
+                from media_file_browser import validate_media_file_exists
+                if validate_media_file_exists(selected_audio, 'audio'):
+                    audio_filename = selected_audio
+                    logger.info(f"✅ Existing audio selected for content {content_id}: {audio_filename}")
+                else:
+                    logger.warning(f"❌ Selected audio file does not exist: {selected_audio}")
+        
+        logger.info(f"🔍 Final media filenames - image: {image_filename}, video: {video_filename}, audio: {audio_filename}")
+        
         # Parse form data
         title = request.form.get('title')
         content = request.form.get('content')
