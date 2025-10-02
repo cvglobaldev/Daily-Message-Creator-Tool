@@ -1019,16 +1019,34 @@ Day 1 content will arrive in 10 seconds!`;
                 const imageFile = document.getElementById('imageFile').files[0];
                 if (imageFile) {
                     formData.append('image_file', imageFile);
+                } else {
+                    // Include selected existing image if no new upload
+                    const selectedImage = document.getElementById('selectedImageFile')?.value;
+                    if (selectedImage) {
+                        formData.append('selected_image', selectedImage);
+                    }
                 }
             } else if (mediaType === 'video') {
                 const videoFile = document.getElementById('videoFile').files[0];
                 if (videoFile) {
                     formData.append('video_file', videoFile);
+                } else {
+                    // Include selected existing video if no new upload
+                    const selectedVideo = document.getElementById('selectedVideoFile')?.value;
+                    if (selectedVideo) {
+                        formData.append('selected_video', selectedVideo);
+                    }
                 }
             } else if (mediaType === 'audio') {
                 const audioFile = document.getElementById('audioFile').files[0];
                 if (audioFile) {
                     formData.append('audio_file', audioFile);
+                } else {
+                    // Include selected existing audio if no new upload
+                    const selectedAudio = document.getElementById('selectedAudioFile')?.value;
+                    if (selectedAudio) {
+                        formData.append('selected_audio', selectedAudio);
+                    }
                 }
             }
             
