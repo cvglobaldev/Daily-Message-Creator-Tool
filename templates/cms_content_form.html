@@ -1030,10 +1030,15 @@
     
     // Update main content preview with current form data
     function updateMainContentPreview() {
+        console.log('🔄 updateMainContentPreview called');
+        
         const mainPreview = document.getElementById('mainContentPreview');
         const textPreview = document.getElementById('textContentPreview');
         
-        if (!mainPreview || !textPreview) return;
+        if (!mainPreview || !textPreview) {
+            console.log('❌ Preview containers not found');
+            return;
+        }
         
         // Get current form values
         const mediaType = document.getElementById('mediaType')?.value || 'text';
@@ -1044,6 +1049,8 @@
         const selectedImage = document.getElementById('selectedImageFile')?.value || '';
         const selectedVideo = document.getElementById('selectedVideoFile')?.value || '';
         const selectedAudio = document.getElementById('selectedAudioFile')?.value || '';
+        
+        console.log('📝 Preview update - mediaType:', mediaType, 'selectedImage:', selectedImage, 'selectedVideo:', selectedVideo, 'selectedAudio:', selectedAudio);
         
         // Clear main preview
         mainPreview.innerHTML = '';
@@ -1080,17 +1087,43 @@
                 mediaContainer.className = 'mb-3';
                 
                 if (mediaType === 'image') {
-                    mediaContainer.innerHTML = `<img src="${createSafeMediaUrl(selectedFile, 'image')}" class="img-fluid rounded" style="max-width: 400px;">`;
+                    const imgUrl = createSafeMediaUrl(selectedFile, 'image');
+                    if (imgUrl) {
+                        const img = document.createElement('img');
+                        img.src = imgUrl;
+                        img.className = 'img-fluid rounded';
+                        img.style.maxWidth = '400px';
+                        mediaContainer.appendChild(img);
+                    }
                 } else if (mediaType === 'video') {
-                    mediaContainer.innerHTML = `<video controls class="img-fluid rounded" style="max-width: 400px; width: 100%;">
-                        <source src="${createSafeMediaUrl(selectedFile, 'video')}" type="video/mp4">
-                        Your browser does not support the video element.
-                    </video>`;
+                    const videoUrl = createSafeMediaUrl(selectedFile, 'video');
+                    if (videoUrl) {
+                        const video = document.createElement('video');
+                        video.controls = true;
+                        video.className = 'img-fluid rounded';
+                        video.style.maxWidth = '400px';
+                        video.style.width = '100%';
+                        const source = document.createElement('source');
+                        source.src = videoUrl;
+                        source.type = 'video/mp4';
+                        video.appendChild(source);
+                        video.appendChild(document.createTextNode('Your browser does not support the video element.'));
+                        mediaContainer.appendChild(video);
+                    }
                 } else if (mediaType === 'audio') {
-                    mediaContainer.innerHTML = `<audio controls class="w-100" style="max-width: 400px;">
-                        <source src="${createSafeMediaUrl(selectedFile, 'audio')}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>`;
+                    const audioUrl = createSafeMediaUrl(selectedFile, 'audio');
+                    if (audioUrl) {
+                        const audio = document.createElement('audio');
+                        audio.controls = true;
+                        audio.className = 'w-100';
+                        audio.style.maxWidth = '400px';
+                        const source = document.createElement('source');
+                        source.src = audioUrl;
+                        source.type = 'audio/mpeg';
+                        audio.appendChild(source);
+                        audio.appendChild(document.createTextNode('Your browser does not support the audio element.'));
+                        mediaContainer.appendChild(audio);
+                    }
                 }
                 
                 mainPreview.appendChild(mediaContainer);
