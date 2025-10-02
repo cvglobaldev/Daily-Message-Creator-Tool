@@ -850,13 +850,16 @@ Day 1 content will arrive in 10 seconds!`;
             const question = document.getElementById('reflectionQuestion').value;
             const selectedTags = getSelectedTags();
             const mediaType = document.getElementById('mediaType').value;
+            const dayNumber = parseInt(document.getElementById('dayNumber').value);
             
             let preview = '';
+            
+            // Get the appropriate content - check greeting content for day 0, otherwise use allContent
+            const dayContent = dayNumber === 0 ? greetingContent : allContent.find(c => c.day_number === dayNumber);
             
             // Media preview
             if (mediaType === 'image') {
                 const imageFile = document.getElementById('imageFile').files[0];
-                const dayContent = allContent.find(c => c.day_number === parseInt(document.getElementById('dayNumber').value));
                 
                 if (imageFile) {
                     preview += `<div class="mb-3">
@@ -879,7 +882,6 @@ Day 1 content will arrive in 10 seconds!`;
                 }
             } else if (mediaType === 'video') {
                 const videoFile = document.getElementById('videoFile').files[0];
-                const dayContent = allContent.find(c => c.day_number === parseInt(document.getElementById('dayNumber').value));
                 
                 if (videoFile) {
                     preview += `<div class="mb-3">
@@ -908,7 +910,6 @@ Day 1 content will arrive in 10 seconds!`;
                 }
             } else if (mediaType === 'audio') {
                 const audioFile = document.getElementById('audioFile').files[0];
-                const dayContent = allContent.find(c => c.day_number === parseInt(document.getElementById('dayNumber').value));
                 
                 if (audioFile) {
                     preview += `<div class="mb-3">
