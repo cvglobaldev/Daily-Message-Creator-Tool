@@ -108,8 +108,73 @@ class ContentScheduler:
             logger.error(f"Error updating last delivery time for bot {bot_id}: {e}")
     
     def send_content_to_user(self, phone_number: str) -> bool:
-        """Send content to a specific user and advance their journey"""
+        """Send content to a specific user and advance their journey with atomic pre-delivery lock"""
+        lock_key = f"delivery_lock_{phone_number}"
+        lock_acquired = False
+        
         try:
+            # ATOMIC PRE-DELIVERY LOCK - Create delivery intent BEFORE checking anything
+            from models import db, SystemSettings
+            from datetime import datetime, timedelta
+            from sqlalchemy import text
+            
+            # Try to atomically create a delivery lock for this user
+            now = datetime.utcnow()
+            lock_expires = now + timedelta(minutes=5)  # Lock expires in 5 minutes (handles slow media uploads)
+            
+            try:
+                # Use raw SQL with INSERT ... ON CONFLICT for true atomicity
+                result = db.session.execute(
+                    text("""
+                        INSERT INTO system_settings (key, value, description, updated_at)
+                        VALUES (:key, :value, :description, :updated_at)
+                        ON CONFLICT (key) DO NOTHING
+                        RETURNING key
+                    """),
+                    {
+                        'key': lock_key,
+                        'value': lock_expires.isoformat(),
+                        'description': f'Content delivery lock for {phone_number}',
+                        'updated_at': now
+                    }
+                )
+                
+                # If INSERT succeeded, we got the lock
+                inserted = result.fetchone()
+                if inserted:
+                    db.session.commit()
+                    lock_acquired = True
+                    logger.info(f"🔒 Acquired new lock for {phone_number}")
+                else:
+                    # Lock already exists - check if it's stale (within same transaction)
+                    existing_lock = SystemSettings.query.filter_by(key=lock_key).with_for_update(nowait=False).first()
+                    
+                    if not existing_lock:
+                        # Lock was deleted between operations - defensive fallback
+                        logger.warning(f"Lock disappeared for {phone_number}, skipping delivery")
+                        db.session.rollback()
+                        return True
+                    
+                    lock_age = (now - existing_lock.updated_at).total_seconds()
+                    
+                    if lock_age < 180:  # 3 minutes - increased for slow deliveries
+                        logger.info(f"🔒 ATOMIC LOCK: Another worker is delivering content to {phone_number} (lock age: {lock_age:.1f}s), skipping")
+                        db.session.rollback()
+                        return True
+                    else:
+                        # Lock is stale, take it over
+                        existing_lock.value = lock_expires.isoformat()
+                        existing_lock.updated_at = now
+                        db.session.commit()
+                        lock_acquired = True
+                        logger.info(f"🔓 Acquired stale lock for {phone_number} (was {lock_age:.1f}s old)")
+                    
+            except Exception as lock_error:
+                logger.warning(f"Lock acquisition error for {phone_number}: {lock_error}")
+                db.session.rollback()
+                return False
+            
+            # Now proceed with normal delivery (lock is held)
             user = self.db.get_user_by_phone(phone_number)
             if not user or user.status != 'active':
                 logger.warning(f"User {phone_number} is not active, skipping content delivery")
@@ -123,7 +188,6 @@ class ContentScheduler:
                 return True
             
             # ULTRA-STRONG duplicate prevention - multiple layers of protection
-            from datetime import datetime, timedelta
             
             # Check recent messages for any outgoing content
             recent_messages = self.db.get_user_messages_by_id(user.id, limit=10)
@@ -195,6 +259,22 @@ class ContentScheduler:
         except Exception as e:
             logger.error(f"Error sending content to user {phone_number}: {e}")
             return False
+        finally:
+            # ALWAYS release the lock after delivery attempt (success or failure)
+            if lock_acquired:
+                try:
+                    from models import db, SystemSettings
+                    lock = SystemSettings.query.filter_by(key=lock_key).first()
+                    if lock:
+                        db.session.delete(lock)
+                        db.session.commit()
+                        logger.info(f"🔓 Released lock for {phone_number}")
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to release lock for {phone_number}: {cleanup_error}")
+                    try:
+                        db.session.rollback()
+                    except:
+                        pass
     
     def _deliver_content_with_reflection(self, phone_number: str, content: dict) -> bool:
         """Deliver the actual content based on media type"""
