@@ -417,13 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Listen for changes
-        checkbox.addEventListener('change', function(e) {
-            console.log('Checkbox changed:', this.value, 'checked:', this.checked);
+        checkbox.addEventListener('change', function() {
             if (this.value === 'whatsapp' && whatsappConfig) {
-                console.log('Toggling WhatsApp config to:', this.checked ? 'block' : 'none');
                 whatsappConfig.style.display = this.checked ? 'block' : 'none';
             } else if (this.value === 'telegram' && telegramConfig) {
-                console.log('Toggling Telegram config to:', this.checked ? 'block' : 'none');
                 telegramConfig.style.display = this.checked ? 'block' : 'none';
             }
         });
