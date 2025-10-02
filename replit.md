@@ -58,6 +58,15 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 
 ## Recent Changes
 
+### ✅ COMPLETED: Bot Creation Platform Configuration & Multi-Language Support (October 2, 2025)
+- **Platform Configuration Display Fixed**: Resolved JavaScript syntax error preventing WhatsApp and Telegram configuration sections from appearing when checkboxes were selected on create bot page
+- **Comprehensive Language Support**: Added all 46 Gemini AI-supported languages to both create and edit bot forms with dropdown selection
+- **Database Schema Updated**: Implemented language field in Bot model with English as default for backward compatibility
+- **Multi-Language Bot Creation**: Users can now select target audience language during bot creation, with language preference persisted to database
+- **Form Validation Enhanced**: Both CreateBotForm and EditBotForm now include language selection with proper validation
+- **JavaScript Debug Fix**: Removed extra closing brace causing "Unexpected token '}'" error that blocked all JavaScript execution
+- **User Experience Improved**: Platform-specific credentials fields (WhatsApp Access Token, Telegram Bot Token) now display immediately upon platform selection
+
 ### ✅ COMPLETED: WhatsApp API Integration & Credentials Updated (August 21, 2025)
 - **WhatsApp Business API Fully Configured**: Updated with new WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID (727962770406515) for proper authentication
 - **Meta Business Manager Integration**: Successfully configured webhook URL (https://smart-budget-cvglobaldev.replit.app/whatsapp/2) with updated verification token
