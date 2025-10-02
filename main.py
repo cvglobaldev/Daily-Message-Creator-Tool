@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
 import signal
+from sqlalchemy import text
 from location_utils import extract_telegram_user_data, get_ip_location_data
 from universal_media_prevention_system import validate_and_upload_with_prevention
 from media_file_browser import MediaFileBrowser
@@ -606,12 +607,12 @@ def _is_duplicate_message(phone_number: str, message_text: str, window_seconds: 
         # Query recent incoming messages in database
         from models import db
         recent_messages = db.session.execute(
-            """SELECT raw_text, timestamp FROM message_logs 
+            text("""SELECT raw_text, timestamp FROM message_logs 
                WHERE user_id = :user_id 
                AND direction = 'incoming' 
                AND timestamp > :cutoff_time 
                AND raw_text = :message_text
-               ORDER BY timestamp DESC LIMIT 1""",
+               ORDER BY timestamp DESC LIMIT 1"""),
             {
                 'user_id': user.id,
                 'cutoff_time': cutoff_time,
@@ -1899,7 +1900,7 @@ def handle_graduated_user_conversation(phone_number: str, message_text: str, pla
             user = db_manager.create_user(phone_number, status='active', current_day=1, bot_id=bot_id)
         # Update existing user to use correct bot_id if different
         elif user.bot_id != bot_id:
-            db_manager.update_user_bot_id(phone_number, bot_id)
+            db_manager.update_user(phone_number, bot_id=bot_id)
             user.bot_id = bot_id
 
         # Log the user's message
