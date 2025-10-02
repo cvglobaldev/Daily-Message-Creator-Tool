@@ -260,6 +260,9 @@ def start_scheduler():
             try:
                 logger.info("Running content scheduler with bot-specific intervals...")
                 with app.app_context():  # Ensure Flask app context for database operations
+                    # Renew lock to show this worker is still active
+                    renew_scheduler_lock()
+                    # Run scheduler
                     scheduler.send_daily_content()
                 # Sleep for 1 minute before checking again (allows for different bot intervals)
                 time.sleep(60)
@@ -270,6 +273,22 @@ def start_scheduler():
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     logger.info("Background scheduler started")
+
+def renew_scheduler_lock():
+    """Renew the scheduler lock to show this worker is still active"""
+    try:
+        from models import SystemSettings, db
+        import datetime
+        
+        lock_key = "scheduler_lock"
+        lock = SystemSettings.query.filter_by(key=lock_key).first()
+        
+        if lock:
+            lock.value = datetime.datetime.utcnow().isoformat()
+            lock.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
+    except Exception as e:
+        logger.error(f"Failed to renew scheduler lock: {e}")
 
 @app.route('/')
 def index():
@@ -4653,14 +4672,55 @@ with app.app_context():
         db.session.commit()
         logger.info("Default admin user created: admin / admin123")
 
-# Start background scheduler only on main worker (prevent multiple schedulers)
-import os
-worker_id = os.environ.get('GUNICORN_WORKER_ID', '0')
-if worker_id == '0' or not os.environ.get('GUNICORN_WORKER_ID'):
-    logger.info(f"🚀 Starting scheduler on worker {worker_id}")
+# Start background scheduler with database-based lock (prevent multiple schedulers across all workers)
+def try_acquire_scheduler_lock():
+    """Try to acquire a database lock for the scheduler. Returns True if successful."""
+    try:
+        from models import SystemSettings, db
+        import datetime
+        
+        lock_key = "scheduler_lock"
+        now = datetime.datetime.utcnow()
+        
+        # Check if lock exists and is still valid (within last 30 seconds)
+        lock = SystemSettings.query.filter_by(key=lock_key).first()
+        
+        if lock:
+            lock_time = datetime.datetime.fromisoformat(lock.value)
+            age_seconds = (now - lock_time).total_seconds()
+            
+            # If lock is fresh (< 30 seconds old), another worker owns it
+            if age_seconds < 30:
+                logger.info(f"❌ Scheduler lock held by another worker (age: {age_seconds:.1f}s)")
+                return False
+            else:
+                # Lock is stale, take it over
+                logger.warning(f"⚠️ Taking over stale scheduler lock (age: {age_seconds:.1f}s)")
+                lock.value = now.isoformat()
+                lock.updated_at = now
+        else:
+            # No lock exists, create it
+            lock = SystemSettings()
+            lock.key = lock_key
+            lock.value = now.isoformat()
+            lock.description = "Scheduler lock - prevents multiple scheduler instances"
+            db.session.add(lock)
+        
+        db.session.commit()
+        logger.info("✅ Scheduler lock acquired successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to acquire scheduler lock: {e}")
+        return False
+
+# Start scheduler with duplicate prevention handled by the scheduler itself
+try:
+    logger.info("🚀 Starting scheduler (duplicate prevention via in-scheduler checks)")
     start_scheduler()
-else:
-    logger.info(f"⏸️ Skipping scheduler on worker {worker_id} (only worker 0 runs scheduler)")
+    logger.info("✅ Scheduler initialized successfully")
+except Exception as e:
+    logger.error(f"❌ CRITICAL: Failed to initialize scheduler: {e}", exc_info=True)
 
 if __name__ == '__main__':
     # Start Flask app only when running directly (development mode)
