@@ -3144,6 +3144,7 @@ In the meantime, feel free to continue sharing your thoughts or questions. Every
             
             bot.journey_duration_days = form.journey_duration_days.data or 30
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
+            bot.language = form.language.data or 'English'
             
             # Save bot first to get the ID
             db.session.add(bot)
@@ -3300,6 +3301,7 @@ def edit_bot(bot_id):
         form.ai_prompt.data = bot.ai_prompt
         form.journey_duration_days.data = bot.journey_duration_days
         form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+        form.language.data = bot.language if hasattr(bot, 'language') else 'English'
         form.help_message.data = bot.help_message
         form.stop_message.data = bot.stop_message
         form.human_message.data = bot.human_message
@@ -3327,6 +3329,7 @@ def edit_bot(bot_id):
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data
+            bot.language = form.language.data or 'English'
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data
             bot.human_message = form.human_message.data

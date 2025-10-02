@@ -89,6 +89,16 @@
                                 {% endif %}
                                 <div class="form-text">{{ form.delivery_interval_minutes.description }}</div>
                             </div>
+                            <div class="col-md-6">
+                                {{ form.language.label(class="form-label") }}
+                                {{ form.language(class="form-select" + (" is-invalid" if form.language.errors else "")) }}
+                                {% if form.language.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.language.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.language.description }}</div>
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -397,6 +407,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Platform configuration toggle
     platformCheckboxes.forEach(checkbox => {
+        // Check initial state on page load
+        if (checkbox.checked) {
+            if (checkbox.value === 'whatsapp') {
+                whatsappConfig.style.display = 'block';
+            } else if (checkbox.value === 'telegram') {
+                telegramConfig.style.display = 'block';
+            }
+        }
+        
+        // Listen for changes
         checkbox.addEventListener('change', function() {
             if (this.value === 'whatsapp') {
                 whatsappConfig.style.display = this.checked ? 'block' : 'none';
