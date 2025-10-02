@@ -103,8 +103,9 @@ telegram_service = TelegramService()
 gemini_service = GeminiService()
 scheduler = ContentScheduler(whatsapp_service, telegram_service, db_manager)
 
-# Global flag to ensure scheduler starts only once
+# Global flag and lock to ensure scheduler starts only once
 scheduler_started = False
+scheduler_lock = threading.Lock()
 
 # Cache for bot-specific services
 bot_telegram_services = {}
@@ -240,7 +241,20 @@ HUMAN_HANDOFF_KEYWORDS = [
 ]
 
 def start_scheduler():
-    """Start the background scheduler in a separate thread"""
+    """Start the background scheduler in a separate thread with thread-safe initialization"""
+    global scheduler_started
+    
+    # Thread-safe check and initialization
+    with scheduler_lock:
+        # Double-check inside lock to prevent race conditions
+        if scheduler_started:
+            logger.warning("Scheduler already running, skipping duplicate start")
+            return
+        
+        # Set flag immediately to prevent other threads from starting
+        scheduler_started = True
+    
+    # Start the scheduler thread (outside lock to avoid blocking)
     def run_scheduler():
         while True:
             try:
