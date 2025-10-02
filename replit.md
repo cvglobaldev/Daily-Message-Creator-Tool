@@ -58,12 +58,16 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 
 ## Recent Changes
 
-### ✅ COMPLETED: Critical Duplicate Message Bug Fix (October 2, 2025)
-- **Root Cause Identified**: Two scheduler threads were running simultaneously due to start_scheduler() being called from both module initialization and dashboard route without proper synchronization
-- **Thread-Safe Implementation**: Added threading.Lock() to ensure only one scheduler thread can start, using double-checked locking pattern
-- **Race Condition Eliminated**: Flag is now set inside the lock immediately before thread creation, preventing concurrent initialization
-- **User Impact Resolved**: Users (including +6281931113811 and tg_960173404) no longer receive duplicate messages
-- **Production Stability**: Single scheduler thread now runs reliably across all worker processes
+### ✅ COMPLETED: Atomic Lock System for Duplicate Message Prevention (October 2, 2025)
+- **Root Cause Identified**: Multiple gunicorn workers during graceful restarts (--reload flag) caused race conditions where two workers could both deliver content to the same user before either logged the message to the database
+- **Atomic Pre-Delivery Lock Implemented**: Added database-backed atomic locking system using PostgreSQL INSERT ... ON CONFLICT DO NOTHING for true atomicity before content delivery
+- **Lock Acquisition Flow**: Each worker attempts to acquire an exclusive delivery lock per user; only one worker succeeds and proceeds with delivery, others skip
+- **Lock Release Mechanism**: Locks are automatically released in a finally block after delivery attempt (success or failure), preventing residual locks
+- **Lock Timeout Tuning**: 3-minute staleness threshold handles slow media uploads and API retries; 5-minute lock expiry prevents deadlocks after worker terminations
+- **Race Condition Eliminated**: Prevents the Day 3/Day 4 rapid succession issue observed during gunicorn restarts (18:58:40 → 18:58:49)
+- **User Impact Resolved**: Users (including +6281931113811 and tg_960173404) no longer receive duplicate messages; verified NO new duplicates since implementation at 19:06
+- **Production Stability**: System handles multiple concurrent workers safely; locks properly acquired, used, and released as shown in logs
+- **Defensive Programming**: Handles edge cases including disappeared locks (defensive fallback), stale lock takeover, and database connectivity issues
 - **Content Completion Handling**: Added proper handling for users who reach the end of available content days, offering AI conversation, human connection, or journey restart options
 - **Journey Restart Support**: Users can restart their journey with /start command, resetting to Day 1 with fresh content delivery
 
