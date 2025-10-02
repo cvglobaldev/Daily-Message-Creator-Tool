@@ -409,18 +409,21 @@ document.addEventListener('DOMContentLoaded', function() {
     platformCheckboxes.forEach(checkbox => {
         // Check initial state on page load
         if (checkbox.checked) {
-            if (checkbox.value === 'whatsapp') {
+            if (checkbox.value === 'whatsapp' && whatsappConfig) {
                 whatsappConfig.style.display = 'block';
-            } else if (checkbox.value === 'telegram') {
+            } else if (checkbox.value === 'telegram' && telegramConfig) {
                 telegramConfig.style.display = 'block';
             }
         }
         
         // Listen for changes
-        checkbox.addEventListener('change', function() {
-            if (this.value === 'whatsapp') {
+        checkbox.addEventListener('change', function(e) {
+            console.log('Checkbox changed:', this.value, 'checked:', this.checked);
+            if (this.value === 'whatsapp' && whatsappConfig) {
+                console.log('Toggling WhatsApp config to:', this.checked ? 'block' : 'none');
                 whatsappConfig.style.display = this.checked ? 'block' : 'none';
-            } else if (this.value === 'telegram') {
+            } else if (this.value === 'telegram' && telegramConfig) {
+                console.log('Toggling Telegram config to:', this.checked ? 'block' : 'none');
                 telegramConfig.style.display = this.checked ? 'block' : 'none';
             }
         });
