@@ -960,9 +960,10 @@
                 </div>
             `;
         }
+    }
 
-        // Select media file function - creates safe URL from filename
-        function selectMediaFile(filename, mediaType, element) {
+    // Select media file function - creates safe URL from filename
+    function selectMediaFile(filename, mediaType, element) {
         console.log(`🎯 selectMediaFile called: filename="${filename}", mediaType="${mediaType}"`);
         
         // Defensive: ensure element is valid, try to find it if missing
@@ -1159,56 +1160,58 @@
         }
     }
 
+    // Pre-populate hidden inputs with existing content values when editing
+    {% if content %}
+        {% if content.image_filename %}
+            document.getElementById('selectedImageFile').value = '{{ content.image_filename }}';
+            console.log('✅ Pre-populated existing image: {{ content.image_filename }}');
+        {% endif %}
+        {% if content.video_filename %}
+            document.getElementById('selectedVideoFile').value = '{{ content.video_filename }}';
+            console.log('✅ Pre-populated existing video: {{ content.video_filename }}');
+        {% endif %}
+        {% if content.audio_filename %}
+            document.getElementById('selectedAudioFile').value = '{{ content.audio_filename }}';
+            console.log('✅ Pre-populated existing audio: {{ content.audio_filename }}');
+        {% endif %}
+    {% endif %}
+    
+    // Initialize main content preview on page load
+    updateMainContentPreview();
+    
+    // Update main preview when content changes
+    const contentTextarea = document.getElementById('content');
+    if (contentTextarea) {
+        contentTextarea.addEventListener('input', updateMainContentPreview);
+    }
+    
+    // Update main preview when title changes  
+    const titleInput = document.getElementById('title');
+    if (titleInput) {
+        titleInput.addEventListener('input', updateMainContentPreview);
+    }
+    
+    // Update main preview when media type changes
+    mediaTypeSelect.addEventListener('change', updateMainContentPreview);
+    
     // Handle form submission to include selected files
     document.getElementById('contentForm').addEventListener('submit', function(e) {
         const selectedImage = document.getElementById('selectedImageFile');
         const selectedVideo = document.getElementById('selectedVideoFile');
         const selectedAudio = document.getElementById('selectedAudioFile');
         
+        console.log('📤 Form being submitted');
         console.log('🔍 Form submit - checking selected media files:');
         console.log('🔍   selectedImage:', selectedImage ? selectedImage.value : 'not found');
         console.log('🔍   selectedVideo:', selectedVideo ? selectedVideo.value : 'not found');
         console.log('🔍   selectedAudio:', selectedAudio ? selectedAudio.value : 'not found');
         
-        // Note: We don't need to create new inputs since the existing hidden inputs 
-        // already have the correct names (selected_image, selected_video, selected_audio)
-        // and they should be automatically included in the form submission
-        console.log('🔍 Existing hidden inputs will be submitted automatically with correct names');
-        
-        // Initialize main content preview
-        updateMainContentPreview();
-        
-        // Update main preview when content changes
-        const contentTextarea = document.getElementById('content');
-        if (contentTextarea) {
-            contentTextarea.addEventListener('input', updateMainContentPreview);
+        // Debug: Log all form data before submission
+        const formData = new FormData(this);
+        console.log('🔍 Form data being submitted:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: "${value}"`);
         }
-        
-        // Update main preview when title changes  
-        const titleInput = document.getElementById('title');
-        if (titleInput) {
-            titleInput.addEventListener('input', updateMainContentPreview);
-        }
-        
-        // Update main preview when media type changes
-        mediaTypeSelect.addEventListener('change', updateMainContentPreview);
-        // Add form submission debugging to track hidden inputs
-        document.getElementById('contentForm').addEventListener('submit', function(e) {
-            console.log('📤 Form being submitted');
-            
-            // Debug: Log all form data before submission
-            const formData = new FormData(this);
-            console.log('🔍 Form data being submitted:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`  ${key}: "${value}"`);
-            }
-            
-            // Debug: Check hidden inputs specifically
-            console.log('🔍 Hidden input values:');
-            console.log(`  selectedImageFile: "${document.getElementById('selectedImageFile').value}"`);
-            console.log(`  selectedVideoFile: "${document.getElementById('selectedVideoFile').value}"`);
-            console.log(`  selectedAudioFile: "${document.getElementById('selectedAudioFile').value}"`);
-        });
     });
     </script>
 </body>
