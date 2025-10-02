@@ -165,8 +165,10 @@ class ContentScheduler:
             # Get content for current day
             content = self.db.get_content_by_day(current_day, bot_id=user.bot_id)
             if not content:
-                logger.error(f"No content found for day {current_day}")
-                return False
+                logger.warning(f"No content found for day {current_day} for user {phone_number} (bot_id: {user.bot_id})")
+                # Handle users who have completed available content
+                self._handle_content_completion(phone_number, current_day, user)
+                return True  # Return True so we don't keep retrying
             
             # Send the main content with reflection question combined
             content_dict = content.to_dict()
@@ -416,6 +418,74 @@ class ContentScheduler:
             
         except Exception as e:
             logger.error(f"Error completing journey for user {phone_number}: {e}")
+    
+    def _handle_content_completion(self, phone_number: str, current_day: int, user) -> None:
+        """Handle users who have reached the end of available content"""
+        try:
+            from models import Bot, Content
+            
+            # Get the bot to check journey duration and available content
+            bot = Bot.query.get(user.bot_id)
+            if not bot:
+                logger.error(f"Bot not found for user {phone_number}")
+                return
+            
+            # Check how many days of content are available for this bot
+            available_content = Content.query.filter_by(
+                bot_id=user.bot_id,
+                content_type='daily',
+                is_active=True
+            ).count()
+            
+            logger.info(f"User {phone_number} on day {current_day}, bot has {available_content} days of content")
+            
+            # Determine platform
+            platform = 'telegram' if phone_number.startswith('tg_') else 'whatsapp'
+            
+            # Create completion message
+            completion_message = (
+                f"🎉 You've completed the available journey content!\n\n"
+                f"Thank you for taking this {available_content}-day journey. "
+                f"We hope it has been meaningful and enriching for you.\n\n"
+                f"📱 What would you like to do next?\n\n"
+                f"• Continue exploring with AI-guided conversations\n"
+                f"• Type 'HUMAN' or '/human' to connect with a counselor\n"
+                f"• Type 'START' or '/start' to restart the journey\n\n"
+                f"Feel free to share your thoughts, ask questions, or explore further. I'm here to help! 💬"
+            )
+            
+            # Send message via appropriate platform
+            if platform == 'telegram':
+                chat_id = phone_number[3:]  # Remove 'tg_' prefix
+                telegram_service = TelegramService(bot.telegram_bot_token) if bot.telegram_bot_token else self.telegram_service
+                telegram_service.send_message(chat_id, completion_message)
+            else:
+                # WhatsApp
+                whatsapp_service = WhatsAppService(
+                    bot.whatsapp_access_token,
+                    bot.whatsapp_phone_number_id
+                ) if bot.whatsapp_access_token else self.whatsapp_service
+                whatsapp_service.send_message(phone_number, completion_message)
+            
+            # Log the message
+            self.db.log_message(
+                user=user,
+                direction='outgoing',
+                raw_text=completion_message,
+                sentiment='positive',
+                tags=['CONTENT_COMPLETION', 'SYSTEM_MESSAGE'],
+                confidence=1.0
+            )
+            
+            # Mark as completed if they've reached the bot's journey duration
+            if current_day >= bot.journey_duration_days:
+                self.db.update_user(phone_number, status='completed', completion_date=datetime.now())
+                logger.info(f"User {phone_number} marked as completed (reached day {current_day} of {bot.journey_duration_days})")
+            
+            logger.info(f"Sent completion message to {phone_number} on day {current_day}")
+            
+        except Exception as e:
+            logger.error(f"Error handling content completion for {phone_number}: {e}")
     
     def get_user_progress(self, phone_number: str) -> dict:
         """Get user's current progress"""
