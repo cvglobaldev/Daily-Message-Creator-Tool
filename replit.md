@@ -58,6 +58,15 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 
 ## Recent Changes
 
+### ✅ COMPLETED: Critical Duplicate Message Bug Fix (October 2, 2025)
+- **Root Cause Identified**: Two scheduler threads were running simultaneously due to start_scheduler() being called from both module initialization and dashboard route without proper synchronization
+- **Thread-Safe Implementation**: Added threading.Lock() to ensure only one scheduler thread can start, using double-checked locking pattern
+- **Race Condition Eliminated**: Flag is now set inside the lock immediately before thread creation, preventing concurrent initialization
+- **User Impact Resolved**: Users (including +6281931113811 and tg_960173404) no longer receive duplicate messages
+- **Production Stability**: Single scheduler thread now runs reliably across all worker processes
+- **Content Completion Handling**: Added proper handling for users who reach the end of available content days, offering AI conversation, human connection, or journey restart options
+- **Journey Restart Support**: Users can restart their journey with /start command, resetting to Day 1 with fresh content delivery
+
 ### ✅ COMPLETED: Bot Creation Platform Configuration & Multi-Language Support (October 2, 2025)
 - **Platform Configuration Display Fixed**: Resolved JavaScript syntax error preventing WhatsApp and Telegram configuration sections from appearing when checkboxes were selected on create bot page
 - **Comprehensive Language Support**: Added all 46 Gemini AI-supported languages to both create and edit bot forms with dropdown selection
