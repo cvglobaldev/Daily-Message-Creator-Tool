@@ -239,6 +239,11 @@ class Content(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Confirmation button customization
+    confirmation_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    yes_button_text: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    no_button_text: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
     # Relationships
     bot: Mapped["Bot"] = relationship("Bot", back_populates="content")
     
@@ -293,7 +298,10 @@ class Content(db.Model):
             'is_active': self.is_active,
             'content_type': getattr(self, 'content_type', 'daily'),
             'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'updated_at': self.updated_at.isoformat(),
+            'confirmation_message': self.confirmation_message,
+            'yes_button_text': self.yes_button_text,
+            'no_button_text': self.no_button_text
         }
 
 class TagRule(db.Model):
