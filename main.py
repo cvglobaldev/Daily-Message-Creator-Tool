@@ -4112,6 +4112,11 @@ def cms_edit_content(content_id):
         media_type = request.form.get('media_type', 'text')
         is_active = request.form.get('is_active') == 'true'
         
+        # Get confirmation button customization fields
+        confirmation_message = request.form.get('confirmation_message', '').strip() or None
+        yes_button_text = request.form.get('yes_button_text', '').strip() or None
+        no_button_text = request.form.get('no_button_text', '').strip() or None
+        
         # Parse tags from JSON string
         tags_json = request.form.get('tags', '[]')
         try:
@@ -4132,7 +4137,10 @@ def cms_edit_content(content_id):
             youtube_url=request.form.get('youtube_url'),  # Keep for backwards compatibility
             audio_filename=audio_filename,
             is_active=is_active,
-            content_type=request.form.get('content_type', 'daily')
+            content_type=request.form.get('content_type', 'daily'),
+            confirmation_message=confirmation_message,
+            yes_button_text=yes_button_text,
+            no_button_text=no_button_text
         )
         
         if success:
