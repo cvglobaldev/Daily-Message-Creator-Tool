@@ -3218,6 +3218,18 @@ Aku disini untuk menuntun kamu dalam perjalanan spiritual, kamu bisa bertanya te
 Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. Percakapan ini sudah ditandai sebagai prioritas untuk respon manusia.
 
 Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. Silakan berbagi apa yang ada di hati Anda. 🙏"""
+
+                bot.completion_message = """🎉 Kamu telah menyelesaikan semua konten perjalanan yang tersedia!
+
+Terima kasih telah mengikuti perjalanan spiritual ini bersama kami. Semoga perjalanan ini memberikan makna dan pengayaan bagi kehidupan rohanimu.
+
+📱 Apa yang ingin kamu lakukan selanjutnya?
+
+• Lanjutkan eksplorasi dengan percakapan bersama AI
+• Ketik 'HUMAN' atau '/human' untuk terhubung dengan konselor
+• Ketik 'START' atau '/start' untuk memulai ulang perjalanan
+
+Jangan ragu untuk berbagi pemikiran, bertanya, atau menjelajah lebih lanjut. Aku di sini untuk membantu! 💬"""
             
             elif hasattr(form, 'bot_template') and form.bot_template.data == 'english_general':
                 # Apply English general Christian outreach template
@@ -3265,12 +3277,25 @@ Remember, this is your personal space for spiritual exploration. There's no pres
 I've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.
 
 In the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝"""
+
+                bot.completion_message = """🎉 You've completed the available journey content!
+
+Thank you for taking this journey with us. We hope it has been meaningful and enriching for you.
+
+📱 What would you like to do next?
+
+• Continue exploring with AI-guided conversations
+• Type 'HUMAN' or '/human' to connect with a counselor
+• Type 'START' or '/start' to restart the journey
+
+Feel free to share your thoughts, ask questions, or explore further. I'm here to help! 💬"""
             else:
                 # Use custom form values
                 bot.ai_prompt = form.ai_prompt.data or ""
                 bot.help_message = form.help_message.data or ""
                 bot.stop_message = form.stop_message.data or ""
                 bot.human_message = form.human_message.data or ""
+                bot.completion_message = form.completion_message.data or ""
             
             bot.journey_duration_days = form.journey_duration_days.data or 30
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
@@ -3435,6 +3460,7 @@ def edit_bot(bot_id):
         form.help_message.data = bot.help_message
         form.stop_message.data = bot.stop_message
         form.human_message.data = bot.human_message
+        form.completion_message.data = bot.completion_message
         form.status.data = bot.status == 'active'
     
     if form.validate_on_submit():
@@ -3463,6 +3489,7 @@ def edit_bot(bot_id):
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data
             bot.human_message = form.human_message.data
+            bot.completion_message = form.completion_message.data
             bot.status = 'active' if form.status.data else 'inactive'
             
             # Auto-setup or update webhooks if needed

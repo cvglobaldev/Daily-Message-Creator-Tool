@@ -141,6 +141,12 @@ Your goal is to create respectful, meaningful conversations that invite people t
         validators=[DataRequired(), Length(min=10, max=1000)],
         default="👤 Human Support Requested\n\nI've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.\n\nIn the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝"
     )
+    completion_message = TextAreaField(
+        'Journey Completion Message',
+        validators=[DataRequired(), Length(min=10, max=1000)],
+        default="🎉 You've completed the available journey content!\n\nThank you for taking this journey with us. We hope it has been meaningful and enriching for you.\n\n📱 What would you like to do next?\n\n• Continue exploring with AI-guided conversations\n• Type 'HUMAN' or '/human' to connect with a counselor\n• Type 'START' or '/start' to restart the journey\n\nFeel free to share your thoughts, ask questions, or explore further. I'm here to help! 💬",
+        description="Message shown when users complete all available journey content"
+    )
     
     # AI Content Generation Settings
     enable_ai_content_generation = BooleanField('Enable AI Content Generation', default=False)
@@ -348,6 +354,11 @@ class EditBotForm(FlaskForm):
     human_message = TextAreaField(
         'Human Command Message',
         validators=[DataRequired(), Length(min=10, max=1000)]
+    )
+    completion_message = TextAreaField(
+        'Journey Completion Message',
+        validators=[DataRequired(), Length(min=10, max=1000)],
+        description="Message shown when users complete all available journey content"
     )
     
     
