@@ -462,19 +462,40 @@ class ContentScheduler:
                 return False
             
             # Get bot for language check
-            from models import Bot
+            from models import Bot, Content
             bot = Bot.query.get(user.bot_id) if user.bot_id else None
             is_indonesian = bot and "indonesia" in bot.name.lower() if bot else False
             
-            # Create confirmation message based on language
-            if is_indonesian:
-                confirmation_message = f"📌 Apakah Anda sudah membaca pesan Hari {day}?"
-                yes_text = "✅ Ya, sudah baca"
-                no_text = "⏰ Nanti saja"
+            # Try to get custom confirmation messages from the content object
+            content = Content.query.filter_by(bot_id=user.bot_id, day_number=day).first()
+            
+            # Use custom messages if available, otherwise use defaults
+            if content and content.confirmation_message:
+                confirmation_message = content.confirmation_message
             else:
-                confirmation_message = f"📌 Have you read today's Day {day} message?"
-                yes_text = "✅ Yes, I've read it"
-                no_text = "⏰ Not yet"
+                # Default confirmation message based on language
+                if is_indonesian:
+                    confirmation_message = f"📌 Apakah Anda sudah membaca pesan Hari {day}?"
+                else:
+                    confirmation_message = f"📌 Have you read today's Day {day} message?"
+            
+            if content and content.yes_button_text:
+                yes_text = content.yes_button_text
+            else:
+                # Default yes button text based on language
+                if is_indonesian:
+                    yes_text = "✅ Ya, sudah baca"
+                else:
+                    yes_text = "✅ Yes, I've read it"
+            
+            if content and content.no_button_text:
+                no_text = content.no_button_text
+            else:
+                # Default no button text based on language
+                if is_indonesian:
+                    no_text = "⏰ Nanti saja"
+                else:
+                    no_text = "⏰ Not yet"
             
             # Send buttons based on platform
             if platform == "telegram":
