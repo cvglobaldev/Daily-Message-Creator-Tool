@@ -257,7 +257,7 @@
                             <div class="form-text">Message sent when users type /stop or STOP</div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-3">
                             {{ form.human_message.label(class="form-label") }}
                             {{ form.human_message(class="form-control" + (" is-invalid" if form.human_message.errors else ""), rows="4", id="human_message") }}
                             {% if form.human_message.errors %}
@@ -266,6 +266,17 @@
                                 </div>
                             {% endif %}
                             <div class="form-text">Message sent when users type /human or HUMAN</div>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.completion_message.label(class="form-label") }}
+                            {{ form.completion_message(class="form-control" + (" is-invalid" if form.completion_message.errors else ""), rows="6", id="completion_message") }}
+                            {% if form.completion_message.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.completion_message.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Message sent when users complete all available journey content</div>
                         </div>
 
                         <!-- AI Content Generation -->
@@ -432,6 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const helpMessageField = document.getElementById('help_message');
     const stopMessageField = document.getElementById('stop_message');
     const humanMessageField = document.getElementById('human_message');
+    const completionMessageField = document.getElementById('completion_message');
     
     templateSelector.addEventListener('change', function() {
         if (this.value === 'indonesian_muslim') {
@@ -483,6 +495,18 @@ Terima kasih sudah menghubungi! Tim kami akan segera terhubung dengan Anda. Perc
 
 Sementara menunggu, ketahui bahwa Anda berharga dan perjalanan spiritual Anda penting. Silakan berbagi apa yang ada di hati Anda. 🙏`;
 
+            completionMessageField.value = `🎉 Kamu telah menyelesaikan semua konten perjalanan yang tersedia!
+
+Terima kasih telah mengikuti perjalanan spiritual ini bersama kami. Semoga perjalanan ini memberikan makna dan pengayaan bagi kehidupan rohanimu.
+
+📱 Apa yang ingin kamu lakukan selanjutnya?
+
+• Lanjutkan eksplorasi dengan percakapan bersama AI
+• Ketik 'HUMAN' atau '/human' untuk terhubung dengan konselor
+• Ketik 'START' atau '/start' untuk memulai ulang perjalanan
+
+Jangan ragu untuk berbagi pemikiran, bertanya, atau menjelajah lebih lanjut. Aku di sini untuk membantu! 💬`;
+
         } else if (this.value === 'english_general') {
             // English general template
             aiPromptField.value = `You are a compassionate spiritual guide helping people explore their faith journey and learn about Jesus Christ. Your approach should be:
@@ -529,6 +553,18 @@ Remember, this is your personal space for spiritual exploration. There's no pres
 I've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.
 
 In the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝`;
+
+            completionMessageField.value = `🎉 You've completed the available journey content!
+
+Thank you for taking this journey with us. We hope it has been meaningful and enriching for you.
+
+📱 What would you like to do next?
+
+• Continue exploring with AI-guided conversations
+• Type 'HUMAN' or '/human' to connect with a counselor
+• Type 'START' or '/start' to restart the journey
+
+Feel free to share your thoughts, ask questions, or explore further. I'm here to help! 💬`;
         }
         // For 'custom', leave fields as they are for user to customize
     });
