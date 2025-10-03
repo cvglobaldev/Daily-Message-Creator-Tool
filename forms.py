@@ -117,6 +117,26 @@ class ContentForm(FlaskForm):
         description="Describe the type of content you want to generate. Be specific about tone, topics, and approach."
     )
     
+    # Confirmation Button Customization
+    confirmation_message = TextAreaField(
+        'Confirmation Message', 
+        validators=[Optional(), Length(max=500)],
+        render_kw={"rows": 2, "placeholder": "Leave blank for default message. E.g., 'Have you read today's message?'"},
+        description="Custom message asking if user has read the content. Leave blank to use default."
+    )
+    yes_button_text = StringField(
+        'Yes Button Text',
+        validators=[Optional(), Length(max=100)],
+        render_kw={"placeholder": "Leave blank for default. E.g., 'Yes, I've read it'"},
+        description="Custom text for the 'Yes' button. Leave blank to use default."
+    )
+    no_button_text = StringField(
+        'No Button Text',
+        validators=[Optional(), Length(max=100)],
+        render_kw={"placeholder": "Leave blank for default. E.g., 'Not yet'"},
+        description="Custom text for the 'No' button. Leave blank to use default."
+    )
+    
     submit = SubmitField('Save Content')
 
 class AIContentGenerationForm(FlaskForm):

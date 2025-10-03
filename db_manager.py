@@ -515,7 +515,8 @@ class DatabaseManager:
     
     def update_content(self, content_id, title, content, reflection_question, tags=None, 
                       media_type='text', image_filename=None, video_filename=None, 
-                      youtube_url=None, audio_filename=None, is_active=True, content_type='daily'):
+                      youtube_url=None, audio_filename=None, is_active=True, content_type='daily',
+                      confirmation_message=None, yes_button_text=None, no_button_text=None):
         """Update existing multimedia content"""
         try:
             content_obj = Content.query.get(content_id)
@@ -534,6 +535,9 @@ class DatabaseManager:
             content_obj.audio_filename = audio_filename
             content_obj.is_active = is_active
             content_obj.content_type = content_type
+            content_obj.confirmation_message = confirmation_message
+            content_obj.yes_button_text = yes_button_text
+            content_obj.no_button_text = no_button_text
             content_obj.updated_at = datetime.utcnow()
             
             self.db.session.commit()

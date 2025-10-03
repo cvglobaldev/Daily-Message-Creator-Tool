@@ -4529,6 +4529,11 @@ def cms_content_edit(content_id):
             
             logger.info(f"Updating content {content_id}: media_type={media_type}, youtube_url={youtube_url}")
             
+            # Get confirmation button customization fields
+            confirmation_message = request.form.get('confirmation_message', '').strip() or None
+            yes_button_text = request.form.get('yes_button_text', '').strip() or None
+            no_button_text = request.form.get('no_button_text', '').strip() or None
+            
             success = db_manager.update_content(
                 content_id=content_id,
                 title=title,
@@ -4539,7 +4544,10 @@ def cms_content_edit(content_id):
                 image_filename=image_filename,
                 youtube_url=youtube_url,
                 audio_filename=audio_filename,
-                is_active=is_active
+                is_active=is_active,
+                confirmation_message=confirmation_message,
+                yes_button_text=yes_button_text,
+                no_button_text=no_button_text
             )
             
             if success:

@@ -333,6 +333,35 @@
                                 <div class="form-text">A thoughtful question to encourage user reflection and response.</div>
                             </div>
                             
+                            <div class="card mb-3 bg-dark">
+                                <div class="card-header bg-secondary">
+                                    <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Confirmation Button Customization</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="confirmationMessage" class="form-label">Confirmation Message</label>
+                                        <textarea class="form-control" id="confirmationMessage" rows="2" placeholder="Leave blank for default. E.g., 'Have you read today's message?'"></textarea>
+                                        <div class="form-text">Custom message asking if user has read the content. Leave blank to use default language-specific message.</div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="yesButtonText" class="form-label">Yes Button Text</label>
+                                                <input type="text" class="form-control" id="yesButtonText" placeholder="Leave blank for default. E.g., 'Yes, I've read it'">
+                                                <div class="form-text">Custom text for the 'Yes' button. Leave blank to use default.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="noButtonText" class="form-label">No Button Text</label>
+                                                <input type="text" class="form-control" id="noButtonText" placeholder="Leave blank for default. E.g., 'Not yet'">
+                                                <div class="form-text">Custom text for the 'No' button. Leave blank to use default.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mb-3">
                                 <label for="tags" class="form-label">Faith Journey Tags</label>
                                 <div class="row">
@@ -763,6 +792,9 @@ Day 1 content will arrive in 10 seconds!`;
             document.getElementById('title').value = dayContent ? dayContent.title || '' : '';
             document.getElementById('content').value = dayContent ? dayContent.content || '' : '';
             document.getElementById('reflectionQuestion').value = dayContent ? dayContent.reflection_question || '' : '';
+            document.getElementById('confirmationMessage').value = dayContent ? (dayContent.confirmation_message || '') : '';
+            document.getElementById('yesButtonText').value = dayContent ? (dayContent.yes_button_text || '') : '';
+            document.getElementById('noButtonText').value = dayContent ? (dayContent.no_button_text || '') : '';
             document.getElementById('isActive').checked = dayContent ? dayContent.is_active : true;
             
             // Set multimedia type
@@ -1006,6 +1038,11 @@ Day 1 content will arrive in 10 seconds!`;
             formData.append('reflection_question', reflectionQuestion);
             formData.append('tags', JSON.stringify(getSelectedTags()));
             formData.append('is_active', document.getElementById('isActive').checked);
+            
+            // Add confirmation button customization
+            formData.append('confirmation_message', document.getElementById('confirmationMessage').value);
+            formData.append('yes_button_text', document.getElementById('yesButtonText').value);
+            formData.append('no_button_text', document.getElementById('noButtonText').value);
             
             // Add content_type for greeting content
             formData.append('content_type', isGreeting ? 'greeting' : 'daily');
