@@ -604,10 +604,10 @@ class ContentScheduler:
             # Determine platform
             platform = 'telegram' if phone_number.startswith('tg_') else 'whatsapp'
             
-            # Create completion message
-            completion_message = (
+            # Get completion message from bot (with fallback to default)
+            completion_message = bot.completion_message if bot.completion_message else (
                 f"🎉 You've completed the available journey content!\n\n"
-                f"Thank you for taking this {available_content}-day journey. "
+                f"Thank you for taking this journey with us. "
                 f"We hope it has been meaningful and enriching for you.\n\n"
                 f"📱 What would you like to do next?\n\n"
                 f"• Continue exploring with AI-guided conversations\n"
