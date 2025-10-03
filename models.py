@@ -115,6 +115,7 @@ class Bot(db.Model):
     help_message: Mapped[str] = mapped_column(Text, nullable=False, default="🤝 Available Commands:\n\n📖 START - Begin your faith journey\n⏹️ STOP - Pause the journey\n❓ HELP - Show this help message\n👤 HUMAN - Connect with a human counselor\n\nI'm here to guide you through a meaningful spiritual journey. Feel free to ask questions or share your thoughts anytime!")
     stop_message: Mapped[str] = mapped_column(Text, nullable=False, default="⏸️ Your faith journey has been paused.\n\nTake your time whenever you're ready to continue. Send START to resume your journey, or HUMAN if you'd like to speak with someone.\n\nRemember, this is your personal space for spiritual exploration. There's no pressure - go at your own pace. 🙏")
     human_message: Mapped[str] = mapped_column(Text, nullable=False, default="👤 Human Support Requested\n\nI've flagged your conversation for our human counselors who will respond as soon as possible. They're trained in spiritual guidance and are here to support you.\n\nIn the meantime, feel free to continue sharing your thoughts or questions. Everything you share is treated with care and confidentiality. 💝")
+    completion_message: Mapped[str] = mapped_column(Text, nullable=False, default="🎉 You've completed the available journey content!\n\nThank you for taking this journey with us. We hope it has been meaningful and enriching for you.\n\n📱 What would you like to do next?\n\n• Continue exploring with AI-guided conversations\n• Type 'HUMAN' or '/human' to connect with a counselor\n• Type 'START' or '/start' to restart the journey\n\nFeel free to share your thoughts, ask questions, or explore further. I'm here to help! 💬")
     
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -145,6 +146,7 @@ class Bot(db.Model):
             'help_message': self.help_message,
             'stop_message': self.stop_message,
             'human_message': self.human_message,
+            'completion_message': self.completion_message,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
