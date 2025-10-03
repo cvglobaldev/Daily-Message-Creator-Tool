@@ -865,6 +865,34 @@ class DatabaseManager:
             logger.error(f"Error updating message tags: {e}")
             return False
     
+    def add_user_tag(self, phone_number: str, tag: str) -> bool:
+        """Add a tag to user's profile-level tags"""
+        try:
+            user = self.get_user_by_phone(phone_number)
+            if not user:
+                logger.error(f"User with phone {phone_number} not found")
+                return False
+            
+            # Get current tags or initialize as empty list
+            current_tags = list(user.tags) if isinstance(user.tags, list) else []
+            
+            # Add tag if not already present
+            if tag not in current_tags:
+                current_tags.append(tag)
+                # Reassign to trigger SQLAlchemy change detection for JSON column
+                user.tags = current_tags
+                self.db.session.commit()
+                logger.info(f"Tag '{tag}' added to user {phone_number}")
+                return True
+            else:
+                logger.info(f"Tag '{tag}' already exists for user {phone_number}")
+                return True
+                
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error adding user tag: {e}")
+            return False
+    
     def get_chatbot_settings(self) -> Dict:
         """Get chatbot settings"""
         try:

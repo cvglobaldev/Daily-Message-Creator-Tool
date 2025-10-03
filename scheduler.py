@@ -352,8 +352,9 @@ class ContentScheduler:
                     telegram_service = self.telegram_service
                     logger.info("Using default service (no user found)")
                 
+                content_delivered = False
                 if media_type == 'text' or not media_url:
-                    return telegram_service.send_message(chat_id, message)
+                    content_delivered = telegram_service.send_message(chat_id, message)
                 elif media_type in ['image', 'video', 'audio']:
                     # For Telegram, send media first, then text content
                     media_sent = False
@@ -384,15 +385,22 @@ class ContentScheduler:
                     # Now send text content after media
                     if media_sent:
                         time.sleep(1)
-                        text_sent = telegram_service.send_message(chat_id, message)
-                        return text_sent
+                        content_delivered = telegram_service.send_message(chat_id, message)
                     else:
                         # If media failed, still send text
-                        return telegram_service.send_message(chat_id, message)
+                        content_delivered = telegram_service.send_message(chat_id, message)
                 else:
-                    return telegram_service.send_message(chat_id, message)
+                    content_delivered = telegram_service.send_message(chat_id, message)
+                
+                # Send confirmation buttons after content is delivered
+                if content_delivered:
+                    time.sleep(2)  # Brief pause before asking for confirmation
+                    self._send_content_confirmation_buttons(phone_number, platform, telegram_service, day)
+                
+                return content_delivered
             else:
                 # WhatsApp user - use bot-specific service
+                platform = "whatsapp"
                 user = self.db.get_user_by_phone(phone_number)
                 if user and user.bot_id:
                     from main import get_whatsapp_service_for_bot
@@ -401,8 +409,9 @@ class ContentScheduler:
                 else:
                     whatsapp_service = self.whatsapp_service
                 
+                content_delivered = False
                 if media_type == 'text' or not media_url:
-                    return whatsapp_service.send_message(phone_number, message)
+                    content_delivered = whatsapp_service.send_message(phone_number, message)
                 elif media_type in ['image', 'video', 'audio']:
                     # For WhatsApp, send media first, then text content
                     media_sent = False
@@ -426,18 +435,70 @@ class ContentScheduler:
                     # Now send text content after media
                     if media_sent:
                         time.sleep(1)
-                        text_sent = whatsapp_service.send_message(phone_number, message)
-                        return text_sent
+                        content_delivered = whatsapp_service.send_message(phone_number, message)
                     else:
                         # If media failed, still send text
-                        return whatsapp_service.send_message(phone_number, message)
+                        content_delivered = whatsapp_service.send_message(phone_number, message)
                 else:
-                    return whatsapp_service.send_message(phone_number, message)
+                    content_delivered = whatsapp_service.send_message(phone_number, message)
+                
+                # Send confirmation buttons after content is delivered
+                if content_delivered:
+                    time.sleep(2)  # Brief pause before asking for confirmation
+                    self._send_content_confirmation_buttons(phone_number, platform, whatsapp_service, day)
+                
+                return content_delivered
                 
         except Exception as e:
             logger.error(f"Error delivering content: {e}")
             return False
     
+    def _send_content_confirmation_buttons(self, phone_number: str, platform: str, service, day: int):
+        """Send confirmation buttons asking if user has read the content"""
+        try:
+            # Get user to check bot language
+            user = self.db.get_user_by_phone(phone_number)
+            if not user:
+                return False
+            
+            # Get bot for language check
+            from models import Bot
+            bot = Bot.query.get(user.bot_id) if user.bot_id else None
+            is_indonesian = bot and "indonesia" in bot.name.lower() if bot else False
+            
+            # Create confirmation message based on language
+            if is_indonesian:
+                confirmation_message = f"📌 Apakah Anda sudah membaca pesan Hari {day}?"
+                yes_text = "✅ Ya, sudah baca"
+                no_text = "⏰ Nanti saja"
+            else:
+                confirmation_message = f"📌 Have you read today's Day {day} message?"
+                yes_text = "✅ Yes, I've read it"
+                no_text = "⏰ Not yet"
+            
+            # Send buttons based on platform
+            if platform == "telegram":
+                # Telegram inline keyboard
+                chat_id = phone_number[3:] if phone_number.startswith('tg_') else phone_number
+                buttons = [
+                    [{"text": yes_text, "callback_data": f"content_confirm_yes_{day}"}],
+                    [{"text": no_text, "callback_data": f"content_confirm_no_{day}"}]
+                ]
+                service.send_message_with_inline_keyboard(chat_id, confirmation_message, buttons)
+                logger.info(f"Sent content confirmation buttons to Telegram user {chat_id} for Day {day}")
+            else:
+                # WhatsApp interactive buttons
+                buttons = [
+                    {"id": f"content_confirm_yes_{day}", "title": yes_text[:20]},  # WhatsApp has 20 char limit
+                    {"id": f"content_confirm_no_{day}", "title": no_text[:20]}
+                ]
+                service.send_interactive_buttons(phone_number, confirmation_message, buttons)
+                logger.info(f"Sent content confirmation buttons to WhatsApp user {phone_number} for Day {day}")
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error sending confirmation buttons: {e}")
+            return False
 
     def _log_delivered_content(self, user, content: dict):
         """Log the delivered daily content to message history"""

@@ -296,6 +296,34 @@ class Content(db.Model):
             'updated_at': self.updated_at.isoformat()
         }
 
+class TagRule(db.Model):
+    """Tag rule model for custom AI-powered tagging rules"""
+    __tablename__ = 'tag_rules'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tag_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    ai_evaluation_rule: Mapped[str] = mapped_column(Text, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<TagRule {self.tag_name}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tag_name': self.tag_name,
+            'description': self.description,
+            'ai_evaluation_rule': self.ai_evaluation_rule,
+            'is_active': self.is_active,
+            'priority': self.priority,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
 class SystemSettings(db.Model):
     """System settings for configuration"""
     __tablename__ = 'system_settings'

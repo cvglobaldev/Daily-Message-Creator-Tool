@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Edit' if tag_rule else 'Create' }} Tag Rule - Daily Message Creator</title>
+    
+    <!-- CV Global Favicon Implementation -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="msapplication-TileColor" content="#000000">
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
+                Daily Message Creator
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link me-3" href="/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link me-3" href="/tags">
+                    <i class="fas fa-tags me-1"></i>Tag Management
+                </a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>{{ current_user.full_name if current_user.is_authenticated else 'Guest' }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/change-password">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-{{ 'edit' if tag_rule else 'plus' }} me-2 text-primary"></i>{{ 'Edit' if tag_rule else 'Create New' }} Tag Rule</h2>
+                        <p class="text-muted mb-0">Define AI-powered rules for automatic tagging of user responses</p>
+                    </div>
+                    <a href="/tags" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Tags
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Tag Rule Form -->
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Tag Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('edit_tag_rule', rule_id=tag_rule.id) if tag_rule else url_for('create_tag_rule') }}">
+                            {{ form.hidden_tag() }}
+                            
+                            <!-- Tag Name -->
+                            <div class="mb-4">
+                                {{ form.tag_name.label(class="form-label fw-bold") }}
+                                {{ form.tag_name(class="form-control" + (" is-invalid" if form.tag_name.errors else "")) }}
+                                {% if form.tag_name.description %}
+                                <div class="form-text">{{ form.tag_name.description }}</div>
+                                {% endif %}
+                                {% if form.tag_name.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.tag_name.errors[0] }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Description -->
+                            <div class="mb-4">
+                                {{ form.description.label(class="form-label fw-bold") }}
+                                {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else "")) }}
+                                {% if form.description.description %}
+                                <div class="form-text">{{ form.description.description }}</div>
+                                {% endif %}
+                                {% if form.description.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.description.errors[0] }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- AI Evaluation Rule -->
+                            <div class="mb-4">
+                                {{ form.ai_evaluation_rule.label(class="form-label fw-bold") }}
+                                <div class="card bg-dark mb-2">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-robot me-2 text-primary"></i>AI Rule Writing Tips:</h6>
+                                        <ul class="mb-0 small">
+                                            <li>Be specific and clear about when the tag should apply</li>
+                                            <li>Include examples of keywords or phrases</li>
+                                            <li>Consider cultural context and variations in expression</li>
+                                            <li>Use "Apply this tag when..." format</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                {{ form.ai_evaluation_rule(class="form-control font-monospace" + (" is-invalid" if form.ai_evaluation_rule.errors else "")) }}
+                                {% if form.ai_evaluation_rule.description %}
+                                <div class="form-text">{{ form.ai_evaluation_rule.description }}</div>
+                                {% endif %}
+                                {% if form.ai_evaluation_rule.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.ai_evaluation_rule.errors[0] }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Priority & Status -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    {{ form.priority.label(class="form-label fw-bold") }}
+                                    {{ form.priority(class="form-select" + (" is-invalid" if form.priority.errors else "")) }}
+                                    {% if form.priority.description %}
+                                    <div class="form-text">{{ form.priority.description }}</div>
+                                    {% endif %}
+                                    {% if form.priority.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.priority.errors[0] }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Status</label>
+                                    <div class="form-check form-switch">
+                                        {{ form.is_active(class="form-check-input") }}
+                                        <label class="form-check-label" for="{{ form.is_active.id }}">
+                                            {% if form.is_active.data %}
+                                            <span class="text-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                            {% else %}
+                                            <span class="text-muted"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                    {% if form.is_active.description %}
+                                    <div class="form-text">{{ form.is_active.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between">
+                                <a href="/tags" class="btn btn-secondary">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </a>
+                                {{ form.submit(class="btn btn-primary") }}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Example Section -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Example Tag Rules</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong class="text-primary">Prayer Interest</strong>
+                            <p class="mb-1"><strong>Rule:</strong> "Apply this tag when the user mentions praying, asks for prayer, expresses desire to pray, or discusses prayer practices. Include phrases like 'can I pray', 'how to pray', 'I prayed', or 'teach me to pray'."</p>
+                        </div>
+                        <div class="mb-3">
+                            <strong class="text-success">Bible Curiosity</strong>
+                            <p class="mb-1"><strong>Rule:</strong> "Apply this tag when the user asks about the Bible, wants to read scripture, references Bible stories, or expresses interest in Biblical teachings. Look for phrases like 'read the Bible', 'what does the Bible say', or 'Bible story'."</p>
+                        </div>
+                        <div>
+                            <strong class="text-info">Spiritual Questions</strong>
+                            <p class="mb-0"><strong>Rule:</strong> "Apply this tag when the user asks deep spiritual questions about God, faith, salvation, afterlife, or meaning of life. Include existential questions and theological inquiries."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Update status label when checkbox changes
+        document.getElementById('{{ form.is_active.id }}').addEventListener('change', function() {
+            const label = this.nextElementSibling;
+            if (this.checked) {
+                label.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Active</span>';
+            } else {
+                label.innerHTML = '<span class="text-muted"><i class="fas fa-pause-circle me-1"></i>Inactive</span>';
+            }
+        });
+    </script>
+</body>
+</html>

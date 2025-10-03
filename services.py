@@ -753,22 +753,49 @@ class GeminiService:
         ]
     
     def analyze_response(self, text: str) -> Dict[str, Any]:
-        """Analyze user response for sentiment and tags"""
+        """Analyze user response for sentiment and tags with custom AI rules"""
         try:
             if not self.client:
                 # Fallback analysis if Gemini is not available
                 return self._fallback_analysis(text)
             
-            # Create system prompt for analysis
+            # Load custom tag rules from database
+            from models import TagRule
+            custom_rules = TagRule.query.filter_by(is_active=True).order_by(TagRule.priority.desc()).all()
+            
+            # Combine predefined and custom tags
+            all_tags = self.predefined_tags.copy()
+            custom_rules_text = ""
+            
+            if custom_rules:
+                custom_rules_text = "\n\nCUSTOM TAG RULES (evaluate these with high priority):\n"
+                for rule in custom_rules:
+                    if rule.tag_name not in all_tags:
+                        all_tags.append(rule.tag_name)
+                    custom_rules_text += f"\n- {rule.tag_name}: {rule.ai_evaluation_rule}"
+            
+            # Create enhanced system prompt with custom rules
             system_prompt = f"""
             You are an expert at analyzing religious and spiritual text responses. 
             
             Analyze the following user response and provide:
             1. Sentiment: One of "positive", "negative", or "neutral"
-            2. Tags: Select relevant tags from this list: {', '.join(self.predefined_tags)}
+            2. Tags: Select relevant tags from this list: {', '.join(all_tags)}
             3. Confidence: A number between 0.0 and 1.0 indicating how confident you are in the analysis
             
+            STANDARD TAGS:
+            - "Introduction to Jesus (ITJ)": User acknowledges reading/watching content about Jesus
+            - "Gospel Presentation": User responds to substantial Gospel explanation
+            - "Prayer": User indicates they have prayed, are praying, or request prayer
+            - "Bible Exposure": User has been exposed to Bible story or teaching
+            - "Bible Engagement": User indicates reading/engaging with Bible for spiritual growth
+            - "Christian Learning": User engaged with material to help them follow Jesus
+            - "Salvation Prayer": User prayed (or indicated they prayed) to follow Jesus
+            - "Holy Spirit Empowerment": User shows evidence of Holy Spirit work
+            {custom_rules_text}
+            
             Consider cultural sensitivity, especially for users from Muslim backgrounds who may be learning about Christian concepts.
+            Multiple tags can be applied if relevant.
             
             Response format: JSON with fields "sentiment", "tags" (array), and "confidence" (number).
             """
@@ -794,8 +821,8 @@ class GeminiService:
                     sentiment = "neutral"
                 
                 tags = analysis_data.get("tags", [])
-                # Filter tags to only include predefined ones
-                filtered_tags = [tag for tag in tags if tag in self.predefined_tags]
+                # Filter tags to only include known ones (predefined + custom)
+                filtered_tags = [tag for tag in tags if tag in all_tags]
                 
                 confidence = float(analysis_data.get("confidence", 0.5))
                 confidence = max(0.0, min(1.0, confidence))  # Clamp between 0 and 1
@@ -806,7 +833,7 @@ class GeminiService:
                     "confidence": confidence
                 }
                 
-                logger.info(f"Gemini analysis completed: {result}")
+                logger.info(f"Gemini analysis completed with custom rules: {result}")
                 return result
             
             else:

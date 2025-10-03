@@ -154,3 +154,29 @@ class AIContentGenerationForm(FlaskForm):
     )
     
     submit = SubmitField('Generate Content')
+
+class TagRuleForm(FlaskForm):
+    """Form for creating and editing custom tagging rules"""
+    tag_name = StringField('Tag Name', 
+                          validators=[DataRequired(), Length(min=2, max=100)],
+                          description="Name of the tag (e.g., 'Prayer Response', 'Bible Interest', 'Spiritual Growth')")
+    
+    description = TextAreaField('Description', 
+                               validators=[DataRequired(), Length(min=10, max=500)],
+                               render_kw={"rows": 3},
+                               description="Describe when this tag should be applied")
+    
+    ai_evaluation_rule = TextAreaField('AI Evaluation Rule', 
+                                      validators=[DataRequired(), Length(min=20, max=1000)],
+                                      render_kw={"rows": 6},
+                                      description="Write a clear instruction for the AI about when to apply this tag. Example: 'Apply this tag when the user mentions praying, asking for prayer, or expressing interest in prayer'")
+    
+    priority = SelectField('Priority', 
+                          coerce=int,
+                          choices=[(0, 'Low'), (5, 'Medium'), (10, 'High')],
+                          default=5,
+                          description="Higher priority tags are checked first")
+    
+    is_active = BooleanField('Active', default=True, description="Only active tags are used for analysis")
+    
+    submit = SubmitField('Save Tag Rule')

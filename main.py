@@ -410,6 +410,52 @@ def telegram_webhook(bot_id=1):
                                     handle_contextual_conversation(phone_number, original_message, "telegram", bot_id)
                                     break
                     
+                elif callback_data.startswith('content_confirm_yes_'):
+                    # User confirmed they read the daily content - apply "Christian Learning" tag
+                    day = callback_data.replace('content_confirm_yes_', '')
+                    logger.info(f"User {phone_number} confirmed reading Day {day} content")
+                    
+                    user = db_manager.get_user_by_phone(phone_number)
+                    if user:
+                        # Log the message with tag
+                        db_manager.log_message(
+                            user=user,
+                            direction='incoming',
+                            raw_text=f"User confirmed reading Day {day} content",
+                            sentiment='positive',
+                            tags=['Christian Learning']
+                        )
+                        # Also add tag to user's profile
+                        db_manager.add_user_tag(phone_number, 'Christian Learning')
+                    
+                    # Send positive feedback
+                    from models import Bot
+                    bot = Bot.query.get(bot_id)
+                    
+                    if bot and bot.name and "indonesia" in bot.name.lower():
+                        feedback_msg = "✅ Terima kasih! Semoga pesan hari ini bermanfaat untuk perjalanan spiritualmu. 🙏"
+                    else:
+                        feedback_msg = "✅ Thank you! We hope today's message was meaningful for your spiritual journey. 🙏"
+                    
+                    send_message_to_platform(phone_number, "telegram", feedback_msg, bot_id=bot_id)
+                    telegram_service.answer_callback_query(callback_query_id, "Thank you!")
+                
+                elif callback_data.startswith('content_confirm_no_'):
+                    # User hasn't read it yet - send encouraging message
+                    day = callback_data.replace('content_confirm_no_', '')
+                    logger.info(f"User {phone_number} hasn't read Day {day} content yet")
+                    
+                    from models import Bot
+                    bot = Bot.query.get(bot_id)
+                    
+                    if bot and bot.name and "indonesia" in bot.name.lower():
+                        reminder_msg = "Tidak apa-apa! Silakan baca kapan pun Anda siap. Kami di sini untuk Anda. 😊"
+                    else:
+                        reminder_msg = "That's okay! Read it whenever you're ready. We're here for you. 😊"
+                    
+                    send_message_to_platform(phone_number, "telegram", reminder_msg, bot_id=bot_id)
+                    telegram_service.answer_callback_query(callback_query_id, "No problem!")
+                
                 elif callback_data.startswith('quick_reply:'):
                     reply_text = callback_data.replace('quick_reply:', '')
                     logger.info(f"Quick reply from {chat_id}: {reply_text}")
@@ -491,6 +537,7 @@ def whatsapp_webhook(bot_id=1):
                                         continue
                                     
                                     message_text = ''
+                                    button_id = None
                                     if message_type == 'text':
                                         message_text = message_data.get('text', {}).get('body', '').strip()
                                     elif message_type == 'button':
@@ -498,9 +545,59 @@ def whatsapp_webhook(bot_id=1):
                                     elif message_type == 'interactive':
                                         interactive = message_data.get('interactive', {})
                                         if 'button_reply' in interactive:
+                                            button_id = interactive['button_reply'].get('id', '')
                                             message_text = interactive['button_reply'].get('title', '').strip()
                                         elif 'list_reply' in interactive:
                                             message_text = interactive['list_reply'].get('title', '').strip()
+                                    
+                                    # Handle content confirmation buttons (WhatsApp)
+                                    if button_id and button_id.startswith('content_confirm_'):
+                                        user = db_manager.get_user_by_phone(phone_number)
+                                        if button_id.startswith('content_confirm_yes_'):
+                                            day = button_id.replace('content_confirm_yes_', '')
+                                            logger.info(f"WhatsApp user {phone_number} confirmed reading Day {day} content")
+                                            
+                                            if user:
+                                                # Log the message with tag
+                                                db_manager.log_message(
+                                                    user=user,
+                                                    direction='incoming',
+                                                    raw_text=f"User confirmed reading Day {day} content",
+                                                    sentiment='positive',
+                                                    tags=['Christian Learning']
+                                                )
+                                                # Also add tag to user's profile
+                                                db_manager.add_user_tag(phone_number, 'Christian Learning')
+                                            
+                                            # Send positive feedback
+                                            from models import Bot
+                                            bot = Bot.query.get(bot_id)
+                                            
+                                            if bot and bot.name and "indonesia" in bot.name.lower():
+                                                feedback_msg = "✅ Terima kasih! Semoga pesan hari ini bermanfaat untuk perjalanan spiritualmu. 🙏"
+                                            else:
+                                                feedback_msg = "✅ Thank you! We hope today's message was meaningful for your spiritual journey. 🙏"
+                                            
+                                            bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                                            bot_whatsapp_service.send_message(phone_number, feedback_msg)
+                                            
+                                        elif button_id.startswith('content_confirm_no_'):
+                                            day = button_id.replace('content_confirm_no_', '')
+                                            logger.info(f"WhatsApp user {phone_number} hasn't read Day {day} content yet")
+                                            
+                                            from models import Bot
+                                            bot = Bot.query.get(bot_id)
+                                            
+                                            if bot and bot.name and "indonesia" in bot.name.lower():
+                                                reminder_msg = "Tidak apa-apa! Silakan baca kapan pun Anda siap. Kami di sini untuk Anda. 😊"
+                                            else:
+                                                reminder_msg = "That's okay! Read it whenever you're ready. We're here for you. 😊"
+                                            
+                                            bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                                            bot_whatsapp_service.send_message(phone_number, reminder_msg)
+                                        
+                                        # Skip normal processing for confirmation buttons
+                                        continue
                                     
                                     if phone_number and message_text:
                                         # Get client IP for location data
@@ -3485,6 +3582,99 @@ def delete_bot(bot_id):
         logger.error(f"Error deleting bot: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Tag Management Routes
+@app.route('/tags')
+@login_required
+def tag_management():
+    """Tag management dashboard"""
+    try:
+        from models import TagRule
+        tag_rules = TagRule.query.order_by(TagRule.priority.desc(), TagRule.created_at.desc()).all()
+        return render_template('tag_management.html', tag_rules=tag_rules)
+    except Exception as e:
+        logger.error(f"Tag management error: {e}")
+        flash(f'Error loading tags: {str(e)}', 'error')
+        return redirect('/dashboard')
+
+@app.route('/tags/create', methods=['GET', 'POST'])
+@login_required
+def create_tag_rule():
+    """Create a new tag rule"""
+    try:
+        from forms import TagRuleForm
+        from models import TagRule, db
+        
+        form = TagRuleForm()
+        
+        if form.validate_on_submit():
+            tag_rule = TagRule(
+                tag_name=form.tag_name.data,
+                description=form.description.data,
+                ai_evaluation_rule=form.ai_evaluation_rule.data,
+                priority=form.priority.data,
+                is_active=form.is_active.data
+            )
+            db.session.add(tag_rule)
+            db.session.commit()
+            
+            flash(f'Tag rule "{tag_rule.tag_name}" created successfully!', 'success')
+            return redirect('/tags')
+        
+        return render_template('tag_form.html', form=form, tag_rule=None)
+    except Exception as e:
+        logger.error(f"Error creating tag rule: {e}")
+        flash(f'Error creating tag rule: {str(e)}', 'error')
+        return redirect('/tags')
+
+@app.route('/tags/edit/<int:rule_id>', methods=['GET', 'POST'])
+@login_required
+def edit_tag_rule(rule_id):
+    """Edit an existing tag rule"""
+    try:
+        from forms import TagRuleForm
+        from models import TagRule, db
+        
+        tag_rule = TagRule.query.get_or_404(rule_id)
+        form = TagRuleForm(obj=tag_rule)
+        
+        if form.validate_on_submit():
+            tag_rule.tag_name = form.tag_name.data
+            tag_rule.description = form.description.data
+            tag_rule.ai_evaluation_rule = form.ai_evaluation_rule.data
+            tag_rule.priority = form.priority.data
+            tag_rule.is_active = form.is_active.data
+            
+            db.session.commit()
+            
+            flash(f'Tag rule "{tag_rule.tag_name}" updated successfully!', 'success')
+            return redirect('/tags')
+        
+        return render_template('tag_form.html', form=form, tag_rule=tag_rule)
+    except Exception as e:
+        logger.error(f"Error editing tag rule: {e}")
+        flash(f'Error editing tag rule: {str(e)}', 'error')
+        return redirect('/tags')
+
+@app.route('/tags/delete/<int:rule_id>', methods=['POST'])
+@login_required
+def delete_tag_rule(rule_id):
+    """Delete a tag rule"""
+    try:
+        from models import TagRule, db
+        
+        tag_rule = TagRule.query.get_or_404(rule_id)
+        tag_name = tag_rule.tag_name
+        
+        db.session.delete(tag_rule)
+        db.session.commit()
+        
+        flash(f'Tag rule "{tag_name}" deleted successfully!', 'success')
+        return redirect('/tags')
+    except Exception as e:
+        logger.error(f"Error deleting tag rule: {e}")
+        flash(f'Error deleting tag rule: {str(e)}', 'error')
+        return redirect('/tags')
 
 # Chat Management Routes
 @app.route('/chat-management')
