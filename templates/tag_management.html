@@ -15,6 +15,36 @@
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/static/cvglobal-theme.css">
+    <style>
+        .parent-tag-row {
+            background-color: #2d3748 !important;
+            border-left: 4px solid #00ff88;
+            cursor: pointer;
+        }
+        .parent-tag-row:hover {
+            background-color: #374151 !important;
+        }
+        .parent-tag-name {
+            color: #00ff88 !important;
+            font-weight: bold;
+        }
+        .subtag-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .subtag-row {
+            background-color: #1a202c;
+        }
+        .subtag-row:hover {
+            background-color: #2d3748;
+        }
+        .collapse-icon {
+            transition: transform 0.2s;
+        }
+        .collapse-icon.expanded {
+            transform: rotate(90deg);
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-dark bg-primary mb-4">
@@ -113,12 +143,12 @@
                                 <tbody>
                                     {% for rule in tag_rules %}
                                         {% if not rule.parent_id %}
-                                        <!-- Main Tag Row -->
-                                        <tr class="table-primary">
+                                        <!-- Main Tag Row (Collapsible) -->
+                                        <tr class="parent-tag-row" onclick="toggleSubtags({{ rule.id }})">
                                             <td>
-                                                <strong class="text-primary">
-                                                    <i class="fas fa-folder me-2"></i>{{ rule.tag_name }}
-                                                </strong>
+                                                <i class="fas fa-chevron-right collapse-icon me-2" id="icon-{{ rule.id }}"></i>
+                                                <i class="fas fa-folder me-2"></i>
+                                                <strong class="parent-tag-name">{{ rule.tag_name }}</strong>
                                                 {% if rule.children %}
                                                 <span class="badge bg-info ms-2">{{ rule.children|length }} sub-tags</span>
                                                 {% endif %}
@@ -145,7 +175,7 @@
                                                 <span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
                                                 {% endif %}
                                             </td>
-                                            <td>
+                                            <td onclick="event.stopPropagation()">
                                                 <div class="btn-group btn-group-sm">
                                                     <a href="/tags/edit/{{ rule.id }}" class="btn btn-outline-primary" title="Edit">
                                                         <i class="fas fa-edit"></i>
@@ -157,48 +187,58 @@
                                             </td>
                                         </tr>
                                         
-                                        <!-- Sub-Tags -->
+                                        <!-- Sub-Tags Container (Collapsible) -->
                                         {% if rule.children %}
-                                            {% for subtag in rule.children %}
-                                            <tr>
-                                                <td class="ps-5">
-                                                    <i class="fas fa-arrow-right me-2 text-muted"></i>
-                                                    <span class="text-info">{{ subtag.tag_name }}</span>
-                                                </td>
-                                                <td>
-                                                    <small>{{ subtag.description[:60] }}{% if subtag.description|length > 60 %}...{% endif %}</small>
-                                                </td>
-                                                <td>
-                                                    <small class="text-muted">{{ subtag.ai_evaluation_rule[:50] }}{% if subtag.ai_evaluation_rule|length > 50 %}...{% endif %}</small>
-                                                </td>
-                                                <td>
-                                                    {% if subtag.priority >= 10 %}
-                                                    <span class="badge bg-danger">High</span>
-                                                    {% elif subtag.priority >= 5 %}
-                                                    <span class="badge bg-warning">Medium</span>
-                                                    {% else %}
-                                                    <span class="badge bg-secondary">Low</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if subtag.is_active %}
-                                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
-                                                    {% else %}
-                                                    <span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm">
-                                                        <a href="/tags/edit/{{ subtag.id }}" class="btn btn-outline-primary" title="Edit">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                        <button onclick="confirmDelete({{ subtag.id }}, '{{ subtag.tag_name }}')" class="btn btn-outline-danger" title="Delete">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
+                                        <tr id="subtags-{{ rule.id }}" style="display: none;">
+                                            <td colspan="6" class="p-0">
+                                                <div class="subtag-container">
+                                                    <table class="table table-sm mb-0">
+                                                        <tbody>
+                                                            {% for subtag in rule.children %}
+                                                            <tr class="subtag-row">
+                                                                <td style="width: 25%;" class="ps-5">
+                                                                    <i class="fas fa-arrow-right me-2 text-muted"></i>
+                                                                    <span class="text-info">{{ subtag.tag_name }}</span>
+                                                                </td>
+                                                                <td style="width: 25%;">
+                                                                    <small>{{ subtag.description[:60] }}{% if subtag.description|length > 60 %}...{% endif %}</small>
+                                                                </td>
+                                                                <td style="width: 25%;">
+                                                                    <small class="text-muted">{{ subtag.ai_evaluation_rule[:50] }}{% if subtag.ai_evaluation_rule|length > 50 %}...{% endif %}</small>
+                                                                </td>
+                                                                <td>
+                                                                    {% if subtag.priority >= 10 %}
+                                                                    <span class="badge bg-danger">High</span>
+                                                                    {% elif subtag.priority >= 5 %}
+                                                                    <span class="badge bg-warning">Medium</span>
+                                                                    {% else %}
+                                                                    <span class="badge bg-secondary">Low</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if subtag.is_active %}
+                                                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                                                    {% else %}
+                                                                    <span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    <div class="btn-group btn-group-sm">
+                                                                        <a href="/tags/edit/{{ subtag.id }}" class="btn btn-outline-primary" title="Edit">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </a>
+                                                                        <button onclick="confirmDelete({{ subtag.id }}, '{{ subtag.tag_name }}')" class="btn btn-outline-danger" title="Delete">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         {% endif %}
                                         {% endif %}
                                     {% endfor %}
@@ -295,6 +335,19 @@
             document.getElementById('deleteTagName').textContent = tagName;
             document.getElementById('deleteForm').action = `/tags/delete/${ruleId}`;
             new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        function toggleSubtags(parentId) {
+            const subtags = document.getElementById('subtags-' + parentId);
+            const icon = document.getElementById('icon-' + parentId);
+            
+            if (subtags.style.display === 'none') {
+                subtags.style.display = 'table-row';
+                icon.classList.add('expanded');
+            } else {
+                subtags.style.display = 'none';
+                icon.classList.remove('expanded');
+            }
         }
     </script>
 </body>

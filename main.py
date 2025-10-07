@@ -3617,7 +3617,15 @@ def tag_management():
     """Tag management dashboard"""
     try:
         from models import TagRule
-        tag_rules = TagRule.query.order_by(TagRule.priority.desc(), TagRule.created_at.desc()).all()
+        # Order: Faith Journey first (by name), then other tags, Delivered Daily Content last
+        all_tags = TagRule.query.order_by(TagRule.priority.desc(), TagRule.created_at.desc()).all()
+        
+        # Separate and reorder: Faith Journey first, Delivered Daily Content last
+        faith_journey = [t for t in all_tags if t.tag_name == 'Faith Journey']
+        daily_content = [t for t in all_tags if t.tag_name == 'Delivered Daily Content']
+        other_tags = [t for t in all_tags if t.tag_name not in ['Faith Journey', 'Delivered Daily Content']]
+        
+        tag_rules = faith_journey + other_tags + daily_content
         return render_template('tag_management.html', tag_rules=tag_rules)
     except Exception as e:
         logger.error(f"Tag management error: {e}")
