@@ -3617,15 +3617,16 @@ def tag_management():
     """Tag management dashboard"""
     try:
         from models import TagRule
-        # Order: Faith Journey first (by name), then other tags, Delivered Daily Content last
+        # Order: Faith Journey first, Other Tags middle, Delivered Daily Content last
         all_tags = TagRule.query.order_by(TagRule.priority.desc(), TagRule.created_at.desc()).all()
         
-        # Separate and reorder: Faith Journey first, Delivered Daily Content last
+        # Separate and reorder: Faith Journey → Other Tags → Delivered Daily Content
         faith_journey = [t for t in all_tags if t.tag_name == 'Faith Journey']
+        other_tags_parent = [t for t in all_tags if t.tag_name == 'Other Tags']
         daily_content = [t for t in all_tags if t.tag_name == 'Delivered Daily Content']
-        other_tags = [t for t in all_tags if t.tag_name not in ['Faith Journey', 'Delivered Daily Content']]
+        remaining_tags = [t for t in all_tags if t.tag_name not in ['Faith Journey', 'Other Tags', 'Delivered Daily Content']]
         
-        tag_rules = faith_journey + other_tags + daily_content
+        tag_rules = faith_journey + other_tags_parent + remaining_tags + daily_content
         return render_template('tag_management.html', tag_rules=tag_rules)
     except Exception as e:
         logger.error(f"Tag management error: {e}")
@@ -3723,6 +3724,93 @@ def delete_tag_rule(rule_id):
     except Exception as e:
         logger.error(f"Error deleting tag rule: {e}")
         flash(f'Error deleting tag rule: {str(e)}', 'error')
+        return redirect('/tags')
+
+@app.route('/tags/initialize-other-tags', methods=['POST'])
+@login_required
+def initialize_other_tags():
+    """Initialize Other Tags parent tag with operational/administrative sub-tags"""
+    try:
+        from models import TagRule, db
+        
+        # Check if Other Tags already exists
+        existing_other = TagRule.query.filter_by(tag_name='Other Tags').first()
+        
+        if existing_other:
+            flash('Other Tags already exist. Delete them first if you want to reinitialize.', 'warning')
+            return redirect('/tags')
+        
+        # Create Other Tags main tag
+        other_tags = TagRule(
+            tag_name='Other Tags',
+            description='Operational and administrative tags for user engagement tracking and support management',
+            ai_evaluation_rule='This is a parent tag for organizing operational tags. Apply relevant sub-tags when users need support, show disengagement, or require administrative actions.',
+            priority=5,
+            is_active=True,
+            parent_id=None
+        )
+        db.session.add(other_tags)
+        db.session.flush()
+        
+        # Create Other Tags sub-tags
+        other_subtags = [
+            {
+                'name': 'Human',
+                'description': 'User requested or needs human connection/support',
+                'rule': 'Apply this tag when the user explicitly requests to speak with a human, or when sensitive topics require human intervention.'
+            },
+            {
+                'name': 'Support',
+                'description': 'User needs additional support or guidance',
+                'rule': 'Apply this tag when the user expresses need for help, guidance, or additional support beyond the daily content.'
+            },
+            {
+                'name': 'Blocked',
+                'description': 'User has blocked the bot or been blocked',
+                'rule': 'Apply this tag when the user has blocked the bot or when communication has been blocked due to policy violations.'
+            },
+            {
+                'name': 'Already in church',
+                'description': 'User was already attending church when chat started',
+                'rule': 'Apply this tag when the user indicates they are already part of a church community or actively attending services.'
+            },
+            {
+                'name': 'Not connected',
+                'description': 'User not successfully connected to partner/pioneer/church',
+                'rule': 'Apply this tag when attempts to connect the user with local church partners, pioneers, or communities have been unsuccessful.'
+            },
+            {
+                'name': 'Not genuine',
+                'description': 'User being inappropriate, testing, or spamming',
+                'rule': 'Apply this tag when the user displays inappropriate behavior, appears to be testing the system, or is sending spam messages.'
+            },
+            {
+                'name': 'No response',
+                'description': 'User never responded after requesting human contact',
+                'rule': 'Apply this tag when the user requested human connection but has not responded to follow-up messages or contact attempts.'
+            }
+        ]
+        
+        for subtag_data in other_subtags:
+            subtag = TagRule(
+                tag_name=subtag_data['name'],
+                description=subtag_data['description'],
+                ai_evaluation_rule=subtag_data['rule'],
+                priority=5,
+                is_active=True,
+                parent_id=other_tags.id
+            )
+            db.session.add(subtag)
+        
+        db.session.commit()
+        
+        flash('Other Tags initialized successfully! Created 7 operational/administrative sub-tags.', 'success')
+        return redirect('/tags')
+        
+    except Exception as e:
+        logger.error(f"Error initializing other tags: {e}")
+        db.session.rollback()
+        flash(f'Error initializing other tags: {str(e)}', 'error')
         return redirect('/tags')
 
 @app.route('/tags/initialize', methods=['POST'])

@@ -98,6 +98,11 @@
                                 <i class="fas fa-magic me-2"></i>Initialize Predefined Tags
                             </button>
                         </form>
+                        <form method="POST" action="/tags/initialize-other-tags" style="display: inline;" onsubmit="return confirm('This will create Other Tags with operational/administrative sub-tags. Continue?');">
+                            <button type="submit" class="btn btn-info me-2">
+                                <i class="fas fa-cog me-2"></i>Initialize Other Tags
+                            </button>
+                        </form>
                         <a href="/tags/create" class="btn btn-primary">
                             <i class="fas fa-plus me-2"></i>Add New Tag
                         </a>
@@ -254,6 +259,11 @@
                                 <form method="POST" action="/tags/initialize" style="display: inline;" onsubmit="return confirm('This will create Faith Journey and Delivered Daily Content tag structures. Continue?');">
                                     <button type="submit" class="btn btn-success me-2">
                                         <i class="fas fa-magic me-2"></i>Initialize Predefined Tags
+                                    </button>
+                                </form>
+                                <form method="POST" action="/tags/initialize-other-tags" style="display: inline;" onsubmit="return confirm('This will create Other Tags with operational/administrative sub-tags. Continue?');">
+                                    <button type="submit" class="btn btn-info me-2">
+                                        <i class="fas fa-cog me-2"></i>Initialize Other Tags
                                     </button>
                                 </form>
                                 <a href="/tags/create" class="btn btn-primary">
