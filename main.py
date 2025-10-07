@@ -3634,13 +3634,18 @@ def create_tag_rule():
         
         form = TagRuleForm()
         
+        # Populate parent tag choices (only main tags, no subtags)
+        main_tags = TagRule.query.filter_by(parent_id=None).order_by(TagRule.tag_name).all()
+        form.parent_id.choices = [('', '-- None (Main Tag) --')] + [(str(tag.id), tag.tag_name) for tag in main_tags]
+        
         if form.validate_on_submit():
             tag_rule = TagRule(
                 tag_name=form.tag_name.data,
                 description=form.description.data,
                 ai_evaluation_rule=form.ai_evaluation_rule.data,
                 priority=form.priority.data,
-                is_active=form.is_active.data
+                is_active=form.is_active.data,
+                parent_id=form.parent_id.data
             )
             db.session.add(tag_rule)
             db.session.commit()
@@ -3665,12 +3670,21 @@ def edit_tag_rule(rule_id):
         tag_rule = TagRule.query.get_or_404(rule_id)
         form = TagRuleForm(obj=tag_rule)
         
+        # Populate parent tag choices (exclude self and its descendants)
+        main_tags = TagRule.query.filter_by(parent_id=None).filter(TagRule.id != rule_id).order_by(TagRule.tag_name).all()
+        form.parent_id.choices = [('', '-- None (Main Tag) --')] + [(str(tag.id), tag.tag_name) for tag in main_tags]
+        
+        # Pre-populate parent_id if editing
+        if request.method == 'GET' and tag_rule.parent_id:
+            form.parent_id.data = str(tag_rule.parent_id)
+        
         if form.validate_on_submit():
             tag_rule.tag_name = form.tag_name.data
             tag_rule.description = form.description.data
             tag_rule.ai_evaluation_rule = form.ai_evaluation_rule.data
             tag_rule.priority = form.priority.data
             tag_rule.is_active = form.is_active.data
+            tag_rule.parent_id = form.parent_id.data
             
             db.session.commit()
             
@@ -3701,6 +3715,124 @@ def delete_tag_rule(rule_id):
     except Exception as e:
         logger.error(f"Error deleting tag rule: {e}")
         flash(f'Error deleting tag rule: {str(e)}', 'error')
+        return redirect('/tags')
+
+@app.route('/tags/initialize', methods=['POST'])
+@login_required
+def initialize_predefined_tags():
+    """Initialize predefined tag structure"""
+    try:
+        from models import TagRule, db
+        
+        # Check if tags already exist
+        existing_count = TagRule.query.filter(
+            TagRule.tag_name.in_(['Faith Journey', 'Delivered Daily Content'])
+        ).count()
+        
+        if existing_count > 0:
+            flash('Predefined tags already exist. Delete them first if you want to reinitialize.', 'warning')
+            return redirect('/tags')
+        
+        # Create Faith Journey main tag
+        faith_journey = TagRule(
+            tag_name='Faith Journey',
+            description='Main category for spiritual milestones and faith development tracking',
+            ai_evaluation_rule='This is a parent tag for organizing faith-related sub-tags. Apply relevant sub-tags when users show spiritual progress.',
+            priority=10,
+            is_active=True,
+            parent_id=None
+        )
+        db.session.add(faith_journey)
+        db.session.flush()
+        
+        # Create Faith Journey sub-tags
+        faith_subtags = [
+            {
+                'name': 'Bible Exposure',
+                'description': 'User has been exposed to Bible story or teaching',
+                'rule': 'Apply this tag when the user acknowledges reading or being exposed to Bible content, stories, or teachings.'
+            },
+            {
+                'name': 'Christian Learning',
+                'description': 'User engaged with material to help them follow Jesus',
+                'rule': 'Apply this tag when the user shows engagement with Christian teachings or materials designed to help them understand and follow Jesus.'
+            },
+            {
+                'name': 'Bible Engagement',
+                'description': 'User indicates reading/engaging with Bible for spiritual growth',
+                'rule': 'Apply this tag when the user actively reads or engages with the Bible for personal spiritual growth and development.'
+            },
+            {
+                'name': 'Salvation Prayer',
+                'description': 'User prayed (or indicated they prayed) to follow Jesus',
+                'rule': 'Apply this tag when the user has prayed or indicated they have prayed a prayer to accept Jesus and follow Him.'
+            },
+            {
+                'name': 'Gospel Presentation',
+                'description': 'User responds to substantial Gospel explanation',
+                'rule': 'Apply this tag when the user responds to or acknowledges a substantial explanation of the Gospel message.'
+            },
+            {
+                'name': 'Prayer',
+                'description': 'User indicates they have prayed, are praying, or request prayer',
+                'rule': 'Apply this tag when the user mentions praying, asks for prayer, or indicates they are engaging in prayer.'
+            },
+            {
+                'name': 'Introduction to Jesus',
+                'description': 'User acknowledges reading/watching content about Jesus',
+                'rule': 'Apply this tag when the user acknowledges exposure to content introducing them to Jesus Christ and His teachings.'
+            },
+            {
+                'name': 'Holy Spirit Empowerment',
+                'description': 'User shows evidence of Holy Spirit work (fruits/gifts)',
+                'rule': 'Apply this tag when the user demonstrates evidence of the Holy Spirit working in their life through spiritual fruits or gifts.'
+            }
+        ]
+        
+        for subtag_data in faith_subtags:
+            subtag = TagRule(
+                tag_name=subtag_data['name'],
+                description=subtag_data['description'],
+                ai_evaluation_rule=subtag_data['rule'],
+                priority=5,
+                is_active=True,
+                parent_id=faith_journey.id
+            )
+            db.session.add(subtag)
+        
+        # Create Delivered Daily Content main tag
+        daily_content = TagRule(
+            tag_name='Delivered Daily Content',
+            description='Tracks which daily content has been delivered to users',
+            ai_evaluation_rule='This is a parent tag for organizing daily content delivery tracking. Apply day-specific sub-tags when content is delivered.',
+            priority=10,
+            is_active=True,
+            parent_id=None
+        )
+        db.session.add(daily_content)
+        db.session.flush()
+        
+        # Create Day 1-90 sub-tags
+        for day in range(1, 91):
+            day_tag = TagRule(
+                tag_name=f'Day {day}',
+                description=f'Content delivered for Day {day} of the journey',
+                ai_evaluation_rule=f'Apply this tag when Day {day} content has been successfully delivered to the user.',
+                priority=0,
+                is_active=True,
+                parent_id=daily_content.id
+            )
+            db.session.add(day_tag)
+        
+        db.session.commit()
+        
+        flash('Predefined tag structure initialized successfully! Created Faith Journey (8 sub-tags) and Delivered Daily Content (90 day tags).', 'success')
+        return redirect('/tags')
+        
+    except Exception as e:
+        logger.error(f"Error initializing tags: {e}")
+        db.session.rollback()
+        flash(f'Error initializing tags: {str(e)}', 'error')
         return redirect('/tags')
 
 # Chat Management Routes

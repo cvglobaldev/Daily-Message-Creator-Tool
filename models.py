@@ -307,7 +307,7 @@ class Content(db.Model):
         }
 
 class TagRule(db.Model):
-    """Tag rule model for custom AI-powered tagging rules"""
+    """Tag rule model for custom AI-powered tagging rules with hierarchical support"""
     __tablename__ = 'tag_rules'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -316,8 +316,16 @@ class TagRule(db.Model):
     ai_evaluation_rule: Mapped[str] = mapped_column(Text, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('tag_rules.id'), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Self-referential relationship for hierarchical tags
+    children: Mapped[List['TagRule']] = db.relationship(
+        'TagRule',
+        backref=db.backref('parent', remote_side=[id]),
+        lazy='joined'
+    )
     
     def __repr__(self):
         return f'<TagRule {self.tag_name}>'
@@ -330,6 +338,8 @@ class TagRule(db.Model):
             'ai_evaluation_rule': self.ai_evaluation_rule,
             'is_active': self.is_active,
             'priority': self.priority,
+            'parent_id': self.parent_id,
+            'has_children': len(self.children) > 0 if self.children else False,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }

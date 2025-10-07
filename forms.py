@@ -176,10 +176,16 @@ class AIContentGenerationForm(FlaskForm):
     submit = SubmitField('Generate Content')
 
 class TagRuleForm(FlaskForm):
-    """Form for creating and editing custom tagging rules"""
+    """Form for creating and editing custom tagging rules with hierarchical support"""
     tag_name = StringField('Tag Name', 
                           validators=[DataRequired(), Length(min=2, max=100)],
                           description="Name of the tag (e.g., 'Prayer Response', 'Bible Interest', 'Spiritual Growth')")
+    
+    parent_id = SelectField('Parent Tag (Optional)', 
+                           coerce=lambda x: int(x) if x and x != '' else None,
+                           choices=[],
+                           validators=[Optional()],
+                           description="Select a parent tag to create a sub-tag, or leave empty for a main tag")
     
     description = TextAreaField('Description', 
                                validators=[DataRequired(), Length(min=10, max=500)],

@@ -60,11 +60,18 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h2><i class="fas fa-tags me-2 text-primary"></i>Tag Management</h2>
-                        <p class="text-muted mb-0">Create and manage custom tagging rules with AI-powered evaluation</p>
+                        <p class="text-muted mb-0">Create and manage hierarchical tagging rules with AI-powered evaluation</p>
                     </div>
-                    <a href="/tags/create" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>Add New Tag Rule
-                    </a>
+                    <div>
+                        <form method="POST" action="/tags/initialize" style="display: inline;" onsubmit="return confirm('This will create Faith Journey and Delivered Daily Content tag structures. Continue?');">
+                            <button type="submit" class="btn btn-success me-2">
+                                <i class="fas fa-magic me-2"></i>Initialize Predefined Tags
+                            </button>
+                        </form>
+                        <a href="/tags/create" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add New Tag
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,8 +80,8 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
-                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'warning' if category == 'warning' else 'danger' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'exclamation-circle' }} me-2"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -87,7 +94,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Active Tag Rules ({{ tag_rules|length }})</h5>
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Tag Structure ({{ tag_rules|length }} total)</h5>
                     </div>
                     <div class="card-body">
                         {% if tag_rules %}
@@ -95,57 +102,105 @@
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Tag Name</th>
-                                        <th>Description</th>
-                                        <th>AI Rule</th>
+                                        <th style="width: 25%;">Tag Name</th>
+                                        <th style="width: 25%;">Description</th>
+                                        <th style="width: 25%;">AI Rule</th>
                                         <th>Priority</th>
                                         <th>Status</th>
-                                        <th>Created</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for rule in tag_rules %}
-                                    <tr>
-                                        <td>
-                                            <strong class="text-primary">{{ rule.tag_name }}</strong>
-                                        </td>
-                                        <td>
-                                            <small>{{ rule.description[:80] }}{% if rule.description|length > 80 %}...{% endif %}</small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">{{ rule.ai_evaluation_rule[:60] }}{% if rule.ai_evaluation_rule|length > 60 %}...{% endif %}</small>
-                                        </td>
-                                        <td>
-                                            {% if rule.priority >= 10 %}
-                                            <span class="badge bg-danger">High</span>
-                                            {% elif rule.priority >= 5 %}
-                                            <span class="badge bg-warning">Medium</span>
-                                            {% else %}
-                                            <span class="badge bg-secondary">Low</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if rule.is_active %}
-                                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
-                                            {% else %}
-                                            <span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">{{ rule.created_at.strftime('%Y-%m-%d') }}</small>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="/tags/edit/{{ rule.id }}" class="btn btn-outline-primary" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <button onclick="confirmDelete({{ rule.id }}, '{{ rule.tag_name }}')" class="btn btn-outline-danger" title="Delete">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                        {% if not rule.parent_id %}
+                                        <!-- Main Tag Row -->
+                                        <tr class="table-primary">
+                                            <td>
+                                                <strong class="text-primary">
+                                                    <i class="fas fa-folder me-2"></i>{{ rule.tag_name }}
+                                                </strong>
+                                                {% if rule.children %}
+                                                <span class="badge bg-info ms-2">{{ rule.children|length }} sub-tags</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small>{{ rule.description[:60] }}{% if rule.description|length > 60 %}...{% endif %}</small>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ rule.ai_evaluation_rule[:50] }}{% if rule.ai_evaluation_rule|length > 50 %}...{% endif %}</small>
+                                            </td>
+                                            <td>
+                                                {% if rule.priority >= 10 %}
+                                                <span class="badge bg-danger">High</span>
+                                                {% elif rule.priority >= 5 %}
+                                                <span class="badge bg-warning">Medium</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Low</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if rule.is_active %}
+                                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="/tags/edit/{{ rule.id }}" class="btn btn-outline-primary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button onclick="confirmDelete({{ rule.id }}, '{{ rule.tag_name }}')" class="btn btn-outline-danger" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Sub-Tags -->
+                                        {% if rule.children %}
+                                            {% for subtag in rule.children %}
+                                            <tr>
+                                                <td class="ps-5">
+                                                    <i class="fas fa-arrow-right me-2 text-muted"></i>
+                                                    <span class="text-info">{{ subtag.tag_name }}</span>
+                                                </td>
+                                                <td>
+                                                    <small>{{ subtag.description[:60] }}{% if subtag.description|length > 60 %}...{% endif %}</small>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">{{ subtag.ai_evaluation_rule[:50] }}{% if subtag.ai_evaluation_rule|length > 50 %}...{% endif %}</small>
+                                                </td>
+                                                <td>
+                                                    {% if subtag.priority >= 10 %}
+                                                    <span class="badge bg-danger">High</span>
+                                                    {% elif subtag.priority >= 5 %}
+                                                    <span class="badge bg-warning">Medium</span>
+                                                    {% else %}
+                                                    <span class="badge bg-secondary">Low</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if subtag.is_active %}
+                                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                                    {% else %}
+                                                    <span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="/tags/edit/{{ subtag.id }}" class="btn btn-outline-primary" title="Edit">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <button onclick="confirmDelete({{ subtag.id }}, '{{ subtag.tag_name }}')" class="btn btn-outline-danger" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% endif %}
+                                        {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -154,10 +209,17 @@
                         <div class="text-center py-5">
                             <i class="fas fa-tags fa-4x text-muted mb-3"></i>
                             <h4 class="text-muted">No Tag Rules Yet</h4>
-                            <p class="text-muted">Create custom tagging rules to automatically categorize user responses</p>
-                            <a href="/tags/create" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Create Your First Tag Rule
-                            </a>
+                            <p class="text-muted">Create custom tagging rules or initialize predefined tag structure</p>
+                            <div class="mt-3">
+                                <form method="POST" action="/tags/initialize" style="display: inline;" onsubmit="return confirm('This will create Faith Journey and Delivered Daily Content tag structures. Continue?');">
+                                    <button type="submit" class="btn btn-success me-2">
+                                        <i class="fas fa-magic me-2"></i>Initialize Predefined Tags
+                                    </button>
+                                </form>
+                                <a href="/tags/create" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Create Custom Tag
+                                </a>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
@@ -170,29 +232,29 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>How Tag Rules Work</h5>
+                        <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Hierarchical Tagging System</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="text-center mb-3">
-                                    <i class="fas fa-robot fa-3x text-primary mb-3"></i>
+                                    <i class="fas fa-sitemap fa-3x text-primary mb-3"></i>
+                                    <h5>Main Tags & Sub-Tags</h5>
+                                    <p class="text-muted">Organize tags hierarchically with main categories and sub-tags for better structure</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-robot fa-3x text-success mb-3"></i>
                                     <h5>AI-Powered Evaluation</h5>
                                     <p class="text-muted">Gemini AI reads your rule and evaluates user messages automatically</p>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="text-center mb-3">
-                                    <i class="fas fa-sliders-h fa-3x text-success mb-3"></i>
-                                    <h5>Priority-Based</h5>
-                                    <p class="text-muted">Higher priority rules are checked first for accurate tagging</p>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="text-center mb-3">
                                     <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
-                                    <h5>Real-Time Insights</h5>
-                                    <p class="text-muted">Track user engagement and spiritual milestones automatically</p>
+                                    <h5>Predefined Structures</h5>
+                                    <p class="text-muted">Faith Journey tags and Daily Content tags (Day 1-90) ready to initialize</p>
                                 </div>
                             </div>
                         </div>
@@ -211,14 +273,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete the tag rule "<strong id="deleteTagName"></strong>"?</p>
+                    <p>Are you sure you want to delete the tag "<strong id="deleteTagName"></strong>"?</p>
+                    <p class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Warning: Deleting a main tag will also delete all its sub-tags!</p>
                     <p class="text-muted">This action cannot be undone.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <form id="deleteForm" method="POST" style="display: inline;">
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash me-2"></i>Delete Tag Rule
+                            <i class="fas fa-trash me-2"></i>Delete Tag
                         </button>
                     </form>
                 </div>

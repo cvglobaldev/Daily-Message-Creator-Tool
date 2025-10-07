@@ -102,6 +102,20 @@
                                 {% endif %}
                             </div>
 
+                            <!-- Parent Tag (Hierarchical) -->
+                            <div class="mb-4">
+                                {{ form.parent_id.label(class="form-label fw-bold") }}
+                                {{ form.parent_id(class="form-select" + (" is-invalid" if form.parent_id.errors else "")) }}
+                                {% if form.parent_id.description %}
+                                <div class="form-text"><i class="fas fa-info-circle me-1"></i>{{ form.parent_id.description }}</div>
+                                {% endif %}
+                                {% if form.parent_id.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.parent_id.errors[0] }}
+                                </div>
+                                {% endif %}
+                            </div>
+
                             <!-- Description -->
                             <div class="mb-4">
                                 {{ form.description.label(class="form-label fw-bold") }}
