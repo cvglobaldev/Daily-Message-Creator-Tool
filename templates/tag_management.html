@@ -60,6 +60,9 @@
                 <a class="nav-link me-3" href="/bots">
                     <i class="fas fa-robot me-1"></i>Bot Management
                 </a>
+                <a class="nav-link me-3" href="/analytics">
+                    <i class="fas fa-chart-line me-1"></i>Analytics
+                </a>
                 {% if current_user.is_authenticated and current_user.role == 'super_admin' %}
                 <a class="nav-link me-3" href="/user-management">
                     <i class="fas fa-users me-1"></i>Users
