@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Faith Journey</title>
+    
+    <!-- CV Global Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <meta name="theme-color" content="#00ff88">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- CV Global Theme -->
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
+    
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+        
+        .filter-section {
+            background: var(--cv-gray-800);
+            border: 1px solid var(--cv-gray-700);
+            border-radius: var(--cv-radius-lg);
+            padding: var(--cv-space-6);
+            margin-bottom: var(--cv-space-8);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--cv-gray-800) 0%, var(--cv-gray-700) 100%);
+            border: 1px solid var(--cv-gray-600);
+            border-radius: var(--cv-radius-lg);
+            padding: var(--cv-space-6);
+            text-align: center;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--cv-green);
+        }
+        
+        .stat-number {
+            font-family: var(--cv-font-heading);
+            font-size: var(--cv-text-3xl);
+            font-weight: 700;
+            color: var(--cv-green);
+            display: block;
+            margin-bottom: var(--cv-space-2);
+        }
+        
+        .stat-label {
+            color: var(--cv-gray-300);
+            font-size: var(--cv-text-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .chart-card {
+            background: var(--cv-gray-800);
+            border: 1px solid var(--cv-gray-700);
+            border-radius: var(--cv-radius-lg);
+            padding: var(--cv-space-6);
+            margin-bottom: var(--cv-space-6);
+        }
+        
+        .chart-title {
+            font-family: var(--cv-font-heading);
+            font-size: var(--cv-text-xl);
+            font-weight: 600;
+            color: var(--cv-white);
+            margin-bottom: var(--cv-space-6);
+        }
+        
+        .no-data-message {
+            text-align: center;
+            padding: var(--cv-space-8);
+            color: var(--cv-gray-400);
+        }
+        
+        .no-data-message i {
+            font-size: 3rem;
+            margin-bottom: var(--cv-space-4);
+            color: var(--cv-gray-500);
+        }
+        
+        .btn-filter-active {
+            background: var(--cv-green) !important;
+            color: var(--cv-dark) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i data-feather="activity"></i>
+                Faith Journey
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i data-feather="home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/analytics">
+                            <i data-feather="bar-chart-2"></i> Analytics
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            <i data-feather="log-out"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="page-title">
+                    <i data-feather="bar-chart-2"></i>
+                    Analytics Dashboard
+                </h1>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i data-feather="refresh-cw"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filter-section">
+            <form method="get" action="/analytics" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Bot Filter</label>
+                    <select name="bot_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Bots</option>
+                        {% for bot in all_bots %}
+                        <option value="{{ bot.id }}" {% if selected_bot_id == bot.id %}selected{% endif %}>
+                            {{ bot.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Time Range</label>
+                    <div class="btn-group w-100" role="group">
+                        <a href="?{% if selected_bot_id %}bot_id={{ selected_bot_id }}&{% endif %}days=7" 
+                           class="btn btn-outline-primary {% if selected_days == 7 %}btn-filter-active{% endif %}">7 Days</a>
+                        <a href="?{% if selected_bot_id %}bot_id={{ selected_bot_id }}&{% endif %}days=30" 
+                           class="btn btn-outline-primary {% if selected_days == 30 %}btn-filter-active{% endif %}">30 Days</a>
+                        <a href="?{% if selected_bot_id %}bot_id={{ selected_bot_id }}&{% endif %}days=60" 
+                           class="btn btn-outline-primary {% if selected_days == 60 %}btn-filter-active{% endif %}">60 Days</a>
+                        <a href="?{% if selected_bot_id %}bot_id={{ selected_bot_id }}&{% endif %}days=90" 
+                           class="btn btn-outline-primary {% if selected_days == 90 %}btn-filter-active{% endif %}">90 Days</a>
+                        <a href="?{% if selected_bot_id %}bot_id={{ selected_bot_id }}{% endif %}" 
+                           class="btn btn-outline-primary {% if not selected_days %}btn-filter-active{% endif %}">All Time</a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Custom Date Range</label>
+                    <div class="input-group">
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+                        <button type="submit" class="btn btn-primary">Go</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <span class="stat-number">{{ total_users }}</span>
+                    <span class="stat-label">Total Users</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <span class="stat-number">{{ total_faith_journeys }}</span>
+                    <span class="stat-label">Faith Journeys</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <span class="stat-number">{{ completion_rate }}%</span>
+                    <span class="stat-label">Completion Rate</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <span class="stat-number">{{ avg_journey_day }}</span>
+                    <span class="stat-label">Avg Journey Day</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="row">
+            <!-- Journey Funnel Chart -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i data-feather="trending-up"></i>
+                        Journey Completion Funnel
+                    </h3>
+                    {% if journey_funnel and journey_funnel.values()|sum > 0 %}
+                    <div class="chart-container">
+                        <canvas id="funnelChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <i data-feather="inbox"></i>
+                        <p>No journey data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Drop-off Chart -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i data-feather="activity"></i>
+                        Drop-off Rate by Day
+                    </h3>
+                    {% if dropoff_data %}
+                    <div class="chart-container">
+                        <canvas id="dropoffChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <i data-feather="inbox"></i>
+                        <p>No drop-off data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Faith Tags Distribution -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i data-feather="pie-chart"></i>
+                        Faith Journey Tag Distribution
+                    </h3>
+                    {% if faith_tags_distribution and faith_tags_distribution.values()|sum > 0 %}
+                    <div class="chart-container">
+                        <canvas id="tagPieChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <i data-feather="inbox"></i>
+                        <p>No faith journey tags available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tag Timeline Chart -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i data-feather="calendar"></i>
+                        Tag Timeline by Journey Day
+                    </h3>
+                    {% if tag_timeline %}
+                    <div class="chart-container">
+                        <canvas id="tagTimelineChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <i data-feather="inbox"></i>
+                        <p>No tag timeline data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Faith Tags Table -->
+        {% if faith_tags_distribution and faith_tags_distribution.values()|sum > 0 %}
+        <div class="chart-card">
+            <h3 class="chart-title">
+                <i data-feather="list"></i>
+                Faith Journey Tag Details
+            </h3>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tag Name</th>
+                            <th>User Count</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tag_name, count in faith_tags_distribution.items()|sort(attribute='1', reverse=True) %}
+                        <tr>
+                            <td>{{ tag_name }}</td>
+                            <td>{{ count }}</td>
+                            <td>
+                                {% if total_users > 0 %}
+                                {{ "%.1f"|format((count / total_users * 100)) }}%
+                                {% else %}
+                                0%
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        feather.replace();
+
+        const cvColors = {
+            green: '#00ff88',
+            greenHover: '#00e677',
+            blue: '#0066ff',
+            purple: '#6366f1',
+            orange: '#ff6600',
+            gray: {
+                900: '#0f0f0f',
+                800: '#1a1a1a',
+                700: '#2a2a2a',
+                600: '#3a3a3a',
+                300: '#9a9a9a'
+            }
+        };
+
+        Chart.defaults.color = '#9a9a9a';
+        Chart.defaults.borderColor = '#2a2a2a';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        {% if journey_funnel and journey_funnel.values()|sum > 0 %}
+        const funnelCtx = document.getElementById('funnelChart').getContext('2d');
+        new Chart(funnelCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ journey_funnel.keys()|list|tojson }},
+                datasets: [{
+                    label: 'Users',
+                    data: {{ journey_funnel.values()|list|tojson }},
+                    backgroundColor: cvColors.green,
+                    borderColor: cvColors.greenHover,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: cvColors.gray[800],
+                        borderColor: cvColors.gray[600],
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: cvColors.gray[700]
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+
+        {% if dropoff_data %}
+        const dropoffCtx = document.getElementById('dropoffChart').getContext('2d');
+        new Chart(dropoffCtx, {
+            type: 'line',
+            data: {
+                labels: {{ dropoff_data.keys()|list|tojson }},
+                datasets: [{
+                    label: 'Drop-off Rate (%)',
+                    data: {{ dropoff_data.values()|list|tojson }},
+                    borderColor: cvColors.orange,
+                    backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: cvColors.gray[800],
+                        borderColor: cvColors.gray[600],
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: cvColors.gray[700]
+                        },
+                        ticks: {
+                            maxTicksLimit: 10
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: cvColors.gray[700]
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        {% endif %}
+
+        {% if faith_tags_distribution and faith_tags_distribution.values()|sum > 0 %}
+        const pieCtx = document.getElementById('tagPieChart').getContext('2d');
+        const pieColors = [
+            cvColors.green,
+            cvColors.blue,
+            cvColors.purple,
+            cvColors.orange,
+            '#ff4444',
+            '#ffaa00',
+            '#00ffff',
+            '#ff00ff'
+        ];
+        new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ faith_tags_distribution.keys()|list|tojson }},
+                datasets: [{
+                    data: {{ faith_tags_distribution.values()|list|tojson }},
+                    backgroundColor: pieColors,
+                    borderColor: cvColors.gray[800],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: cvColors.gray[300],
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: cvColors.gray[800],
+                        borderColor: cvColors.gray[600],
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+        {% endif %}
+
+        {% if tag_timeline %}
+        const timelineCtx = document.getElementById('tagTimelineChart').getContext('2d');
+        new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: {{ tag_timeline.keys()|list|tojson }},
+                datasets: [{
+                    label: 'Tags Applied',
+                    data: {{ tag_timeline.values()|list|tojson }},
+                    borderColor: cvColors.blue,
+                    backgroundColor: 'rgba(0, 102, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: cvColors.gray[800],
+                        borderColor: cvColors.gray[600],
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: cvColors.gray[700]
+                        },
+                        ticks: {
+                            maxTicksLimit: 10
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: cvColors.gray[700]
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

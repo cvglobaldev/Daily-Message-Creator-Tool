@@ -323,6 +323,121 @@ def dashboard():
         logger.error(f"Error loading dashboard: {e}")
         return f"Dashboard error: {e}", 500
 
+@app.route('/analytics')
+@login_required
+def analytics_dashboard():
+    """Comprehensive analytics dashboard with journey and faith insights"""
+    try:
+        from models import Bot, TagRule
+        from sqlalchemy import func
+        
+        bot_id = request.args.get('bot_id', type=int)
+        days_filter = request.args.get('days', type=int)
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        
+        query = User.query
+        
+        if bot_id:
+            query = query.filter(User.bot_id == bot_id)
+        
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            query = query.filter(User.join_date.between(start_date, end_date))
+        elif days_filter:
+            cutoff_date = datetime.utcnow() - timedelta(days=days_filter)
+            query = query.filter(User.join_date >= cutoff_date)
+        
+        journey_funnel = {
+            'Day 1-10': query.filter(User.current_day.between(1, 10)).count(),
+            'Day 11-20': query.filter(User.current_day.between(11, 20)).count(),
+            'Day 21-30': query.filter(User.current_day.between(21, 30)).count(),
+            'Day 31-40': query.filter(User.current_day.between(31, 40)).count(),
+            'Day 41-50': query.filter(User.current_day.between(41, 50)).count(),
+            'Day 51-60': query.filter(User.current_day.between(51, 60)).count(),
+            'Day 61-70': query.filter(User.current_day.between(61, 70)).count(),
+            'Day 71-80': query.filter(User.current_day.between(71, 80)).count(),
+            'Day 81-90': query.filter(User.current_day.between(81, 90)).count(),
+            'Completed': query.filter(User.status == 'completed').count()
+        }
+        
+        dropoff_data = {}
+        for day in range(1, 91):
+            total_reached = query.filter(User.current_day >= day).count()
+            stopped_at = query.filter(User.current_day == day, User.status == 'stopped').count()
+            if total_reached > 0:
+                dropoff_data[day] = round((stopped_at / total_reached) * 100, 2)
+            else:
+                dropoff_data[day] = 0
+        
+        active_users = query.filter(User.status == 'active').all()
+        avg_days = round(sum(u.current_day for u in active_users) / len(active_users), 1) if active_users else 0
+        
+        total_users = query.count()
+        completed_users = query.filter(User.status == 'completed').count()
+        completion_rate = round((completed_users / total_users) * 100, 1) if total_users > 0 else 0
+        
+        faith_journey_parent = TagRule.query.filter(
+            TagRule.tag_name == 'Faith Journey',
+            TagRule.parent_id.is_(None)
+        ).first()
+        
+        faith_tags_distribution = {}
+        tag_timeline = {}
+        
+        if faith_journey_parent:
+            faith_tags = TagRule.query.filter(TagRule.parent_id == faith_journey_parent.id).all()
+            
+            for tag in faith_tags:
+                users_with_tag = 0
+                all_users = query.all()
+                for user in all_users:
+                    if user.tags and tag.tag_name in user.tags:
+                        users_with_tag += 1
+                faith_tags_distribution[tag.tag_name] = users_with_tag
+            
+            tag_names = [t.tag_name for t in faith_tags]
+            for day in range(1, 91):
+                day_count = 0
+                msgs = MessageLog.query.join(User).filter(User.current_day == day)
+                if bot_id:
+                    msgs = msgs.filter(User.bot_id == bot_id)
+                for msg in msgs.all():
+                    if msg.llm_tags and any(tag in msg.llm_tags for tag in tag_names):
+                        day_count += 1
+                tag_timeline[day] = day_count
+        
+        total_faith_journeys = sum(faith_tags_distribution.values())
+        
+        all_bots = Bot.query.filter_by(status='active').all()
+        
+        analytics_data = {
+            'journey_funnel': journey_funnel,
+            'dropoff_data': dropoff_data,
+            'avg_days': avg_days,
+            'total_users': total_users,
+            'completed_users': completed_users,
+            'completion_rate': completion_rate,
+            'avg_journey_day': avg_days,
+            'total_faith_journeys': total_faith_journeys,
+            'faith_tags_distribution': faith_tags_distribution,
+            'tag_timeline': tag_timeline,
+            'all_bots': all_bots,
+            'selected_bot_id': bot_id,
+            'selected_days': days_filter,
+            'start_date': start_date_str,
+            'end_date': end_date_str
+        }
+        
+        return render_template('analytics.html', **analytics_data)
+        
+    except Exception as e:
+        logger.error(f"Error loading analytics dashboard: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return f"Analytics error: {e}", 500
+
 @app.route('/telegram', methods=['POST'])
 @app.route('/telegram/<int:bot_id>', methods=['POST'])
 def telegram_webhook(bot_id=1):
