@@ -862,9 +862,9 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             journey_duration = bot.journey_duration_days if bot else 30
             
             if user.current_day > journey_duration:
-                # Users who have completed their journey get specialized graduated user handling
-                logger.info(f"User {phone_number} (Day {user.current_day}/{journey_duration}) completed journey, using graduated user handler")
-                handle_graduated_user_conversation(phone_number, message_text, platform, bot_id)
+                # Users who have completed their journey get specialized journey completed handling
+                logger.info(f"User {phone_number} (Day {user.current_day}/{journey_duration}) completed journey, using journey completed handler")
+                handle_journey_completed_conversation(phone_number, message_text, platform, bot_id)
             elif user.current_day > 1:
                 # Users beyond Day 1 should always get contextual responses based on their current content
                 logger.info(f"User {phone_number} (Day {user.current_day}) sending message, providing contextual response based on current journey")
@@ -2018,7 +2018,7 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
         except:
             logger.error(f"Failed to send fallback message to {phone_number}")
 
-def handle_graduated_user_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+def handle_journey_completed_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle conversation for users who have completed their journey - always provide AI response + human connection offer"""
     try:
         # Analyze the response with Gemini
@@ -2047,7 +2047,7 @@ def handle_graduated_user_conversation(phone_number: str, message_text: str, pla
         # Check if message is related to Christianity/spiritual topics
         is_spiritual_topic = _is_spiritual_or_christian_topic(message_text, analysis)
         
-        # Generate AI response for graduated users
+        # Generate AI response for journey completed users
         try:
             # Get the bot's configuration for AI prompt
             from models import Bot
@@ -2057,8 +2057,8 @@ def handle_graduated_user_conversation(phone_number: str, message_text: str, pla
                 # Spiritual topics get comprehensive AI response
                 ai_prompt = bot.ai_prompt if bot else "You are a helpful spiritual guide chatbot."
                 
-                # Add context for graduated users
-                graduated_context = """
+                # Add context for journey completed users
+                journey_completed_context = """
 IMPORTANT: This user has completed their spiritual journey program and is now seeking ongoing spiritual guidance. 
 - They have already gone through the full content series
 - Provide thoughtful, mature spiritual responses
@@ -2066,14 +2066,14 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
 - Encourage continued spiritual growth and exploration
 - Be available for deeper theological discussions
 """
-                enhanced_prompt = ai_prompt + graduated_context
+                enhanced_prompt = ai_prompt + journey_completed_context
                 
-                logger.info(f"Generating graduated user response for spiritual topic from {phone_number}")
+                logger.info(f"Generating journey completed response for spiritual topic from {phone_number}")
                 
                 contextual_response = gemini_service.generate_bot_response(
                     user_message=message_text,
                     ai_prompt=enhanced_prompt,
-                    content_context=None,  # No specific daily content for graduated users
+                    content_context=None,  # No specific daily content for journey completed users
                     bot_id=bot_id,
                     phone_number=phone_number
                 )
@@ -2085,7 +2085,7 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
                     contextual_response = "Thank you for sharing. I'm here if you'd like to discuss spiritual topics or have questions about Jesus Christ."
                 
         except Exception as ai_error:
-            logger.error(f"Failed to generate graduated user AI response for {phone_number}: {ai_error}")
+            logger.error(f"Failed to generate journey completed AI response for {phone_number}: {ai_error}")
             # Fallback response
             contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
         
@@ -2099,10 +2099,10 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
                 direction='outgoing',
                 raw_text=contextual_response,
                 sentiment='positive',
-                tags=['AI_RESPONSE', 'GRADUATED_USER']
+                tags=['AI_RESPONSE', 'JOURNEY_COMPLETED']
             )
         
-        # Always offer human connection for graduated users (as follow-up message)
+        # Always offer human connection for journey completed users (as follow-up message)
         from models import Bot
         bot = Bot.query.get(bot_id)
         
@@ -2125,19 +2125,19 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
                 direction='outgoing',
                 raw_text=human_offer,
                 sentiment='positive',
-                tags=['HUMAN_OFFER', 'GRADUATED_USER']
+                tags=['HUMAN_OFFER', 'JOURNEY_COMPLETED']
             )
             
-        logger.info(f"Processed graduated user message from {phone_number}: spiritual_topic={is_spiritual_topic}, sentiment={analysis['sentiment']}")
+        logger.info(f"Processed journey completed message from {phone_number}: spiritual_topic={is_spiritual_topic}, sentiment={analysis['sentiment']}")
         
     except Exception as e:
-        logger.error(f"Error handling graduated user conversation from {phone_number}: {e}")
+        logger.error(f"Error handling journey completed conversation from {phone_number}: {e}")
         # Fallback message
         try:
             fallback_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
             send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
         except:
-            logger.error(f"Failed to send fallback message to graduated user {phone_number}")
+            logger.error(f"Failed to send fallback message to journey completed user {phone_number}")
 
 def _is_spiritual_or_christian_topic(message_text: str, analysis: dict) -> bool:
     """Determine if a message is related to Christianity or spiritual topics"""
