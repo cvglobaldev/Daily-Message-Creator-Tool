@@ -3733,9 +3733,9 @@ def retag_all_messages():
     try:
         from models import MessageLog, TagRule, db
         
-        # Get all active tag rules
-        tag_rules = TagRule.query.filter_by(is_active=True, parent_id=None).all()
-        if not tag_rules:
+        # Check if we have active tag rules
+        active_rules = TagRule.query.filter_by(is_active=True).count()
+        if active_rules == 0:
             flash('No active tag rules found. Please initialize tags first.', 'warning')
             return redirect('/tags')
         
@@ -3746,20 +3746,14 @@ def retag_all_messages():
             flash('No incoming messages found to retag.', 'info')
             return redirect('/tags')
         
-        # Build tag evaluation prompt
-        tag_descriptions = []
-        all_rules = TagRule.query.filter_by(is_active=True).all()
-        for rule in all_rules:
-            if rule.parent_id:  # Only include sub-tags for evaluation
-                tag_descriptions.append(f'- "{rule.tag_name}": {rule.ai_evaluation_rule}')
-        
         retagged_count = 0
         error_count = 0
         
         for msg in messages:
             try:
-                # Analyze message with new tag rules
-                analysis = gemini_service.analyze_response(msg.raw_text, tag_rules=tag_descriptions)
+                # Analyze message with current tag rules from database
+                # analyze_response() automatically loads tag rules from the database
+                analysis = gemini_service.analyze_response(msg.raw_text)
                 
                 # Update tags
                 if 'tags' in analysis and analysis['tags']:
