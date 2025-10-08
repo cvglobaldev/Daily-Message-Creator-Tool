@@ -135,9 +135,10 @@
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th style="width: 25%;">Tag Name</th>
-                                        <th style="width: 25%;">Description</th>
-                                        <th style="width: 25%;">AI Rule</th>
+                                        <th style="width: 20%;">Tag Name</th>
+                                        <th>Type</th>
+                                        <th style="width: 20%;">Description</th>
+                                        <th style="width: 20%;">Rule/Condition</th>
                                         <th>Priority</th>
                                         <th>Status</th>
                                         <th>Actions</th>
@@ -157,10 +158,21 @@
                                                 {% endif %}
                                             </td>
                                             <td>
+                                                {% if rule.rule_type == 'rule_based' %}
+                                                <span class="badge bg-warning"><i class="fas fa-project-diagram me-1"></i>Rule-Based</span>
+                                                {% else %}
+                                                <span class="badge bg-primary"><i class="fas fa-brain me-1"></i>AI-Powered</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
                                                 <small>{{ rule.description[:60] }}{% if rule.description|length > 60 %}...{% endif %}</small>
                                             </td>
                                             <td>
+                                                {% if rule.rule_type == 'rule_based' and rule.rule_config %}
+                                                <small class="text-muted">When-If-Then Rule</small>
+                                                {% else %}
                                                 <small class="text-muted">{{ rule.ai_evaluation_rule[:50] }}{% if rule.ai_evaluation_rule|length > 50 %}...{% endif %}</small>
+                                                {% endif %}
                                             </td>
                                             <td>
                                                 {% if rule.priority >= 10 %}
@@ -193,21 +205,32 @@
                                         <!-- Sub-Tags Container (Collapsible) -->
                                         {% if rule.children %}
                                         <tr id="subtags-{{ rule.id }}" style="display: none;">
-                                            <td colspan="6" class="p-0">
+                                            <td colspan="7" class="p-0">
                                                 <div class="subtag-container">
                                                     <table class="table table-sm mb-0">
                                                         <tbody>
                                                             {% for subtag in rule.children %}
                                                             <tr class="subtag-row">
-                                                                <td style="width: 25%;" class="ps-5">
+                                                                <td style="width: 20%;" class="ps-5">
                                                                     <i class="fas fa-arrow-right me-2 text-muted"></i>
                                                                     <span class="text-info">{{ subtag.tag_name }}</span>
                                                                 </td>
-                                                                <td style="width: 25%;">
+                                                                <td>
+                                                                    {% if subtag.rule_type == 'rule_based' %}
+                                                                    <span class="badge bg-warning"><i class="fas fa-project-diagram me-1"></i>Rule-Based</span>
+                                                                    {% else %}
+                                                                    <span class="badge bg-primary"><i class="fas fa-brain me-1"></i>AI-Powered</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td style="width: 20%;">
                                                                     <small>{{ subtag.description[:60] }}{% if subtag.description|length > 60 %}...{% endif %}</small>
                                                                 </td>
-                                                                <td style="width: 25%;">
+                                                                <td style="width: 20%;">
+                                                                    {% if subtag.rule_type == 'rule_based' and subtag.rule_config %}
+                                                                    <small class="text-muted">When-If-Then Rule</small>
+                                                                    {% else %}
                                                                     <small class="text-muted">{{ subtag.ai_evaluation_rule[:50] }}{% if subtag.ai_evaluation_rule|length > 50 %}...{% endif %}</small>
+                                                                    {% endif %}
                                                                 </td>
                                                                 <td>
                                                                     {% if subtag.priority >= 10 %}
