@@ -58,6 +58,16 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 
 ## Recent Changes
 
+### ✅ COMPLETED: Dual-Layer Tagging System - AI-Powered + Rule-Based (October 8, 2025)
+- **Dual Tagging Architecture**: Implemented two-layer tagging system combining AI semantic analysis with rule-based automation (When-If-Then logic)
+- **TagRule Model Extended**: Added `rule_type` ('ai_powered'/'rule_based') and `rule_config` (JSON) fields to support both tagging approaches
+- **RuleEngine Service**: Built comprehensive rule evaluation engine supporting triggers (message_received, user_day_reached, sentiment_detected, tag_applied), conditions (keyword matching, sentiment checks, day comparisons, tag existence), and actions (apply_tag, remove_tag)
+- **Rule Builder UI**: Created multi-step form at /tags/create-rule-based with dynamic condition/action rows, supporting all trigger types and operators
+- **Pipeline Integration**: Applied combined tagging (AI + rules) to all conversation handlers via apply_combined_tags() helper function
+- **Tag Management Enhanced**: Updated tag management page to display tag type (AI-Powered vs Rule-Based) with distinct badge indicators
+- **JSON Serialization Fix**: Resolved TagRule object serialization issue by converting database objects to dictionaries before template rendering
+- **Message Processing**: All incoming messages now receive both AI-powered semantic tags and rule-based automation tags before database persistence
+
 ### ✅ COMPLETED: Atomic Lock System for Duplicate Message Prevention (October 2, 2025)
 - **Root Cause Identified**: Multiple gunicorn workers during graceful restarts (--reload flag) caused race conditions where two workers could both deliver content to the same user before either logged the message to the database
 - **Atomic Pre-Delivery Lock Implemented**: Added database-backed atomic locking system using PostgreSQL INSERT ... ON CONFLICT DO NOTHING for true atomicity before content delivery

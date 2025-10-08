@@ -3730,8 +3730,8 @@ def create_rule_based_tag():
         
         form = RuleBasedTagForm()
         
-        # Get all existing tags for dropdown choices
-        all_tags = TagRule.query.order_by(TagRule.tag_name).all()
+        # Get all existing tags for dropdown choices (convert to dict for JSON serialization)
+        all_tags = [{'id': tag.id, 'tag_name': tag.tag_name} for tag in TagRule.query.order_by(TagRule.tag_name).all()]
         
         if request.method == 'POST' and form.validate_on_submit():
             # Build rule_config from form data
