@@ -3778,6 +3778,63 @@ def retag_all_messages():
         flash(f'Error retagging messages: {str(e)}', 'error')
         return redirect('/tags')
 
+@app.route('/tags/retag-user/<int:user_id>', methods=['POST'])
+@login_required
+def retag_user_messages(user_id):
+    """Re-run AI tagging on all messages from a specific user"""
+    try:
+        from models import MessageLog, TagRule, User, db
+        
+        # Get user info
+        user = User.query.get_or_404(user_id)
+        
+        # Check if we have active tag rules
+        active_rules = TagRule.query.filter_by(is_active=True).count()
+        if active_rules == 0:
+            flash('No active tag rules found. Please initialize tags first.', 'warning')
+            return redirect(f'/chat/{user_id}')
+        
+        # Get all incoming messages from this user
+        messages = MessageLog.query.filter_by(
+            user_id=user_id,
+            direction='incoming'
+        ).order_by(MessageLog.timestamp).all()
+        
+        if not messages:
+            flash(f'No incoming messages found for {user.phone_number}.', 'info')
+            return redirect(f'/chat/{user_id}')
+        
+        retagged_count = 0
+        error_count = 0
+        
+        for msg in messages:
+            try:
+                # Analyze message with current tag rules from database
+                analysis = gemini_service.analyze_response(msg.raw_text)
+                
+                # Update tags
+                if 'tags' in analysis and analysis['tags']:
+                    msg.llm_tags = analysis['tags']
+                    msg.llm_sentiment = analysis.get('sentiment', 'neutral')
+                    msg.llm_confidence = analysis.get('confidence', 0.0)
+                    retagged_count += 1
+                    
+            except Exception as e:
+                logger.error(f"Error retagging message {msg.id}: {e}")
+                error_count += 1
+                continue
+        
+        db.session.commit()
+        
+        flash(f'Successfully retagged {retagged_count} messages for {user.phone_number}. {error_count} errors encountered.', 'success' if error_count == 0 else 'warning')
+        return redirect(f'/chat/{user_id}')
+        
+    except Exception as e:
+        logger.error(f"Error retagging user messages: {e}")
+        db.session.rollback()
+        flash(f'Error retagging messages: {str(e)}', 'error')
+        return redirect('/chat-management')
+
 @app.route('/tags/initialize-other-tags', methods=['POST'])
 @login_required
 def initialize_other_tags():
