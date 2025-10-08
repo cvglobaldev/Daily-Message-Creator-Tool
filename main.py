@@ -337,6 +337,10 @@ def analytics_dashboard():
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
         
+        # Default to 30 days if no filter is specified
+        if not days_filter and not start_date_str and not end_date_str:
+            days_filter = 30
+        
         query = User.query
         
         if bot_id:
@@ -390,9 +394,12 @@ def analytics_dashboard():
         if faith_journey_parent:
             faith_tags = TagRule.query.filter(TagRule.parent_id == faith_journey_parent.id).all()
             
-            # Optimized: Use database aggregation instead of loading all users
+            # Optimized: Use database aggregation with proper JSON array checking
             for tag in faith_tags:
-                count = query.filter(User.tags.contains([tag.tag_name])).count()
+                # Cast JSON to JSONB and use @> operator for array contains
+                count = query.filter(
+                    func.cast(User.tags, JSONB).op('@>')(func.cast([tag.tag_name], JSONB))
+                ).count()
                 faith_tags_distribution[tag.tag_name] = count
             
             tag_names = [t.tag_name for t in faith_tags]
