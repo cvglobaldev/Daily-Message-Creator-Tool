@@ -307,13 +307,23 @@ class Content(db.Model):
         }
 
 class TagRule(db.Model):
-    """Tag rule model for custom AI-powered tagging rules with hierarchical support"""
+    """Tag rule model for both AI-powered and rule-based tagging with hierarchical support"""
     __tablename__ = 'tag_rules'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tag_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    ai_evaluation_rule: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    # Rule type: 'ai_powered' (default) or 'rule_based'
+    rule_type: Mapped[str] = mapped_column(String(20), nullable=False, default='ai_powered', index=True)
+    
+    # AI-powered rule configuration (nullable for backward compatibility)
+    ai_evaluation_rule: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Rule-based configuration (JSON structure for When-If-Then logic)
+    # Structure: {"when": {"trigger": "message_received"}, "if": [...], "then": [...]}
+    rule_config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('tag_rules.id'), nullable=True, index=True)
@@ -335,7 +345,9 @@ class TagRule(db.Model):
             'id': self.id,
             'tag_name': self.tag_name,
             'description': self.description,
+            'rule_type': self.rule_type,
             'ai_evaluation_rule': self.ai_evaluation_rule,
+            'rule_config': self.rule_config or {},
             'is_active': self.is_active,
             'priority': self.priority,
             'parent_id': self.parent_id,
