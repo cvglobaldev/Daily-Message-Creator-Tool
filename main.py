@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify, render_template, make_response, redir
 from models import db, User, Content, MessageLog, AdminUser, Bot
 from db_manager import DatabaseManager
 from services import WhatsAppService, TelegramService, GeminiService
+from rule_engine import rule_engine
 from scheduler import ContentScheduler
 import threading
 import time
@@ -1627,7 +1628,7 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
             db_manager.update_user(phone_number, bot_id=bot_id)
         
         # Log the handoff request
-        db_manager.log_message(
+        message_log = db_manager.log_message(
             user=user,
             direction='incoming',
             raw_text=message_text,
@@ -1635,6 +1636,12 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
             tags=['HUMAN_HANDOFF', 'URGENT'],
             is_human_handoff=True
         )
+        
+        # Apply rule-based tags in addition to AI tags
+        from models import Bot
+        bot = Bot.query.get(bot_id)
+        if message_log and bot:
+            apply_combined_tags(message_log, user, bot)
         
         # Send response to user
         response_message = ("Thank you for reaching out. A member of our team will contact you shortly. "
@@ -1775,6 +1782,27 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
     except Exception as e:
         logger.error(f"Error handling WhatsApp first message for {phone_number}: {e}")
 
+def apply_combined_tags(message_log: MessageLog, user: User, bot: Bot) -> None:
+    """Apply both AI-powered and rule-based tags to a message"""
+    try:
+        # Get AI tags (already in message_log.llm_tags from AI analysis)
+        ai_tags = message_log.llm_tags or []
+        
+        # Get rule-based tags from rule engine
+        rule_tags = rule_engine.evaluate_rules(message_log, user, bot)
+        
+        # Combine tags (AI tags + rule-based tags, remove duplicates)
+        combined_tags = list(set(ai_tags + rule_tags))
+        
+        # Update message log with combined tags
+        message_log.llm_tags = combined_tags
+        db.session.commit()
+        
+        logger.info(f"🏷️ Combined tagging: AI={ai_tags}, Rules={rule_tags}, Final={combined_tags}")
+        
+    except Exception as e:
+        logger.error(f"Error applying combined tags: {e}")
+
 def handle_general_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
     """Handle general conversation using bot-specific AI prompt without reflection context"""
     try:
@@ -1789,8 +1817,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
         elif user.bot_id != bot_id:
             db_manager.update_user(phone_number, bot_id=bot_id)
         
-        # Log the incoming message
-        db_manager.log_message(
+        # Log the incoming message with AI tags
+        message_log = db_manager.log_message(
             user=user,
             direction='incoming',
             raw_text=message_text,
@@ -1798,6 +1826,12 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
             tags=analysis['tags'],
             confidence=analysis.get('confidence')
         )
+        
+        # Apply rule-based tags in addition to AI tags
+        from models import Bot
+        bot = Bot.query.get(bot_id)
+        if message_log and bot:
+            apply_combined_tags(message_log, user, bot)
         
         # Generate bot-specific AI response using the bot's prompt
         try:
@@ -1921,7 +1955,7 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
             # Remove any automatic "Human" tags from analysis
             filtered_tags = [tag for tag in analysis['tags'] if tag.lower() != 'human']
             
-            db_manager.log_message(
+            message_log = db_manager.log_message(
                 user=user,
                 direction='incoming',
                 raw_text=message_text,
@@ -1929,6 +1963,12 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 tags=filtered_tags,
                 confidence=analysis.get('confidence')
             )
+            
+            # Apply rule-based tags in addition to AI tags
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if message_log and bot:
+                apply_combined_tags(message_log, user, bot)
         
         # Get current content for contextual response - use current_day for the content they're currently on
         current_content_day = user.current_day if user and user.current_day > 0 else 1
@@ -2035,7 +2075,7 @@ def handle_journey_completed_conversation(phone_number: str, message_text: str, 
 
         # Log the user's message
         if user:
-            db_manager.log_message(
+            message_log = db_manager.log_message(
                 user=user,
                 direction='incoming',
                 raw_text=message_text,
@@ -2043,6 +2083,12 @@ def handle_journey_completed_conversation(phone_number: str, message_text: str, 
                 tags=analysis['tags'],
                 confidence=analysis.get('confidence')
             )
+            
+            # Apply rule-based tags in addition to AI tags
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if message_log and bot:
+                apply_combined_tags(message_log, user, bot)
         
         # Check if message is related to Christianity/spiritual topics
         is_spiritual_topic = _is_spiritual_or_christian_topic(message_text, analysis)
@@ -2215,7 +2261,7 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
         
         # Log the response
         if user:
-            db_manager.log_message(
+            message_log = db_manager.log_message(
                 user=user,
                 direction='incoming',
                 raw_text=message_text,
@@ -2223,6 +2269,12 @@ def handle_reflection_response(phone_number: str, message_text: str, platform: s
                 tags=analysis['tags'],
                 confidence=analysis.get('confidence')
             )
+            
+            # Apply rule-based tags in addition to AI tags
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            if message_log and bot:
+                apply_combined_tags(message_log, user, bot)
         
         # Get current day content for contextual response
         current_day = user.current_day - 1 if user else 1  # User was advanced after receiving content, so subtract 1 for the content they just reflected on
