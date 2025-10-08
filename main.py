@@ -3668,6 +3668,72 @@ def create_tag_rule():
         flash(f'Error creating tag rule: {str(e)}', 'error')
         return redirect('/tags')
 
+@app.route('/tags/create-rule-based', methods=['GET', 'POST'])
+@login_required
+def create_rule_based_tag():
+    """Create a new rule-based tag with When-If-Then logic"""
+    try:
+        from forms import RuleBasedTagForm
+        from models import TagRule, db
+        
+        form = RuleBasedTagForm()
+        
+        # Get all existing tags for dropdown choices
+        all_tags = TagRule.query.order_by(TagRule.tag_name).all()
+        
+        if request.method == 'POST' and form.validate_on_submit():
+            # Build rule_config from form data
+            rule_config = {
+                'when': {
+                    'trigger': form.trigger_type.data
+                },
+                'if': [],
+                'then': []
+            }
+            
+            # Parse IF conditions from request
+            condition_types = request.form.getlist('condition_type[]')
+            condition_values = request.form.getlist('condition_value[]')
+            
+            for i, cond_type in enumerate(condition_types):
+                if i < len(condition_values) and condition_values[i]:
+                    rule_config['if'].append({
+                        'type': cond_type,
+                        'value': condition_values[i]
+                    })
+            
+            # Parse THEN actions from request
+            action_types = request.form.getlist('action_type[]')
+            action_values = request.form.getlist('action_value[]')
+            
+            for i, action_type in enumerate(action_types):
+                if i < len(action_values) and action_values[i]:
+                    rule_config['then'].append({
+                        'type': action_type,
+                        'value': action_values[i]
+                    })
+            
+            # Create rule-based tag
+            tag_rule = TagRule(
+                tag_name=form.tag_name.data,
+                description=form.description.data,
+                rule_type='rule_based',
+                rule_config=rule_config,
+                priority=form.priority.data,
+                is_active=form.is_active.data
+            )
+            db.session.add(tag_rule)
+            db.session.commit()
+            
+            flash(f'Rule-based tag "{tag_rule.tag_name}" created successfully!', 'success')
+            return redirect('/tags')
+        
+        return render_template('create_rule_based_tag.html', form=form, all_tags=all_tags)
+    except Exception as e:
+        logger.error(f"Error creating rule-based tag: {e}")
+        flash(f'Error creating rule-based tag: {str(e)}', 'error')
+        return redirect('/tags')
+
 @app.route('/tags/edit/<int:rule_id>', methods=['GET', 'POST'])
 @login_required
 def edit_tag_rule(rule_id):

@@ -206,3 +206,34 @@ class TagRuleForm(FlaskForm):
     is_active = BooleanField('Active', default=True, description="Only active tags are used for analysis")
     
     submit = SubmitField('Save Tag Rule')
+
+class RuleBasedTagForm(FlaskForm):
+    """Form for creating rule-based tags with When-If-Then logic"""
+    tag_name = StringField('Tag Name', 
+                          validators=[DataRequired(), Length(min=2, max=100)],
+                          description="Name of the tag (e.g., 'Day 5 Reached', 'Positive Response')")
+    
+    description = TextAreaField('Description', 
+                               validators=[DataRequired(), Length(min=10, max=500)],
+                               render_kw={"rows": 3},
+                               description="Describe what this rule-based tag does")
+    
+    priority = SelectField('Priority', 
+                          coerce=int,
+                          choices=[(0, 'Low'), (5, 'Medium'), (10, 'High')],
+                          default=5,
+                          description="Higher priority rules are evaluated first")
+    
+    trigger_type = SelectField('When (Trigger)', 
+                              validators=[DataRequired()],
+                              choices=[
+                                  ('message_received', 'Message Received'),
+                                  ('user_day_reached', 'User Day Reached'),
+                                  ('sentiment_detected', 'Sentiment Detected'),
+                                  ('tag_applied', 'Tag Applied')
+                              ],
+                              description="Select when this rule should be triggered")
+    
+    is_active = BooleanField('Active', default=True, description="Only active rules are evaluated")
+    
+    submit = SubmitField('Save Rule-Based Tag')

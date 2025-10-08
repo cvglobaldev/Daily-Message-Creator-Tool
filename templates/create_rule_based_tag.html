@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Rule-Based Tag - Daily Message Creator</title>
+    
+    <!-- CV Global Favicon Implementation -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="msapplication-TileColor" content="#000000">
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
+    <style>
+        .condition-item, .action-item {
+            background-color: #1a202c;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .when-section {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .if-section {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .then-section {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        .add-btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
+                Daily Message Creator
+            </a>
+            <div class="navbar-nav flex-row">
+                <a class="nav-link me-3" href="/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link me-3" href="/tags">
+                    <i class="fas fa-tags me-1"></i>Tag Management
+                </a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>{{ current_user.full_name if current_user.is_authenticated else 'Guest' }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/change-password">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-project-diagram me-2 text-primary"></i>Create Rule-Based Tag</h2>
+                        <p class="text-muted mb-0">Build automated tagging rules with When-If-Then logic</p>
+                    </div>
+                    <a href="/tags" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Tags
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Rule Builder Form -->
+        <form method="POST" action="/tags/create-rule-based" id="ruleForm">
+            {{ form.hidden_tag() }}
+            
+            <!-- Step 1: Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header section-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Step 1: Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.tag_name.label(class="form-label fw-bold") }}
+                            {{ form.tag_name(class="form-control" + (" is-invalid" if form.tag_name.errors else "")) }}
+                            {% if form.tag_name.description %}
+                            <div class="form-text">{{ form.tag_name.description }}</div>
+                            {% endif %}
+                            {% if form.tag_name.errors %}
+                            <div class="invalid-feedback">{{ form.tag_name.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.priority.label(class="form-label fw-bold") }}
+                            {{ form.priority(class="form-select" + (" is-invalid" if form.priority.errors else "")) }}
+                            {% if form.priority.description %}
+                            <div class="form-text">{{ form.priority.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label fw-bold") }}
+                        {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else "")) }}
+                        {% if form.description.description %}
+                        <div class="form-text">{{ form.description.description }}</div>
+                        {% endif %}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">{{ form.description.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-check">
+                        {{ form.is_active(class="form-check-input") }}
+                        {{ form.is_active.label(class="form-check-label") }}
+                        {% if form.is_active.description %}
+                        <div class="form-text">{{ form.is_active.description }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: WHEN Trigger -->
+            <div class="card mb-4">
+                <div class="card-header section-header when-section">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Step 2: WHEN (Trigger Event)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form.trigger_type.label(class="form-label fw-bold") }}
+                        {{ form.trigger_type(class="form-select" + (" is-invalid" if form.trigger_type.errors else "")) }}
+                        {% if form.trigger_type.description %}
+                        <div class="form-text">{{ form.trigger_type.description }}</div>
+                        {% endif %}
+                        {% if form.trigger_type.errors %}
+                        <div class="invalid-feedback">{{ form.trigger_type.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: IF Conditions -->
+            <div class="card mb-4">
+                <div class="card-header section-header if-section">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Step 3: IF (Conditions)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Add one or more conditions that must be met for this rule to apply</p>
+                    <div id="conditionsContainer"></div>
+                    <button type="button" class="btn btn-outline-info add-btn" onclick="addCondition()">
+                        <i class="fas fa-plus me-2"></i>Add Condition
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: THEN Actions -->
+            <div class="card mb-4">
+                <div class="card-header section-header then-section">
+                    <h5 class="mb-0"><i class="fas fa-play-circle me-2"></i>Step 4: THEN (Actions)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Define what actions should be taken when conditions are met</p>
+                    <div id="actionsContainer"></div>
+                    <button type="button" class="btn btn-outline-success add-btn" onclick="addAction()">
+                        <i class="fas fa-plus me-2"></i>Add Action
+                    </button>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid gap-2 mb-4">
+                {{ form.submit(class="btn btn-primary btn-lg") }}
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Available tags for dropdowns
+        const availableTags = {{ all_tags | tojson }};
+        
+        let conditionCounter = 0;
+        let actionCounter = 0;
+
+        // Add a new condition row
+        function addCondition() {
+            const container = document.getElementById('conditionsContainer');
+            const conditionId = conditionCounter++;
+            
+            const conditionHtml = `
+                <div class="condition-item" id="condition-${conditionId}">
+                    <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeCondition(${conditionId})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Condition Type</label>
+                            <select class="form-select" name="condition_type[]" onchange="updateConditionInput(${conditionId}, this.value)">
+                                <option value="">-- Select Type --</option>
+                                <option value="contains_keyword">Contains Keyword</option>
+                                <option value="sentiment_is">Sentiment Is</option>
+                                <option value="user_day_is">User Day Is</option>
+                                <option value="user_day_greater_than">User Day Greater Than</option>
+                                <option value="user_day_less_than">User Day Less Than</option>
+                                <option value="tag_exists">Tag Exists</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 mb-2">
+                            <label class="form-label">Value</label>
+                            <div id="condition-value-${conditionId}">
+                                <input type="text" class="form-control" name="condition_value[]" placeholder="Select condition type first">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', conditionHtml);
+        }
+
+        // Remove a condition
+        function removeCondition(id) {
+            document.getElementById(`condition-${id}`).remove();
+        }
+
+        // Update condition input based on type
+        function updateConditionInput(conditionId, type) {
+            const container = document.getElementById(`condition-value-${conditionId}`);
+            let html = '';
+            
+            switch(type) {
+                case 'contains_keyword':
+                    html = '<input type="text" class="form-control" name="condition_value[]" placeholder="Enter keyword">';
+                    break;
+                case 'sentiment_is':
+                    html = `
+                        <select class="form-select" name="condition_value[]">
+                            <option value="">-- Select Sentiment --</option>
+                            <option value="positive">Positive</option>
+                            <option value="negative">Negative</option>
+                            <option value="neutral">Neutral</option>
+                        </select>
+                    `;
+                    break;
+                case 'user_day_is':
+                case 'user_day_greater_than':
+                case 'user_day_less_than':
+                    html = '<input type="number" class="form-control" name="condition_value[]" placeholder="Enter day number" min="1">';
+                    break;
+                case 'tag_exists':
+                    html = '<select class="form-select" name="condition_value[]">';
+                    html += '<option value="">-- Select Tag --</option>';
+                    availableTags.forEach(tag => {
+                        html += `<option value="${tag.tag_name}">${tag.tag_name}</option>`;
+                    });
+                    html += '</select>';
+                    break;
+                default:
+                    html = '<input type="text" class="form-control" name="condition_value[]" placeholder="Select condition type first">';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Add a new action row
+        function addAction() {
+            const container = document.getElementById('actionsContainer');
+            const actionId = actionCounter++;
+            
+            const actionHtml = `
+                <div class="action-item" id="action-${actionId}">
+                    <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeAction(${actionId})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type[]" onchange="updateActionInput(${actionId}, this.value)">
+                                <option value="">-- Select Type --</option>
+                                <option value="apply_tag">Apply Tag</option>
+                                <option value="remove_tag">Remove Tag</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 mb-2">
+                            <label class="form-label">Tag</label>
+                            <div id="action-value-${actionId}">
+                                <select class="form-select" name="action_value[]" disabled>
+                                    <option value="">Select action type first</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', actionHtml);
+        }
+
+        // Remove an action
+        function removeAction(id) {
+            document.getElementById(`action-${id}`).remove();
+        }
+
+        // Update action input based on type
+        function updateActionInput(actionId, type) {
+            const container = document.getElementById(`action-value-${actionId}`);
+            let html = '';
+            
+            if (type === 'apply_tag' || type === 'remove_tag') {
+                html = '<select class="form-select" name="action_value[]">';
+                html += '<option value="">-- Select Tag --</option>';
+                availableTags.forEach(tag => {
+                    html += `<option value="${tag.tag_name}">${tag.tag_name}</option>`;
+                });
+                html += '</select>';
+            } else {
+                html = '<select class="form-select" name="action_value[]" disabled><option value="">Select action type first</option></select>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Add initial condition and action on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addCondition();
+            addAction();
+        });
+    </script>
+</body>
+</html>
