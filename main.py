@@ -22,7 +22,6 @@ from sqlalchemy import text
 from location_utils import extract_telegram_user_data, get_ip_location_data
 from universal_media_prevention_system import validate_and_upload_with_prevention
 from media_file_browser import MediaFileBrowser
-from analytics_service import AnalyticsService
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -104,7 +103,6 @@ whatsapp_service = WhatsAppService()
 telegram_service = TelegramService()
 gemini_service = GeminiService()
 scheduler = ContentScheduler(whatsapp_service, telegram_service, db_manager)
-analytics_service = AnalyticsService()
 
 # Global flag and lock to ensure scheduler starts only once
 scheduler_started = False
@@ -1997,43 +1995,6 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 content_context=content,
                 bot_id=bot_id,
                 phone_number=phone_number
-
-
-# Analytics Routes
-@app.route('/analytics')
-@login_required
-def analytics_dashboard():
-    """Analytics dashboard page"""
-    return render_template('analytics_dashboard.html')
-
-@app.route('/api/analytics/user-journey')
-@login_required
-def api_user_journey_analytics():
-    """API endpoint for user journey analytics"""
-    try:
-        bot_id = request.args.get('bot_id', type=int)
-        days = request.args.get('days', 30, type=int)
-        
-        data = analytics_service.get_user_journey_analytics(bot_id=bot_id, days=days)
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error getting user journey analytics: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/analytics/faith-journey')
-@login_required
-def api_faith_journey_insights():
-    """API endpoint for faith journey insights"""
-    try:
-        bot_id = request.args.get('bot_id', type=int)
-        days = request.args.get('days', 30, type=int)
-        
-        data = analytics_service.get_faith_journey_insights(bot_id=bot_id, days=days)
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error getting faith journey insights: {e}")
-        return jsonify({'error': str(e)}), 500
-
             )
             
             if content:
