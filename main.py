@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash, send_from_directory
 from models import db, User, Content, MessageLog, AdminUser, Bot
 from db_manager import DatabaseManager
@@ -18,7 +18,8 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
 import signal
-from sqlalchemy import text
+from sqlalchemy import text, func, cast, ARRAY, String
+from sqlalchemy.dialects.postgresql import JSONB
 from location_utils import extract_telegram_user_data, get_ip_location_data
 from universal_media_prevention_system import validate_and_upload_with_prevention
 from media_file_browser import MediaFileBrowser
@@ -389,24 +390,46 @@ def analytics_dashboard():
         if faith_journey_parent:
             faith_tags = TagRule.query.filter(TagRule.parent_id == faith_journey_parent.id).all()
             
+            # Optimized: Use database aggregation instead of loading all users
             for tag in faith_tags:
-                users_with_tag = 0
-                all_users = query.all()
-                for user in all_users:
-                    if user.tags and tag.tag_name in user.tags:
-                        users_with_tag += 1
-                faith_tags_distribution[tag.tag_name] = users_with_tag
+                count = query.filter(User.tags.contains([tag.tag_name])).count()
+                faith_tags_distribution[tag.tag_name] = count
             
             tag_names = [t.tag_name for t in faith_tags]
-            for day in range(1, 91):
-                day_count = 0
-                msgs = MessageLog.query.join(User).filter(User.current_day == day)
-                if bot_id:
-                    msgs = msgs.filter(User.bot_id == bot_id)
-                for msg in msgs.all():
-                    if msg.llm_tags and any(tag in msg.llm_tags for tag in tag_names):
-                        day_count += 1
-                tag_timeline[day] = day_count
+            
+            # Optimized: Single grouped query instead of 90 separate queries
+            tag_timeline_query = db.session.query(
+                User.current_day,
+                func.count(MessageLog.id).label('count')
+            ).join(MessageLog, User.id == MessageLog.user_id)
+            
+            # Apply the same filters as the main query
+            if bot_id:
+                tag_timeline_query = tag_timeline_query.filter(User.bot_id == bot_id)
+            
+            if start_date_str and end_date_str:
+                tag_timeline_query = tag_timeline_query.filter(
+                    User.join_date.between(start_date, end_date)
+                )
+            elif days_filter:
+                cutoff_date = datetime.utcnow() - timedelta(days=days_filter)
+                tag_timeline_query = tag_timeline_query.filter(User.join_date >= cutoff_date)
+            
+            # Filter for messages containing any faith journey tag
+            # Cast JSON to JSONB to use PostgreSQL's ?| operator for array overlap checking
+            tag_timeline_query = tag_timeline_query.filter(
+                func.cast(MessageLog.llm_tags, JSONB).op('?|')(cast(tag_names, ARRAY(String)))
+            )
+            
+            # Group by day and execute
+            tag_timeline_query = tag_timeline_query.group_by(User.current_day)
+            tag_counts = tag_timeline_query.all()
+            
+            # Build the tag_timeline dict (initialize all days to 0)
+            tag_timeline = {day: 0 for day in range(1, 91)}
+            for day, count in tag_counts:
+                if 1 <= day <= 90:
+                    tag_timeline[day] = count
         
         total_faith_journeys = sum(faith_tags_distribution.values())
         
