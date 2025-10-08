@@ -3726,6 +3726,64 @@ def delete_tag_rule(rule_id):
         flash(f'Error deleting tag rule: {str(e)}', 'error')
         return redirect('/tags')
 
+@app.route('/tags/retag-all-messages', methods=['POST'])
+@login_required
+def retag_all_messages():
+    """Re-run AI tagging on all historical incoming messages with new tag system"""
+    try:
+        from models import MessageLog, TagRule, db
+        
+        # Get all active tag rules
+        tag_rules = TagRule.query.filter_by(is_active=True, parent_id=None).all()
+        if not tag_rules:
+            flash('No active tag rules found. Please initialize tags first.', 'warning')
+            return redirect('/tags')
+        
+        # Get all incoming messages
+        messages = MessageLog.query.filter_by(direction='incoming').order_by(MessageLog.timestamp).all()
+        
+        if not messages:
+            flash('No incoming messages found to retag.', 'info')
+            return redirect('/tags')
+        
+        # Build tag evaluation prompt
+        tag_descriptions = []
+        all_rules = TagRule.query.filter_by(is_active=True).all()
+        for rule in all_rules:
+            if rule.parent_id:  # Only include sub-tags for evaluation
+                tag_descriptions.append(f'- "{rule.tag_name}": {rule.ai_evaluation_rule}')
+        
+        retagged_count = 0
+        error_count = 0
+        
+        for msg in messages:
+            try:
+                # Analyze message with new tag rules
+                analysis = gemini_service.analyze_response(msg.raw_text, tag_rules=tag_descriptions)
+                
+                # Update tags
+                if 'tags' in analysis and analysis['tags']:
+                    msg.llm_tags = analysis['tags']
+                    msg.llm_sentiment = analysis.get('sentiment', 'neutral')
+                    msg.llm_confidence = analysis.get('confidence', 0.0)
+                    retagged_count += 1
+                    
+            except Exception as e:
+                logger.error(f"Error retagging message {msg.id}: {e}")
+                error_count += 1
+                continue
+        
+        db.session.commit()
+        
+        flash(f'Successfully retagged {retagged_count} messages. {error_count} errors encountered.', 'success' if error_count == 0 else 'warning')
+        return redirect('/tags')
+        
+    except Exception as e:
+        logger.error(f"Error retagging messages: {e}")
+        db.session.rollback()
+        flash(f'Error retagging messages: {str(e)}', 'error')
+        return redirect('/tags')
+
 @app.route('/tags/initialize-other-tags', methods=['POST'])
 @login_required
 def initialize_other_tags():

@@ -93,6 +93,11 @@
                         <p class="text-muted mb-0">Create and manage hierarchical tagging rules with AI-powered evaluation</p>
                     </div>
                     <div>
+                        <form method="POST" action="/tags/retag-all-messages" style="display: inline;" onsubmit="return confirm('This will re-analyze ALL historical messages with the new tag rules. This may take a while. Continue?');">
+                            <button type="submit" class="btn btn-warning me-2">
+                                <i class="fas fa-sync-alt me-2"></i>Retag All Messages
+                            </button>
+                        </form>
                         <form method="POST" action="/tags/initialize" style="display: inline;" onsubmit="return confirm('This will create Faith Journey and Delivered Daily Content tag structures. Continue?');">
                             <button type="submit" class="btn btn-success me-2">
                                 <i class="fas fa-magic me-2"></i>Initialize Predefined Tags
