@@ -1,0 +1,221 @@
+Field
+Version
+Test
+Subscribe
+account_alerts
+Subscription version selector for the account_alerts webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+account_review_update
+Subscription version selector for the account_review_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+account_settings_update
+Subscription version selector for the account_settings_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+account_update
+Subscription version selector for the account_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+automatic_events
+Subscription version selector for the automatic_events webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+business_capability_update
+Subscription version selector for the business_capability_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+business_status_update
+Subscription version selector for the business_status_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+calls
+Subscription version selector for the calls webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+flows
+Subscription version selector for the flows webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+group_lifecycle_update
+Subscription version selector for the group_lifecycle_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+group_participants_update
+Subscription version selector for the group_participants_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+group_settings_update
+Subscription version selector for the group_settings_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+group_status_update
+Subscription version selector for the group_status_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+history
+Subscription version selector for the history webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+message_echoes
+Subscription version selector for the message_echoes webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+message_template_components_update
+Subscription version selector for the message_template_components_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+message_template_quality_update
+Subscription version selector for the message_template_quality_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+message_template_status_update
+Subscription version selector for the message_template_status_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+messages
+Subscription version selector for the messages webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Subscribed
+messaging_handovers
+Subscription version selector for the messaging_handovers webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+partner_solutions
+Subscription version selector for the partner_solutions webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+payment_configuration_update
+Subscription version selector for the payment_configuration_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+phone_number_name_update
+Subscription version selector for the phone_number_name_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+phone_number_quality_update
+Subscription version selector for the phone_number_quality_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+security
+Subscription version selector for the security webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+smb_app_state_sync
+Subscription version selector for the smb_app_state_sync webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+smb_message_echoes
+Subscription version selector for the smb_message_echoes webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+template_category_update
+Subscription version selector for the template_category_update webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+template_correct_category_detection
+Subscription version selector for the template_correct_category_detection webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+tracking_events
+Subscription version selector for the tracking_events webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
+user_preferences
+Subscription version selector for the user_preferences webhook field. Set at version v24.0.
+v24.0
+​
+Test
+
+Unsubscribed
