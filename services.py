@@ -1325,22 +1325,31 @@ class SpeechToTextService:
             except Exception as auto_error:
                 logger.warning(f"⚠️ Auto-detection failed: {auto_error}, trying explicit OGG_OPUS encoding")
             
-            # Fallback: Try with explicit OGG_OPUS encoding
-            config_ogg = speech.RecognitionConfig(
-                encoding=speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
-                language_code=language_code,
-                enable_automatic_punctuation=True,
-            )
+            # Fallback: Try with explicit OGG_OPUS encoding and common sample rates
+            # Telegram typically uses 48000 Hz, but we'll try all common rates
+            sample_rates = [48000, 16000, 24000, 12000, 8000]
             
-            response = self.client.recognize(config=config_ogg, audio=audio)
+            for sample_rate in sample_rates:
+                try:
+                    config_ogg = speech.RecognitionConfig(
+                        encoding=speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
+                        sample_rate_hertz=sample_rate,
+                        language_code=language_code,
+                        enable_automatic_punctuation=True,
+                    )
+                    
+                    response = self.client.recognize(config=config_ogg, audio=audio)
+                    
+                    if response.results and len(response.results) > 0:
+                        transcript = response.results[0].alternatives[0].transcript
+                        confidence = response.results[0].alternatives[0].confidence
+                        logger.info(f"✅ Audio transcribed with OGG_OPUS @ {sample_rate}Hz (confidence: {confidence:.2f}): {transcript[:50]}...")
+                        return transcript
+                except Exception as rate_error:
+                    logger.debug(f"Sample rate {sample_rate}Hz failed: {rate_error}")
+                    continue
             
-            if response.results and len(response.results) > 0:
-                transcript = response.results[0].alternatives[0].transcript
-                confidence = response.results[0].alternatives[0].confidence
-                logger.info(f"✅ Audio transcribed with OGG_OPUS (confidence: {confidence:.2f}): {transcript[:50]}...")
-                return transcript
-            
-            logger.warning("❌ No transcription results with any encoding")
+            logger.warning("❌ No transcription results with any encoding or sample rate")
             return None
             
         except Exception as e:
