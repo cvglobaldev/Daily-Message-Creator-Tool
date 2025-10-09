@@ -28,6 +28,7 @@ class MessageLog(db.Model):
     llm_tags: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=list)
     llm_confidence: Mapped[Optional[float]] = mapped_column(nullable=True)
     is_human_handoff: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_voice_message: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="messages")
@@ -46,7 +47,8 @@ class MessageLog(db.Model):
             'llm_sentiment': self.llm_sentiment,
             'llm_tags': self.llm_tags or [],
             'llm_confidence': self.llm_confidence,
-            'is_human_handoff': self.is_human_handoff
+            'is_human_handoff': self.is_human_handoff,
+            'is_voice_message': self.is_voice_message
         }
 
 class AdminUser(UserMixin, db.Model):

@@ -284,6 +284,13 @@
                         {% for message in messages %}
                             <div class="message-bubble message-{{ message.direction }} {% if message.is_human_handoff %}handoff-indicator{% endif %}">
                                 <div class="message-content">
+                                    {% if message.is_voice_message %}
+                                        {% if message.direction == 'incoming' %}
+                                            <i class="fas fa-microphone text-warning me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-volume-up text-info me-2"></i>
+                                        {% endif %}
+                                    {% endif %}
                                     {{ message.raw_text }}
                                 </div>
                                 <div class="message-meta">

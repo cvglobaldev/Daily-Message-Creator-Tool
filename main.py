@@ -916,7 +916,7 @@ def send_test_message():
         
         # Send message using WhatsApp service
         logger.info(f"🔥 TEST: Sending test message to {phone_number}")
-        result = send_message_to_platform(phone_number, "whatsapp", message, bot_id=bot_id)
+        result, _ = send_message_to_platform(phone_number, "whatsapp", message, bot_id=bot_id)
         
         if result:
             return jsonify({"status": "success", "message": "Test message sent successfully"}), 200
@@ -1226,15 +1226,28 @@ def send_message_with_buttons(phone_number: str, platform: str, message: str, bo
     except Exception as e:
         logger.error(f"Error sending message with buttons to {phone_number}: {e}")
         # Fallback to regular message
-        return send_message_to_platform(phone_number, platform, message + "\n\nReply 'YES' for human team or 'NO' to continue with bot.", bot_id=bot_id)
+        success, _ = send_message_to_platform(phone_number, platform, message + "\n\nReply 'YES' for human team or 'NO' to continue with bot.", bot_id=bot_id)
+        return success
     
     return False
 
 def send_message_to_platform(phone_number: str, platform: str, message: str, 
                            with_quick_replies: bool = False, copy_text: str = "", 
                            copy_label: str = "Copy Text", bot_id: int = 1, retry_count: int = 3,
-                           send_as_voice: bool = False) -> bool:
-    """Send message to the appropriate platform with enhanced reliability and retry logic"""
+                           send_as_voice: bool = False) -> tuple[bool, bool]:
+    """Send message to the appropriate platform with enhanced reliability and retry logic
+    
+    Returns:
+        tuple[bool, bool]: (success: bool, voice_sent: bool)
+            - success: True if message was sent successfully (either as voice or text), False otherwise
+            - voice_sent: True if message was sent as voice, False if sent as text
+        
+    Note: When send_as_voice=True, the function attempts to send voice first. If that fails,
+    it falls back to text. The is_voice_message flag should be set based on what was actually sent.
+    """
+    
+    # Track whether voice was actually sent (for logging purposes)
+    voice_sent = False
     
     # Voice message handling
     if send_as_voice:
@@ -1287,7 +1300,8 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                                 success = bot_service.send_voice(chat_id, temp_file)
                                 if success:
                                     logger.info(f"✅ Voice message sent successfully to Telegram {chat_id}")
-                                    return True
+                                    voice_sent = True
+                                    return (True, True)
                     else:
                         # WhatsApp needs a public URL - save to static/uploads/audio
                         static_audio_dir = "static/uploads/audio"
@@ -1313,7 +1327,8 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                             success = bot_whatsapp_service.send_audio(phone_number, audio_url)
                             if success:
                                 logger.info(f"✅ Voice message sent successfully to WhatsApp {phone_number}")
-                                return True
+                                voice_sent = True
+                                return (True, True)
                     
                 finally:
                     # Clean up temporary file
@@ -1348,7 +1363,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                     bot_service = get_telegram_service_for_bot(bot_id)
                     if not bot_service:
                         logger.error(f"No Telegram service available for bot_id {bot_id}")
-                        return False
+                        return (False, False)
                     
                     # Enhanced Telegram messaging with 2025 features
                     if copy_text and copy_label:
@@ -1365,13 +1380,13 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                         success = bot_service.send_message(chat_id, message)
                 else:
                     logger.error(f"Invalid Telegram chat_id format: {phone_number}")
-                    return False
+                    return (False, False)
             else:
                 # Default to WhatsApp - use bot-specific service with validation
                 bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
                 if not bot_whatsapp_service:
                     logger.error(f"No WhatsApp service available for bot_id {bot_id}")
-                    return False
+                    return (False, False)
                     
                 success = bot_whatsapp_service.send_message(phone_number, message)
             
@@ -1412,7 +1427,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
             except Exception as fallback_error:
                 logger.error(f"Even fallback message failed: {fallback_error}")
     
-    return success
+    return success, voice_sent
 
 
 
@@ -1544,7 +1559,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                             message += f"\n\n{content.reflection_question}"
                         
                         # Send directly to the platform
-                        success = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
+                        success, _ = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
                         if success:
                             logger.info(f"✅ Day 1 content delivered successfully to restart user {phone_number}")
                             # Advance user to Day 2
@@ -1673,7 +1688,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                     # Send directly to the platform
                     logger.info(f"🔥 DEBUG: About to send message to {phone_number} on {platform} with bot_id {user.bot_id}")
                     logger.info(f"🔥 DEBUG: Message preview: {message[:100]}...")
-                    success = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
+                    success, _ = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
                     logger.info(f"🔥 DEBUG: Message send result: {success}")
                     if success:
                         logger.info(f"✅ Day 1 content delivered successfully to {phone_number}")
@@ -1766,7 +1781,7 @@ def handle_stop_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                 message = "You weren't subscribed to any journey. Send START to begin your faith journey."
         
         logger.info(f"🔥 DEBUG: Sending STOP response: {message}")
-        success = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+        success, _ = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
         logger.info(f"🔥 DEBUG: STOP message send result: {success}")
         
         # Log the stop request
@@ -1862,7 +1877,7 @@ def handle_help_command(phone_number: str, platform: str = "whatsapp", bot_id: i
                                "If you need to speak with someone, just let us know.")
         
         logger.info(f"🔥 DEBUG: About to send help message to {phone_number}: {help_message[:50]}...")
-        success = send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
+        success, _ = send_message_to_platform(phone_number, platform, help_message, bot_id=bot_id)
         logger.info(f"🔥 DEBUG: Help message send result: {success}")
         
         # Log the help request  
@@ -1963,7 +1978,7 @@ def handle_human_command(phone_number: str, platform: str = "whatsapp", bot_id: 
                                   "In the meantime, know that you are valued and your journey matters. "
                                   "Feel free to share what's on your heart. 🙏")
         
-        success = send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
+        success, _ = send_message_to_platform(phone_number, platform, response_message, bot_id=bot_id)
         
         if success and user:
             # Log the outgoing human response
@@ -2054,7 +2069,7 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
             logger.warning(f"No CMS greeting found for bot {bot_id}, using fallback")
         
         # Send welcome message immediately
-        success = send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
+        success, _ = send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
         
         if success and user:
             # Log the welcome message
@@ -2126,7 +2141,7 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
                                     message += f"\n\n{content.reflection_question}"
                             
                             # Send the content message
-                            success = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
+                            success, _ = send_message_to_platform(phone_number, platform, message, bot_id=bot_id)
                             
                             if success:
                                 logger.info(f"✅ Day 1 content delivered to new user {phone_number} after 10 seconds")
@@ -2198,7 +2213,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
             raw_text=message_text,
             sentiment=analysis['sentiment'],
             tags=analysis['tags'],
-            confidence=analysis.get('confidence')
+            confidence=analysis.get('confidence'),
+            is_voice_message=is_voice_message
         )
         
         # Apply rule-based tags in addition to AI tags
@@ -2256,7 +2272,7 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
                 contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
         
         # Send the contextual response with voice if incoming was voice
-        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
+        success, voice_sent = send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
         
         # Log the outgoing response
         if user:
@@ -2266,7 +2282,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
                 raw_text=contextual_response,
                 sentiment='positive',
                 tags=['AI_Response', 'General_Conversation'],
-                confidence=0.9
+                confidence=0.9,
+                is_voice_message=voice_sent  # Track actual voice vs text based on what was sent
             )
         
         logger.info(f"Processed general conversation from {phone_number}: sentiment={analysis['sentiment']}, tags={analysis['tags']}")
@@ -2335,7 +2352,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 raw_text=message_text,
                 sentiment=analysis['sentiment'],
                 tags=filtered_tags,
-                confidence=analysis.get('confidence')
+                confidence=analysis.get('confidence'),
+                is_voice_message=is_voice_message
             )
             
             # Apply rule-based tags in addition to AI tags
@@ -2406,7 +2424,7 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
         
         # Send the contextual response with voice if incoming was voice
-        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
+        success, voice_sent = send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
         
         # Log the outgoing response
         if user:
@@ -2415,7 +2433,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 direction='outgoing',
                 raw_text=contextual_response,
                 sentiment='positive',
-                tags=['AI_RESPONSE', 'CONTEXTUAL']
+                tags=['AI_RESPONSE', 'CONTEXTUAL'],
+                is_voice_message=voice_sent  # Track actual voice vs text based on what was sent
             )
             
     except Exception as e:
@@ -2455,7 +2474,8 @@ def handle_journey_completed_conversation(phone_number: str, message_text: str, 
                 raw_text=message_text,
                 sentiment=analysis['sentiment'],
                 tags=analysis['tags'],
-                confidence=analysis.get('confidence')
+                confidence=analysis.get('confidence'),
+                is_voice_message=is_voice_message
             )
             
             # Apply rule-based tags in addition to AI tags
@@ -2510,7 +2530,7 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
             contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
         
         # Send the AI response with voice if incoming was voice
-        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
+        success, voice_sent = send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
         
         # Log the outgoing AI response
         if user:
@@ -2519,7 +2539,8 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
                 direction='outgoing',
                 raw_text=contextual_response,
                 sentiment='positive',
-                tags=['AI_RESPONSE', 'JOURNEY_COMPLETED']
+                tags=['AI_RESPONSE', 'JOURNEY_COMPLETED'],
+                is_voice_message=voice_sent  # Track actual voice vs text based on what was sent
             )
         
         # Always offer human connection for journey completed users (as follow-up message)
@@ -3137,7 +3158,7 @@ def send_message_to_user():
             
         # Determine platform and send message
         platform = 'telegram' if user.phone_number.startswith('tg_') else 'whatsapp'
-        success = send_message_to_platform(user.phone_number, platform, message)
+        success, _ = send_message_to_platform(user.phone_number, platform, message)
         
         if success:
             # Log the message
@@ -3168,7 +3189,7 @@ def send_admin_message():
             
         # Determine platform and send message with bot-specific service
         platform = 'telegram' if user.phone_number.startswith('tg_') else 'whatsapp'
-        success = send_message_to_platform(user.phone_number, platform, message, bot_id=user.bot_id)
+        success, _ = send_message_to_platform(user.phone_number, platform, message, bot_id=user.bot_id)
         
         if success:
             # Log the message with admin tags

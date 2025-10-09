@@ -464,7 +464,9 @@
                                 <br><small class="text-muted">${conversation.total_messages} messages</small>
                             </td>
                             <td>
-                                <div class="message-preview">${conversation.raw_text}</div>
+                                <div class="message-preview">
+                                    ${conversation.is_voice_message ? (conversation.direction === 'incoming' ? '<i class="fas fa-microphone text-warning me-2"></i>' : '<i class="fas fa-volume-up text-info me-2"></i>') : ''}${conversation.raw_text}
+                                </div>
                                 <small class="text-info">${conversation.conversation_summary}</small>
                                 ${conversation.is_human_handoff ? '<br><small class="badge bg-warning mt-1">Human Required</small>' : ''}
                             </td>

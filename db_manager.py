@@ -273,7 +273,8 @@ class DatabaseManager:
     # Message Logging Methods
     def log_message(self, user: User, direction: str, raw_text: str,
                    sentiment: Optional[str] = None, tags: Optional[List[str]] = None,
-                   confidence: Optional[float] = None, is_human_handoff: bool = False) -> Optional[MessageLog]:
+                   confidence: Optional[float] = None, is_human_handoff: bool = False,
+                   is_voice_message: bool = False) -> Optional[MessageLog]:
         """Log a message"""
         try:
             message_log = MessageLog()
@@ -284,6 +285,7 @@ class DatabaseManager:
             message_log.llm_tags = tags or []
             message_log.llm_confidence = confidence
             message_log.is_human_handoff = is_human_handoff
+            message_log.is_voice_message = is_voice_message
             self.db.session.add(message_log)
             self.db.session.commit()
             return message_log
