@@ -7,29 +7,36 @@ This project is a multi-platform chatbot (WhatsApp and Telegram) designed to gui
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
+The system is a scalable and maintainable Flask web application in Python, utilizing a PostgreSQL relational database. It supports multiple independent bot instances, each with its own content, users, and configurations.
 
-### Core Design Principles
-The system is a scalable and maintainable Flask web application in Python. It utilizes a PostgreSQL relational database for robust data management and supports multiple independent bot instances, each with its own content, users, and configurations.
+### UI/UX Decisions
+A consistent "CV Global" design theme is applied across all management interfaces (dashboard, bot management, CMS, chat management) with professional branding and consistent color schemes.
 
-### Technical Implementation
+### Technical Implementations
 - **Backend**: Flask web application with Python.
-- **Database**: PostgreSQL for all data storage, including users, content, message logs, and system settings.
-- **AI Integration**: Leverages Google Gemini API for sentiment analysis, keyword tagging of user responses, and AI-powered content generation.
-- **Messaging Integration**: Integrates with the WhatsApp Business API and Telegram Bot API for multi-platform support, allowing bots to operate independently.
-- **Scheduling**: A background thread-based scheduler manages daily content delivery, user progression, and rate limiting.
-- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, and support for configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags. It supports multimedia delivery (images, audio, video).
-- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro, offering audience customization (language, religion, age group, cultural background) and flexible journey durations.
+- **Database**: PostgreSQL for all data storage.
+- **AI Integration**: Leverages Google Gemini API for sentiment analysis, keyword tagging, and AI-powered content generation.
+- **Messaging Integration**: Integrates with WhatsApp Business API and Telegram Bot API for multi-platform support.
+- **Scheduling**: A background thread-based scheduler manages daily content delivery and user progression.
+- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, multimedia delivery, and support for configurable journey durations (10, 30, 60, 90 days) and predefined faith journey tags.
+- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro, offering audience customization (language, religion, age group, cultural background).
 - **Chat Management System**: Provides an interface for consolidated user conversations, message sending, human handoff detection, real-time analytics, and user profiles.
 - **Authentication**: Implements Flask-Login for secure password hashing, session management, and role-based access control.
-- **UI/UX**: Applies a consistent "CV Global" design theme across all management interfaces (dashboard, bot management, CMS, chat management) with professional branding and consistent color schemes.
+- **Voice Conversation Feature**: Includes end-to-end voice message handling, Speech-to-Text (Google Cloud Speech-to-Text API) and Text-to-Speech (Google Cloud Text-to-Speech API) integrations for multiple languages, with platform-specific audio format support.
+- **Dual-Layer Tagging System**: Combines AI semantic analysis with rule-based automation (When-If-Then logic) for comprehensive message tagging.
+- **Atomic Lock System**: Implements a database-backed atomic locking system using PostgreSQL for duplicate message prevention during content delivery.
+
+### System Design Choices
 - **Multi-Bot System**: Enables creation and management of independent bots, each with its own content, user base, AI prompts, and platform configurations.
 - **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds.
 - **AI Response Analysis**: AI analyzes user reflections for sentiment and tags them with spiritual milestones.
-- **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN" with customizable responses.
+- **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN."
 - **User Progression**: Tracks user progress through customizable journey durations (10-90 days).
 - **Error Handling & Simulation**: Includes robust error handling, user deactivation for inactive chats, and development-friendly API simulation modes.
-- **Phone Number Normalization**: Automatically handles various phone number formats for consistent user identification.
-- **Media Management**: Comprehensive system for managing media files, including prevention of broken references and integrity monitoring.
+- **Phone Number Normalization**: Automatically handles various phone number formats.
+- **Media Management**: Comprehensive system for managing media files, including prevention of broken references.
+- **Contextual AI Response System**: AI responses are contextually aware of the user's current daily content, journey stage, and spiritual topic.
+- **Human Connection Option System**: Proactively offers users the option to connect with a human team member for sensitive topics, with intelligent detection and user choice priority.
 
 ## External Dependencies
 
@@ -37,13 +44,15 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 - WhatsApp Business API
 - Google Gemini API
 - Telegram Bot API
+- Google Cloud Speech-to-Text API
+- Google Cloud Text-to-Speech API
 
 ### Environment Variables
 - `WHATSAPP_ACCESS_TOKEN`
 - `WHATSAPP_PHONE_NUMBER_ID`
 - `GEMINI_API_KEY`
 - `SESSION_SECRET`
-- `GOOGLE_CLOUD_CREDENTIALS_JSON` (for voice conversation features)
+- `GOOGLE_CLOUD_CREDENTIALS_JSON`
 
 ### Python Packages
 - `flask`
@@ -59,81 +68,3 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 - `python-dotenv`
 - `python-telegram-bot`
 - `pydub`
-
-## Recent Changes
-
-### ✅ COMPLETED: Voice Conversation Feature for Multi-Platform Chatbot (October 9, 2025)
-- **Voice Input Processing**: Implemented end-to-end voice message handling for both WhatsApp and Telegram platforms
-- **Speech-to-Text Integration**: Added Google Cloud Speech-to-Text API integration for accurate voice transcription with support for multiple languages (en-US, id-ID, hi-IN)
-- **Text-to-Speech Integration**: Integrated Google Cloud Text-to-Speech API with platform-specific audio format support (OGG_OPUS for Telegram, MP3 for WhatsApp)
-- **Voice Services Architecture**: Created SpeechToTextService and TextToSpeechService classes with robust error handling and graceful fallbacks
-- **Platform-Specific Implementation**: 
-  - Telegram: Voice message detection, file download via Bot API, OGG_OPUS voice replies
-  - WhatsApp: Audio message detection, media download via Graph API, MP3 audio replies
-- **Voice Response Pipeline**: Bot automatically responds with voice messages when users send voice messages, maintaining conversation context
-- **Temporary File Management**: Implemented proper cleanup of temporary audio files with try/finally blocks to prevent storage buildup
-- **Language-Aware Voice Synthesis**: Voice responses automatically match bot language configuration for culturally appropriate delivery
-- **Error Handling & Fallbacks**: Comprehensive error handling with automatic fallback to text messages if voice generation fails
-- **Environment Configuration**: Added GOOGLE_CLOUD_CREDENTIALS_JSON for secure Google Cloud authentication
-
-### ✅ COMPLETED: Dual-Layer Tagging System - AI-Powered + Rule-Based (October 8, 2025)
-- **Dual Tagging Architecture**: Implemented two-layer tagging system combining AI semantic analysis with rule-based automation (When-If-Then logic)
-- **TagRule Model Extended**: Added `rule_type` ('ai_powered'/'rule_based') and `rule_config` (JSON) fields to support both tagging approaches
-- **RuleEngine Service**: Built comprehensive rule evaluation engine supporting triggers (message_received, user_day_reached, sentiment_detected, tag_applied), conditions (keyword matching, sentiment checks, day comparisons, tag existence), and actions (apply_tag, remove_tag)
-- **Rule Builder UI**: Created multi-step form at /tags/create-rule-based with dynamic condition/action rows, supporting all trigger types and operators
-- **Pipeline Integration**: Applied combined tagging (AI + rules) to all conversation handlers via apply_combined_tags() helper function
-- **Tag Management Enhanced**: Updated tag management page to display tag type (AI-Powered vs Rule-Based) with distinct badge indicators
-- **JSON Serialization Fix**: Resolved TagRule object serialization issue by converting database objects to dictionaries before template rendering
-- **Message Processing**: All incoming messages now receive both AI-powered semantic tags and rule-based automation tags before database persistence
-
-### ✅ COMPLETED: Atomic Lock System for Duplicate Message Prevention (October 2, 2025)
-- **Root Cause Identified**: Multiple gunicorn workers during graceful restarts (--reload flag) caused race conditions where two workers could both deliver content to the same user before either logged the message to the database
-- **Atomic Pre-Delivery Lock Implemented**: Added database-backed atomic locking system using PostgreSQL INSERT ... ON CONFLICT DO NOTHING for true atomicity before content delivery
-- **Lock Acquisition Flow**: Each worker attempts to acquire an exclusive delivery lock per user; only one worker succeeds and proceeds with delivery, others skip
-- **Lock Release Mechanism**: Locks are automatically released in a finally block after delivery attempt (success or failure), preventing residual locks
-- **Lock Timeout Tuning**: 3-minute staleness threshold handles slow media uploads and API retries; 5-minute lock expiry prevents deadlocks after worker terminations
-- **Race Condition Eliminated**: Prevents the Day 3/Day 4 rapid succession issue observed during gunicorn restarts (18:58:40 → 18:58:49)
-- **User Impact Resolved**: Users (including +6281931113811 and tg_960173404) no longer receive duplicate messages; verified NO new duplicates since implementation at 19:06
-- **Production Stability**: System handles multiple concurrent workers safely; locks properly acquired, used, and released as shown in logs
-- **Defensive Programming**: Handles edge cases including disappeared locks (defensive fallback), stale lock takeover, and database connectivity issues
-- **Content Completion Handling**: Added proper handling for users who reach the end of available content days, offering AI conversation, human connection, or journey restart options
-- **Journey Restart Support**: Users can restart their journey with /start command, resetting to Day 1 with fresh content delivery
-
-### ✅ COMPLETED: Bot Creation Platform Configuration & Multi-Language Support (October 2, 2025)
-- **Platform Configuration Display Fixed**: Resolved JavaScript syntax error preventing WhatsApp and Telegram configuration sections from appearing when checkboxes were selected on create bot page
-- **Comprehensive Language Support**: Added all 46 Gemini AI-supported languages to both create and edit bot forms with dropdown selection
-- **Database Schema Updated**: Implemented language field in Bot model with English as default for backward compatibility
-- **Multi-Language Bot Creation**: Users can now select target audience language during bot creation, with language preference persisted to database
-- **Form Validation Enhanced**: Both CreateBotForm and EditBotForm now include language selection with proper validation
-- **JavaScript Debug Fix**: Removed extra closing brace causing "Unexpected token '}'" error that blocked all JavaScript execution
-- **User Experience Improved**: Platform-specific credentials fields (WhatsApp Access Token, Telegram Bot Token) now display immediately upon platform selection
-
-### ✅ COMPLETED: WhatsApp API Integration & Credentials Updated (August 21, 2025)
-- **WhatsApp Business API Fully Configured**: Updated with new WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID (727962770406515) for proper authentication
-- **Meta Business Manager Integration**: Successfully configured webhook URL (https://smart-budget-cvglobaldev.replit.app/whatsapp/2) with updated verification token
-- **Credentials Resolution**: Updated access token and phone number ID to resolve Meta Business permissions and enable message delivery
-- **Interactive Button System**: Implemented Yes/No button responses for human connection requests on both WhatsApp and Telegram
-- **Multi-Platform Button Support**: Telegram inline keyboards and WhatsApp interactive buttons both fully functional
-- **Contextual Response System Validated**: Bot 2 (Indonesian Bang Kris) confirmed working with proper contextual AI responses based on daily spiritual content
-- **Human Connection Flow**: Enhanced with proper callback handling and confirmation messages in both English/Indonesian
-- **Webhook Routing**: Proper bot-specific webhook URLs configured (/whatsapp/1, /whatsapp/2, etc.) for multi-bot isolation
-- **Message Processing**: All platforms now properly receive, process, and generate contextual replies based on user's spiritual journey stage
-- **Production Ready**: System successfully processing real WhatsApp messages with proper Indonesian spiritual guidance responses about Isa al-Masih
-
-### ✅ COMPLETED: Human Connection Option System (August 19, 2025)
-- **Always Offer Human Connection First**: System now proactively offers users the option to connect with a human team member before providing AI responses for sensitive topics
-- **Intelligent Detection**: Enhanced analysis identifies messages containing emotional distress, spiritual concerns, or deep questions requiring personal guidance
-- **No Auto "Human" Tags**: Removed automatic assignment of "Human" tags from AI analysis to prevent premature classification
-- **User Choice Priority**: Users receive clear options to either connect with human team or continue with contextual AI responses based on daily content
-- **Multi-language Support**: Human connection offers available in both English and Indonesian based on bot configuration
-- **Comprehensive Coverage**: Applied across all bots to ensure consistent user experience and support availability
-
-### ✅ COMPLETED: Enhanced Contextual AI Response System (August 19, 2025)
-- **Intelligent Content-Aware Responses**: Users now receive AI responses that are contextually aware of their current daily content, journey stage, and spiritual topic
-- **Enhanced AI Context Integration**: Improved Google Gemini integration with expanded context including current day content, topics, reflection questions, and journey stage
-- **Unified Contextual Conversation Handler**: Created comprehensive `handle_contextual_conversation` function that provides intelligent responses for all user messages beyond Day 1
-- **Content-Based Response Generation**: AI responses now reference and build upon the user's current daily content, creating more meaningful spiritual conversations
-- **Improved Message Routing**: Enhanced logic to route users to appropriate conversation handlers based on their journey progress and content engagement
-- **Day 1 Contextual Support**: Even Day 1 users receive contextual responses once they've received their initial content
-- **Fallback Enhancement**: Robust fallback system ensures users always receive appropriate responses even during AI service interruptions
-- **Journey-Aware AI Prompts**: AI responses now include detailed context about user's current spiritual content, enabling more relevant and helpful conversations
