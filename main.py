@@ -1050,9 +1050,11 @@ def process_voice_message(phone_number: str, audio_bytes: bytes, platform: str =
         
         # Initialize voice services
         speech_to_text = SpeechToTextService()
+        logger.info(f"🎤 STT Service initialized - Simulation mode: {speech_to_text.simulate_mode}")
         
         # Transcribe audio to text
         transcribed_text = speech_to_text.transcribe_audio(audio_bytes)
+        logger.info(f"🎤 Transcription result: {transcribed_text[:100] if transcribed_text else 'None'}...")
         
         if transcribed_text:
             logger.info(f"🎤 Transcribed: {transcribed_text}")
@@ -1266,6 +1268,7 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
             
             # Initialize TTS service
             tts_service = TextToSpeechService()
+            logger.info(f"🔊 TTS Service initialized - Simulation mode: {tts_service.simulate_mode}")
             
             # Determine audio format based on platform
             audio_format = "OGG_OPUS" if platform == "telegram" else "MP3"
@@ -1278,6 +1281,8 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
                 voice_gender="NEUTRAL",
                 audio_format=audio_format
             )
+            
+            logger.info(f"🔊 TTS audio generated: {len(audio_bytes) if audio_bytes else 0} bytes")
             
             if audio_bytes:
                 temp_file = None
