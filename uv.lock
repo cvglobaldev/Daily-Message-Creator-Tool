@@ -1,7 +1,9 @@
 version = 1
 requires-python = ">=3.11"
 resolution-markers = [
-    "python_full_version >= '3.12'",
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
+    "python_full_version == '3.12.*'",
     "python_full_version < '3.12'",
 ]
 
@@ -588,6 +590,58 @@ wheels = [
 ]
 
 [[package]]
+name = "google-api-core"
+version = "2.25.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.12.*'",
+    "python_full_version < '3.12'",
+]
+dependencies = [
+    { name = "google-auth", marker = "python_full_version != '3.13.*'" },
+    { name = "googleapis-common-protos", marker = "python_full_version != '3.13.*'" },
+    { name = "proto-plus", marker = "python_full_version != '3.13.*'" },
+    { name = "protobuf", marker = "python_full_version != '3.13.*'" },
+    { name = "requests", marker = "python_full_version != '3.13.*'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/09/cd/63f1557235c2440fe0577acdbc32577c5c002684c58c7f4d770a92366a24/google_api_core-2.25.2.tar.gz", hash = "sha256:1c63aa6af0d0d5e37966f157a77f9396d820fba59f9e43e9415bc3dc5baff300", size = 166266 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/d8/894716a5423933f5c8d2d5f04b16f052a515f78e815dab0c2c6f1fd105dc/google_api_core-2.25.2-py3-none-any.whl", hash = "sha256:e9a8f62d363dc8424a8497f4c2a47d6bcda6c16514c935629c257ab5d10210e7", size = 162489 },
+]
+
+[package.optional-dependencies]
+grpc = [
+    { name = "grpcio", marker = "python_full_version != '3.13.*'" },
+    { name = "grpcio-status", marker = "python_full_version != '3.13.*'" },
+]
+
+[[package]]
+name = "google-api-core"
+version = "2.26.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version == '3.13.*'",
+]
+dependencies = [
+    { name = "google-auth", marker = "python_full_version == '3.13.*'" },
+    { name = "googleapis-common-protos", marker = "python_full_version == '3.13.*'" },
+    { name = "proto-plus", marker = "python_full_version == '3.13.*'" },
+    { name = "protobuf", marker = "python_full_version == '3.13.*'" },
+    { name = "requests", marker = "python_full_version == '3.13.*'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/32/ea/e7b6ac3c7b557b728c2d0181010548cbbdd338e9002513420c5a354fa8df/google_api_core-2.26.0.tar.gz", hash = "sha256:e6e6d78bd6cf757f4aee41dcc85b07f485fbb069d5daa3afb126defba1e91a62", size = 166369 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/ad/f73cf9fe9bd95918502b270e3ddb8764e4c900b3bbd7782b90c56fac14bb/google_api_core-2.26.0-py3-none-any.whl", hash = "sha256:2b204bd0da2c81f918e3582c48458e24c11771f987f6258e6e227212af78f3ed", size = 162505 },
+]
+
+[package.optional-dependencies]
+grpc = [
+    { name = "grpcio", marker = "python_full_version == '3.13.*'" },
+    { name = "grpcio-status", marker = "python_full_version == '3.13.*'" },
+]
+
+[[package]]
 name = "google-auth"
 version = "2.40.3"
 source = { registry = "https://pypi.org/simple" }
@@ -599,6 +653,38 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/9b/e92ef23b84fa10a64ce4831390b7a4c2e53c0132568d99d4ae61d04c8855/google_auth-2.40.3.tar.gz", hash = "sha256:500c3a29adedeb36ea9cf24b8d10858e152f2412e3ca37829b3fa18e33d63b77", size = 281029 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/17/63/b19553b658a1692443c62bd07e5868adaa0ad746a0751ba62c59568cd45b/google_auth-2.40.3-py2.py3-none-any.whl", hash = "sha256:1370d4593e86213563547f97a92752fc658456fe4514c809544f330fed45a7ca", size = 216137 },
+]
+
+[[package]]
+name = "google-cloud-speech"
+version = "2.33.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", version = "2.25.2", source = { registry = "https://pypi.org/simple" }, extra = ["grpc"], marker = "python_full_version != '3.13.*'" },
+    { name = "google-api-core", version = "2.26.0", source = { registry = "https://pypi.org/simple" }, extra = ["grpc"], marker = "python_full_version == '3.13.*'" },
+    { name = "google-auth" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9a/74/9c5a556f8af19cab461058aa15e1409e7afa453ca2383473a24a12801ef7/google_cloud_speech-2.33.0.tar.gz", hash = "sha256:fd08511b5124fdaa768d71a4054e84a5d8eb02531cb6f84f311c0387ea1314ed", size = 389072 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/1d/880342b2541b4bad888ad8ab2ac77d4b5dad25b32a2a1c5f21140c14c8e3/google_cloud_speech-2.33.0-py3-none-any.whl", hash = "sha256:4ba16c8517c24a6abcde877289b0f40b719090504bf06b1adea248198ccd50a5", size = 335681 },
+]
+
+[[package]]
+name = "google-cloud-texttospeech"
+version = "2.31.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", version = "2.25.2", source = { registry = "https://pypi.org/simple" }, extra = ["grpc"], marker = "python_full_version != '3.13.*'" },
+    { name = "google-api-core", version = "2.26.0", source = { registry = "https://pypi.org/simple" }, extra = ["grpc"], marker = "python_full_version == '3.13.*'" },
+    { name = "google-auth" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/4b/7ccadbec28ee255a3176c3de0a14705c4b6469777f1c7ddbf4452fa893e3/google_cloud_texttospeech-2.31.0.tar.gz", hash = "sha256:1f0c0c6448f175e1e2f63d96fb13af5d9abee6970bbb22c1e4036f53136a5588", size = 184880 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/3e/54ff1a5af26f90c5d76e7e80b9208f8484035b5bd8fb6a06c819fed6a8c9/google_cloud_texttospeech-2.31.0-py3-none-any.whl", hash = "sha256:9442134b4b8e7e3d179dfd3850a5a953a6a6a9cf000a3640caddb85cf97ab69b", size = 191280 },
 ]
 
 [[package]]
@@ -618,6 +704,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4a/6e/d9618081990ad7c4907c93fcccacb13081e825ca818e9e18618f91050246/google_genai-1.26.0.tar.gz", hash = "sha256:d7b019ac98ca07888caa6121a953eb65db20f78370d8ae06aec29fb534534dc8", size = 218877 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/50/7d/201894058552d5ed810930f9483bf6be8650e3d599efab180d0510d0eea1/google_genai-1.26.0-py3-none-any.whl", hash = "sha256:a050de052ee6e68654ba7cdb97028a576ad7108d0ecc9257c69bcc555498e9a2", size = 217693 },
+]
+
+[[package]]
+name = "googleapis-common-protos"
+version = "1.70.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/24/33db22342cf4a2ea27c9955e6713140fedd51e8b141b5ce5260897020f1a/googleapis_common_protos-1.70.0.tar.gz", hash = "sha256:0e1b44e0ea153e6594f9f394fef15193a68aaaea2d843f83e2742717ca753257", size = 145903 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/f1/62a193f0227cf15a920390abe675f386dec35f7ae3ffe6da582d3ade42c7/googleapis_common_protos-1.70.0-py3-none-any.whl", hash = "sha256:b8bfcca8c25a2bb253e0e0b0adaf8c00773e5e6af6fd92397576680b807e0fd8", size = 294530 },
 ]
 
 [[package]]
@@ -707,6 +805,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/29/efbd4ac837c23bc48e34bbaf32bd429f0dc9ad7f80721cdb4622144c118c/grpcio-1.73.1-cp313-cp313-musllinux_1_1_x86_64.whl", hash = "sha256:686231cdd03a8a8055f798b2b54b19428cdf18fa1549bee92249b43607c42668", size = 6287288 },
     { url = "https://files.pythonhosted.org/packages/d8/61/c6045d2ce16624bbe18b5d169c1a5ce4d6c3a47bc9d0e5c4fa6a50ed1239/grpcio-1.73.1-cp313-cp313-win32.whl", hash = "sha256:89018866a096e2ce21e05eabed1567479713ebe57b1db7cbb0f1e3b896793ba4", size = 3668151 },
     { url = "https://files.pythonhosted.org/packages/c2/d7/77ac689216daee10de318db5aa1b88d159432dc76a130948a56b3aa671a2/grpcio-1.73.1-cp313-cp313-win_amd64.whl", hash = "sha256:4a68f8c9966b94dff693670a5cf2b54888a48a5011c5d9ce2295a1a1465ee84f", size = 4335747 },
+]
+
+[[package]]
+name = "grpcio-status"
+version = "1.62.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "googleapis-common-protos" },
+    { name = "grpcio" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7c/d7/013ef01c5a1c2fd0932c27c904934162f69f41ca0f28396d3ffe4d386123/grpcio-status-1.62.3.tar.gz", hash = "sha256:289bdd7b2459794a12cf95dc0cb727bd4a1742c37bd823f760236c937e53a485", size = 13063 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/90/40/972271de05f9315c0d69f9f7ebbcadd83bc85322f538637d11bb8c67803d/grpcio_status-1.62.3-py3-none-any.whl", hash = "sha256:f9049b762ba8de6b1086789d8315846e094edac2c50beaf462338b301a8fd4b8", size = 14448 },
 ]
 
 [[package]]
@@ -1234,6 +1346,18 @@ wheels = [
 ]
 
 [[package]]
+name = "proto-plus"
+version = "1.26.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/ac/87285f15f7cce6d4a008f33f1757fb5a13611ea8914eb58c3d0d26243468/proto_plus-1.26.1.tar.gz", hash = "sha256:21a515a4c4c0088a773899e23c7bbade3d18f9c66c73edd4c7ee3816bc96a012", size = 56142 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/6d/280c4c2ce28b1593a19ad5239c8b826871fc6ec275c21afc8e1820108039/proto_plus-1.26.1-py3-none-any.whl", hash = "sha256:13285478c2dcf2abb829db158e1047e2f1e8d63a077d94263c2b88b043c75a66", size = 50163 },
+]
+
+[[package]]
 name = "protobuf"
 version = "4.25.8"
 source = { registry = "https://pypi.org/simple" }
@@ -1433,6 +1557,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pydub"
+version = "0.25.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/9a/e6bca0eed82db26562c73b5076539a4a08d3cffd19c3cc5913a3e61145fd/pydub-0.25.1.tar.gz", hash = "sha256:980a33ce9949cab2a569606b65674d748ecbca4f0796887fd6f46173a7b0d30f", size = 38326 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/53/d78dc063216e62fc55f6b2eebb447f6a4b0a59f55c8406376f76bf959b08/pydub-0.25.1-py2.py3-none-any.whl", hash = "sha256:65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6", size = 32327 },
+]
+
+[[package]]
 name = "pyjwt"
 version = "2.10.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1576,11 +1709,14 @@ dependencies = [
     { name = "flask-login" },
     { name = "flask-sqlalchemy" },
     { name = "flask-wtf" },
+    { name = "google-cloud-speech" },
+    { name = "google-cloud-texttospeech" },
     { name = "google-genai" },
     { name = "gunicorn" },
     { name = "oauthlib" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
+    { name = "pydub" },
     { name = "pyjwt" },
     { name = "replit" },
     { name = "requests" },
@@ -1599,11 +1735,14 @@ requires-dist = [
     { name = "flask-login", specifier = ">=0.6.3" },
     { name = "flask-sqlalchemy", specifier = ">=3.1.1" },
     { name = "flask-wtf", specifier = ">=1.2.2" },
+    { name = "google-cloud-speech", specifier = ">=2.33.0" },
+    { name = "google-cloud-texttospeech", specifier = ">=2.31.0" },
     { name = "google-genai", specifier = ">=1.26.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "oauthlib", specifier = ">=3.3.1" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "pydub", specifier = ">=0.25.1" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "replit", specifier = ">=4.1.2" },
     { name = "requests", specifier = ">=2.32.4" },
