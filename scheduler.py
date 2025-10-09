@@ -601,6 +601,26 @@ class ContentScheduler:
             
             logger.info(f"User {phone_number} on day {current_day}, bot has {available_content} days of content")
             
+            # **FIX: Check if completion message was already sent in the last 24 hours**
+            # This prevents the message from being sent repeatedly every 10 minutes
+            recent_messages = self.db.get_user_messages_by_id(user.id, limit=20)
+            if recent_messages:
+                from datetime import timedelta
+                twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
+                
+                for msg in recent_messages:
+                    if (msg.direction == 'outgoing' and 
+                        msg.timestamp > twenty_four_hours_ago and 
+                        "completed the available journey content" in msg.raw_text):
+                        logger.info(f"🚫 Completion message already sent to {phone_number} within 24h, skipping duplicate")
+                        
+                        # Mark user as 'completed' to stop scheduler from checking them repeatedly
+                        if user.status == 'active':
+                            self.db.update_user(phone_number, status='completed', completion_date=datetime.now())
+                            logger.info(f"User {phone_number} marked as completed to prevent duplicate messages")
+                        
+                        return  # Don't send the message again
+            
             # Determine platform
             platform = 'telegram' if phone_number.startswith('tg_') else 'whatsapp'
             
@@ -639,12 +659,10 @@ class ContentScheduler:
                 confidence=1.0
             )
             
-            # Mark as completed if they've reached the bot's journey duration
-            if current_day >= bot.journey_duration_days:
-                self.db.update_user(phone_number, status='completed', completion_date=datetime.now())
-                logger.info(f"User {phone_number} marked as completed (reached day {current_day} of {bot.journey_duration_days})")
-            
-            logger.info(f"Sent completion message to {phone_number} on day {current_day}")
+            # **FIX: Always mark as completed when no more content is available**
+            # This prevents the scheduler from repeatedly checking and sending the message
+            self.db.update_user(phone_number, status='completed', completion_date=datetime.now())
+            logger.info(f"User {phone_number} marked as completed (no content available for day {current_day})")
             
         except Exception as e:
             logger.error(f"Error handling content completion for {phone_number}: {e}")

@@ -6,6 +6,29 @@ This project is a multi-platform chatbot (WhatsApp and Telegram) designed to gui
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Bug Fix: Duplicate Completion Messages (October 9, 2025)
+**Issue**: Telegram Bot 1 users on day 11 were receiving the completion message repeatedly every 10 minutes. The bot also appeared unresponsive to START/STOP commands.
+
+**Root Cause**: 
+- Bot 1 had content gaps (days 11-14 missing, only 1-10 and 15 available)
+- Users reaching day 11 had no content to receive
+- Scheduler repeatedly triggered `_handle_content_completion()` every 10 minutes
+- Users remained in 'active' status, causing the scheduler to keep checking them
+- Each check resulted in sending the completion message again
+
+**Fix Implemented**:
+1. Added duplicate message prevention in `_handle_content_completion()`:
+   - Checks if completion message was sent in the last 24 hours
+   - If found, skips sending the message
+   - Marks user as 'completed' to stop scheduler checks
+2. Changed completion logic to always mark users as 'completed' when no content is available
+3. Updated affected users (tg_960173404, tg_616955431, tg_1021333375) to 'completed' status
+
+**Files Modified**:
+- `scheduler.py`: Enhanced `_handle_content_completion()` with duplicate prevention logic
+
 ## System Architecture
 The system is a scalable and maintainable Flask web application in Python, utilizing a PostgreSQL relational database. It supports multiple independent bot instances, each with its own content, users, and configurations.
 
