@@ -1620,6 +1620,8 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                 confidence=1.0
             )
             
+            time.sleep(5)  # 5 second delay before Day 1 content
+            
             # Send Day 1 content directly (bypass scheduler for immediate delivery)
             # **FIX: Use scheduler's delivery method to properly handle media (images/videos)**
             try:
@@ -1790,6 +1792,8 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                 tags=['START', 'NEW_USER', 'ONBOARDING'],
                 confidence=1.0
             )
+        
+        time.sleep(5)  # 5 second delay before Day 1 content
         
         # Send Day 1 content directly (bypass scheduler for immediate delivery)
         # **FIX: Use scheduler's delivery method to properly handle media (images/videos)**
