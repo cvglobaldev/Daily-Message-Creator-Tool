@@ -43,10 +43,13 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 - `WHATSAPP_PHONE_NUMBER_ID`
 - `GEMINI_API_KEY`
 - `SESSION_SECRET`
+- `GOOGLE_CLOUD_CREDENTIALS_JSON` (for voice conversation features)
 
 ### Python Packages
 - `flask`
 - `google-genai`
+- `google-cloud-speech`
+- `google-cloud-texttospeech`
 - `requests`
 - `replit`
 - `psycopg2-binary`
@@ -55,8 +58,23 @@ The system is a scalable and maintainable Flask web application in Python. It ut
 - `passlib`
 - `python-dotenv`
 - `python-telegram-bot`
+- `pydub`
 
 ## Recent Changes
+
+### ✅ COMPLETED: Voice Conversation Feature for Multi-Platform Chatbot (October 9, 2025)
+- **Voice Input Processing**: Implemented end-to-end voice message handling for both WhatsApp and Telegram platforms
+- **Speech-to-Text Integration**: Added Google Cloud Speech-to-Text API integration for accurate voice transcription with support for multiple languages (en-US, id-ID, hi-IN)
+- **Text-to-Speech Integration**: Integrated Google Cloud Text-to-Speech API with platform-specific audio format support (OGG_OPUS for Telegram, MP3 for WhatsApp)
+- **Voice Services Architecture**: Created SpeechToTextService and TextToSpeechService classes with robust error handling and graceful fallbacks
+- **Platform-Specific Implementation**: 
+  - Telegram: Voice message detection, file download via Bot API, OGG_OPUS voice replies
+  - WhatsApp: Audio message detection, media download via Graph API, MP3 audio replies
+- **Voice Response Pipeline**: Bot automatically responds with voice messages when users send voice messages, maintaining conversation context
+- **Temporary File Management**: Implemented proper cleanup of temporary audio files with try/finally blocks to prevent storage buildup
+- **Language-Aware Voice Synthesis**: Voice responses automatically match bot language configuration for culturally appropriate delivery
+- **Error Handling & Fallbacks**: Comprehensive error handling with automatic fallback to text messages if voice generation fails
+- **Environment Configuration**: Added GOOGLE_CLOUD_CREDENTIALS_JSON for secure Google Cloud authentication
 
 ### ✅ COMPLETED: Dual-Layer Tagging System - AI-Powered + Rule-Based (October 8, 2025)
 - **Dual Tagging Architecture**: Implemented two-layer tagging system combining AI semantic analysis with rule-based automation (When-If-Then logic)
