@@ -2599,14 +2599,14 @@ def _is_spiritual_or_christian_topic(message_text: str, analysis: dict) -> bool:
     # Check for spiritual keywords
     spiritual_keywords = [
         # Christian/Jesus terms
-        'jesus', 'christ', 'isa', 'al-masih', 'god', 'allah', 'lord', 'savior',
+        'jesus', 'yesus', 'christ', 'isa', 'al-masih', 'god', 'allah', 'lord', 'savior',
         'bible', 'scripture', 'gospel', 'church', 'faith', 'believe', 'salvation',
         'prayer', 'pray', 'heaven', 'eternal', 'forgiveness', 'sin', 'grace',
-        'holy', 'spirit', 'cross', 'resurrection', 'disciple', 'christian',
+        'holy', 'spirit', 'cross', 'resurrection', 'disciple', 'christian', 'kristus',
         
         # Indonesian spiritual terms  
         'tuhan', 'doa', 'iman', 'percaya', 'rohani', 'spiritual', 'keselamatan',
-        'pengampunan', 'dosa', 'kasih', 'injil', 'alkitab', 'gereja', 'kudus',
+        'pengampunan', 'dosa', 'kasih', 'injil', 'alkitab', 'gereja', 'kudus', 'jelaskan',
         
         # Question indicators about spirituality
         'why did god', 'how can i', 'what does the bible', 'is it true that',
