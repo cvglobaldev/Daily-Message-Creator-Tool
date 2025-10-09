@@ -1,11 +1,13 @@
 import os
 import json
 import logging
+import requests
 from datetime import datetime, timedelta
+from typing import Dict
 from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash, send_from_directory
 from models import db, User, Content, MessageLog, AdminUser, Bot
 from db_manager import DatabaseManager
-from services import WhatsAppService, TelegramService, GeminiService
+from services import WhatsAppService, TelegramService, GeminiService, SpeechToTextService, TextToSpeechService
 from rule_engine import rule_engine
 from scheduler import ContentScheduler
 import threading
@@ -484,21 +486,68 @@ def telegram_webhook(bot_id=1):
         if 'message' in data:
             message_data = data['message']
             chat_id = str(message_data.get('chat', {}).get('id', ''))
-            message_text = message_data.get('text', '').strip()
             user_info = message_data.get('from', {})
             username = user_info.get('username', '')
             first_name = user_info.get('first_name', '')
             
-            if chat_id and message_text:
-                # Use chat_id as the phone number equivalent for Telegram
-                phone_number = f"tg_{chat_id}"
+            # Get client IP address for location data
+            client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if client_ip and ',' in client_ip:
+                client_ip = client_ip.split(',')[0].strip()
+            
+            phone_number = f"tg_{chat_id}"
+            
+            # Check for voice message
+            if message_data.get('voice'):
+                voice_data = message_data['voice']
+                file_id = voice_data.get('file_id')
+                duration = voice_data.get('duration', 0)
+                
+                logger.info(f"🎤 Telegram voice message from {chat_id} ({username}), duration: {duration}s")
+                
+                try:
+                    # Get bot-specific Telegram service
+                    bot_service = get_telegram_service_for_bot(bot_id)
+                    bot_token = bot_service.bot_token
+                    
+                    # Download voice file using Telegram API
+                    # Step 1: Get file path
+                    file_info_url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
+                    file_info_response = requests.get(file_info_url, timeout=30)
+                    
+                    if file_info_response.status_code == 200:
+                        file_path = file_info_response.json().get('result', {}).get('file_path')
+                        
+                        if file_path:
+                            # Step 2: Download actual file
+                            file_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+                            file_response = requests.get(file_url, timeout=30)
+                            
+                            if file_response.status_code == 200:
+                                audio_bytes = file_response.content
+                                logger.info(f"✅ Downloaded Telegram voice file ({len(audio_bytes)} bytes)")
+                                
+                                # Process voice message
+                                process_voice_message(phone_number, audio_bytes, platform="telegram", 
+                                                    user_data=user_info, request_ip=client_ip, bot_id=bot_id)
+                            else:
+                                logger.error(f"Failed to download Telegram voice file: {file_response.status_code}")
+                        else:
+                            logger.error("No file_path in Telegram file info response")
+                    else:
+                        logger.error(f"Failed to get Telegram file info: {file_info_response.status_code}")
+                        
+                except Exception as e:
+                    logger.error(f"Error downloading Telegram voice message: {e}")
+                    send_message_to_platform(phone_number, "telegram", 
+                        "Sorry, there was an error processing your voice message. Please try again or send a text message.", 
+                        bot_id=bot_id)
+            
+            # Check for text message
+            elif chat_id and message_data.get('text'):
+                message_text = message_data.get('text', '').strip()
                 
                 logger.info(f"Telegram message from {chat_id} ({username}): {message_text}")
-                
-                # Get client IP address for location data
-                client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-                if client_ip and ',' in client_ip:
-                    client_ip = client_ip.split(',')[0].strip()
                 
                 # Process the message with enhanced user data
                 process_incoming_message(phone_number, message_text, platform="telegram", 
@@ -695,6 +744,62 @@ def whatsapp_webhook(bot_id=1):
                                             message_text = interactive['button_reply'].get('title', '').strip()
                                         elif 'list_reply' in interactive:
                                             message_text = interactive['list_reply'].get('title', '').strip()
+                                    elif message_type in ['audio', 'voice']:
+                                        # Handle voice/audio messages
+                                        audio_data = message_data.get('audio') or message_data.get('voice')
+                                        if audio_data:
+                                            media_id = audio_data.get('id')
+                                            logger.info(f"🎤 WhatsApp voice/audio message from {phone_number}, media_id: {media_id}")
+                                            
+                                            try:
+                                                # Get client IP for location data
+                                                client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+                                                if client_ip and ',' in client_ip:
+                                                    client_ip = client_ip.split(',')[0].strip()
+                                                
+                                                # Extract WhatsApp user data from contacts (if available)
+                                                contacts_data = value.get('contacts', [])
+                                                whatsapp_user_data = extract_whatsapp_user_data(message_data, contacts_data, client_ip)
+                                                
+                                                # Get bot-specific WhatsApp service
+                                                bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                                                access_token = bot_whatsapp_service.access_token
+                                                
+                                                # Download audio using WhatsApp Media API
+                                                # Step 1: Get media URL
+                                                media_url_endpoint = f"https://graph.facebook.com/v18.0/{media_id}"
+                                                headers = {"Authorization": f"Bearer {access_token}"}
+                                                media_url_response = requests.get(media_url_endpoint, headers=headers, timeout=30)
+                                                
+                                                if media_url_response.status_code == 200:
+                                                    media_url = media_url_response.json().get('url')
+                                                    
+                                                    if media_url:
+                                                        # Step 2: Download actual file
+                                                        file_response = requests.get(media_url, headers=headers, timeout=30)
+                                                        
+                                                        if file_response.status_code == 200:
+                                                            audio_bytes = file_response.content
+                                                            logger.info(f"✅ Downloaded WhatsApp audio file ({len(audio_bytes)} bytes)")
+                                                            
+                                                            # Process voice message
+                                                            process_voice_message(phone_number, audio_bytes, platform="whatsapp", 
+                                                                                user_data=whatsapp_user_data, request_ip=client_ip, bot_id=bot_id)
+                                                        else:
+                                                            logger.error(f"Failed to download WhatsApp audio file: {file_response.status_code}")
+                                                    else:
+                                                        logger.error("No URL in WhatsApp media response")
+                                                else:
+                                                    logger.error(f"Failed to get WhatsApp media URL: {media_url_response.status_code}")
+                                                    
+                                            except Exception as e:
+                                                logger.error(f"Error downloading WhatsApp voice message: {e}")
+                                                bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                                                bot_whatsapp_service.send_message(phone_number, 
+                                                    "Sorry, there was an error processing your voice message. Please try again or send a text message.")
+                                            
+                                            # Skip normal text processing for voice messages
+                                            continue
                                     
                                     # Handle content confirmation buttons (WhatsApp)
                                     if button_id and button_id.startswith('content_confirm_'):
@@ -937,7 +1042,34 @@ def _is_duplicate_webhook(whatsapp_message_id: str, window_seconds: int = 300) -
         logger.error(f"Error checking for duplicate webhook: {e}")
         return False  # Default to processing if check fails
 
-def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
+def process_voice_message(phone_number: str, audio_bytes: bytes, platform: str = "whatsapp", 
+                         user_data: Dict = None, request_ip: str = None, bot_id: int = 1):
+    """Process incoming voice message by transcribing and routing to text handler"""
+    try:
+        logger.info(f"🎤 Processing voice message from {phone_number} ({platform})")
+        
+        # Initialize voice services
+        speech_to_text = SpeechToTextService()
+        
+        # Transcribe audio to text
+        transcribed_text = speech_to_text.transcribe_audio(audio_bytes)
+        
+        if transcribed_text:
+            logger.info(f"🎤 Transcribed: {transcribed_text}")
+            # Process as text message through existing pipeline
+            process_incoming_message(phone_number, transcribed_text, platform=platform, 
+                                   user_data=user_data, request_ip=request_ip, bot_id=bot_id,
+                                   is_voice_message=True)
+        else:
+            logger.error(f"Failed to transcribe voice message from {phone_number}")
+            # Send error message
+            send_message_to_platform(phone_number, platform, 
+                "Sorry, I couldn't understand your voice message. Please try again or send a text message.", 
+                bot_id=bot_id)
+    except Exception as e:
+        logger.error(f"Error processing voice message: {e}")
+
+def process_incoming_message(phone_number: str, message_text: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1, is_voice_message: bool = False):
     """Process incoming message from user"""
     try:
         logger.info(f"Processing message from {phone_number}: {message_text}")
@@ -969,7 +1101,7 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             elif existing_user.current_day == 1 and not any(cmd in message_lower for cmd in ['start', 'stop', 'help', 'human']):
                 # Day 1 users already received content, so they should get contextual responses too
                 logger.info(f"Day 1 user {phone_number} sending message about Day 1 content, using contextual AI response")
-                handle_contextual_conversation(phone_number, message_text, platform, bot_id)
+                handle_contextual_conversation(phone_number, message_text, platform, bot_id, is_voice_message)
                 return
             else:
                 # Update user with any new WhatsApp data if available
@@ -1010,19 +1142,19 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
             if user.current_day > journey_duration:
                 # Users who have completed their journey get specialized journey completed handling
                 logger.info(f"User {phone_number} (Day {user.current_day}/{journey_duration}) completed journey, using journey completed handler")
-                handle_journey_completed_conversation(phone_number, message_text, platform, bot_id)
+                handle_journey_completed_conversation(phone_number, message_text, platform, bot_id, is_voice_message)
             elif user.current_day > 1:
                 # Users beyond Day 1 should always get contextual responses based on their current content
                 logger.info(f"User {phone_number} (Day {user.current_day}) sending message, providing contextual response based on current journey")
-                handle_contextual_conversation(phone_number, message_text, platform, bot_id)
+                handle_contextual_conversation(phone_number, message_text, platform, bot_id, is_voice_message)
             else:
                 # Day 1 users get general conversation
                 logger.info(f"User {phone_number} (Day 1) routing to general conversation")
-                handle_general_conversation(phone_number, message_text, platform, bot_id)
+                handle_general_conversation(phone_number, message_text, platform, bot_id, is_voice_message)
         else:
             # New users get general conversation
             logger.info(f"User {phone_number} (new) routing to general conversation")
-            handle_general_conversation(phone_number, message_text, platform, bot_id)
+            handle_general_conversation(phone_number, message_text, platform, bot_id, is_voice_message)
         
     except Exception as e:
         logger.error(f"Error processing message from {phone_number}: {e}")
@@ -1100,8 +1232,105 @@ def send_message_with_buttons(phone_number: str, platform: str, message: str, bo
 
 def send_message_to_platform(phone_number: str, platform: str, message: str, 
                            with_quick_replies: bool = False, copy_text: str = "", 
-                           copy_label: str = "Copy Text", bot_id: int = 1, retry_count: int = 3) -> bool:
+                           copy_label: str = "Copy Text", bot_id: int = 1, retry_count: int = 3,
+                           send_as_voice: bool = False) -> bool:
     """Send message to the appropriate platform with enhanced reliability and retry logic"""
+    
+    # Voice message handling
+    if send_as_voice:
+        try:
+            logger.info(f"🎙️ Generating voice response for {phone_number} on {platform}")
+            
+            # Get bot configuration for language
+            from models import Bot
+            bot = Bot.query.get(bot_id)
+            language_code = "en-US"
+            if bot and bot.name:
+                if "indonesia" in bot.name.lower():
+                    language_code = "id-ID"
+                elif "hindi" in bot.name.lower():
+                    language_code = "hi-IN"
+            
+            # Initialize TTS service
+            tts_service = TextToSpeechService()
+            
+            # Determine audio format based on platform
+            audio_format = "OGG_OPUS" if platform == "telegram" else "MP3"
+            file_extension = "ogg" if platform == "telegram" else "mp3"
+            
+            # Generate speech audio
+            audio_bytes = tts_service.synthesize_speech(
+                text=message,
+                language_code=language_code,
+                voice_gender="NEUTRAL",
+                audio_format=audio_format
+            )
+            
+            if audio_bytes:
+                temp_file = None
+                try:
+                    # Generate unique filename
+                    temp_file = f"/tmp/voice_{uuid.uuid4()}.{file_extension}"
+                    
+                    # Save audio to temporary file
+                    with open(temp_file, 'wb') as f:
+                        f.write(audio_bytes)
+                    
+                    logger.info(f"🎙️ Voice file saved: {temp_file} ({len(audio_bytes)} bytes)")
+                    
+                    # Send voice based on platform
+                    if platform == "telegram":
+                        if phone_number.startswith("tg_"):
+                            chat_id = phone_number[3:]
+                            bot_service = get_telegram_service_for_bot(bot_id)
+                            if bot_service:
+                                success = bot_service.send_voice(chat_id, temp_file)
+                                if success:
+                                    logger.info(f"✅ Voice message sent successfully to Telegram {chat_id}")
+                                    return True
+                    else:
+                        # WhatsApp needs a public URL - save to static/uploads/audio
+                        static_audio_dir = "static/uploads/audio"
+                        os.makedirs(static_audio_dir, exist_ok=True)
+                        
+                        static_filename = f"voice_{uuid.uuid4()}.{file_extension}"
+                        static_file_path = os.path.join(static_audio_dir, static_filename)
+                        
+                        # Copy to static directory
+                        import shutil
+                        shutil.copy(temp_file, static_file_path)
+                        
+                        # Construct public URL
+                        base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                        if not base_url.startswith('http'):
+                            base_url = f"https://{base_url}"
+                        audio_url = f"{base_url}/static/uploads/audio/{static_filename}"
+                        
+                        logger.info(f"🎙️ WhatsApp audio URL: {audio_url}")
+                        
+                        bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                        if bot_whatsapp_service:
+                            success = bot_whatsapp_service.send_audio(phone_number, audio_url)
+                            if success:
+                                logger.info(f"✅ Voice message sent successfully to WhatsApp {phone_number}")
+                                return True
+                    
+                finally:
+                    # Clean up temporary file
+                    if temp_file and os.path.exists(temp_file):
+                        try:
+                            os.remove(temp_file)
+                            logger.info(f"🗑️ Cleaned up temp file: {temp_file}")
+                        except Exception as cleanup_error:
+                            logger.error(f"Error cleaning up temp file: {cleanup_error}")
+            
+            # If voice sending failed, fall back to text
+            logger.warning(f"Voice generation failed, falling back to text message for {phone_number}")
+            
+        except Exception as voice_error:
+            logger.error(f"Voice generation error: {voice_error}, falling back to text message")
+    
+    # Text message handling (original logic)
     success = False
     attempt = 0
     last_error = None
@@ -1948,7 +2177,7 @@ def apply_combined_tags(message_log: MessageLog, user: User, bot: Bot) -> None:
     except Exception as e:
         logger.error(f"Error applying combined tags: {e}")
 
-def handle_general_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+def handle_general_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1, is_voice_message: bool = False):
     """Handle general conversation using bot-specific AI prompt without reflection context"""
     try:
         # Analyze the response with Gemini
@@ -2026,8 +2255,8 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
                 # No bot found, use generic
                 contextual_response = "Thank you for your message. I'm here to help you learn about Jesus Christ. What would you like to know?"
         
-        # Send the contextual response
-        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
+        # Send the contextual response with voice if incoming was voice
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
         
         # Log the outgoing response
         if user:
@@ -2046,9 +2275,9 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
         logger.error(f"Error handling general conversation from {phone_number}: {e}")
         # Still acknowledge the user's message with fallback
         fallback_response = "Thank you for your message. How can I help you today?"
-        send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
+        send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id, send_as_voice=is_voice_message)
 
-def handle_contextual_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+def handle_contextual_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1, is_voice_message: bool = False):
     """Handle any user message with full context of their current daily content"""
     try:
         # Analyze the response with Gemini
@@ -2176,8 +2405,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 # No bot found, use bot-specific fallback
                 contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
         
-        # Send the contextual response
-        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
+        # Send the contextual response with voice if incoming was voice
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
         
         # Log the outgoing response
         if user:
@@ -2199,11 +2428,11 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
                 fallback_message = "Maaf, ada sedikit masalah teknis. Terima kasih sudah berbagi pemikiran Anda. Ada yang bisa saya bantu?"
             else:
                 fallback_message = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
-            send_message_to_platform(phone_number, platform, fallback_message, bot_id=bot_id)
+            send_message_to_platform(phone_number, platform, fallback_message, bot_id=bot_id, send_as_voice=is_voice_message)
         except:
             logger.error(f"Failed to send fallback message to {phone_number}")
 
-def handle_journey_completed_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1):
+def handle_journey_completed_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1, is_voice_message: bool = False):
     """Handle conversation for users who have completed their journey - always provide AI response + human connection offer"""
     try:
         # Analyze the response with Gemini
@@ -2280,8 +2509,8 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
             # Fallback response
             contextual_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
         
-        # Send the AI response
-        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id)
+        # Send the AI response with voice if incoming was voice
+        send_message_to_platform(phone_number, platform, contextual_response, bot_id=bot_id, send_as_voice=is_voice_message)
         
         # Log the outgoing AI response
         if user:
@@ -2294,6 +2523,7 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
             )
         
         # Always offer human connection for journey completed users (as follow-up message)
+        # Note: Human offer is NOT sent as voice, only the main response
         from models import Bot
         bot = Bot.query.get(bot_id)
         
@@ -2326,7 +2556,7 @@ IMPORTANT: This user has completed their spiritual journey program and is now se
         # Fallback message
         try:
             fallback_response = gemini_service._get_bot_specific_fallback_response(message_text, bot_id)
-            send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id)
+            send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id, send_as_voice=is_voice_message)
         except:
             logger.error(f"Failed to send fallback message to journey completed user {phone_number}")
 
