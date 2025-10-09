@@ -709,7 +709,7 @@ def whatsapp_webhook(bot_id=1):
     # POST request for incoming messages
     try:
         data = request.get_json()
-        logger.debug(f"Received WhatsApp webhook data for bot {bot_id}: {data}")
+        logger.info(f"📥 Received WhatsApp webhook for bot {bot_id}: {data}")
         
         # Handle Facebook/Meta WhatsApp Business API format
         if 'entry' in data:
@@ -725,6 +725,8 @@ def whatsapp_webhook(bot_id=1):
                                     phone_number = message_data.get('from', '')
                                     message_type = message_data.get('type', '')
                                     whatsapp_message_id = message_data.get('id', '')  # Unique WhatsApp message ID
+                                    
+                                    logger.info(f"📨 WhatsApp message: type={message_type}, from={phone_number}, id={whatsapp_message_id}")
                                     
                                     # **WEBHOOK DEDUPLICATION** - Check WhatsApp message ID first
                                     if whatsapp_message_id and _is_duplicate_webhook(whatsapp_message_id):
