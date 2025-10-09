@@ -61,6 +61,11 @@ LANGUAGE_CODE_MAP = {
     'Português': 'pt-BR',
     'português': 'pt-BR',
     'pt': 'pt-BR',
+    
+    # Hausa
+    'Hausa': 'ha-NG',
+    'hausa': 'ha-NG',
+    'ha': 'ha-NG',
 }
 
 def get_language_code(language_name: str, default: str = 'en-US') -> str:
