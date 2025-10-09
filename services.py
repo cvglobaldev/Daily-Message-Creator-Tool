@@ -1286,7 +1286,9 @@ class SpeechToTextService:
                 self.simulate_mode = False
                 logger.info("Speech-to-Text service initialized successfully")
         except Exception as e:
+            import traceback
             logger.error(f"Error initializing Speech-to-Text service: {e}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             self.client = None
             self.simulate_mode = True
     
@@ -1307,10 +1309,6 @@ class SpeechToTextService:
                 encoding=speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
                 sample_rate_hertz=16000,
                 language_code=language_code,
-                alternative_encodings=[
-                    speech.RecognitionConfig.AudioEncoding.LINEAR16,
-                    speech.RecognitionConfig.AudioEncoding.OGG_OPUS
-                ],
                 enable_automatic_punctuation=True,
             )
             
@@ -1350,7 +1348,9 @@ class TextToSpeechService:
                 self.simulate_mode = False
                 logger.info("Text-to-Speech service initialized successfully")
         except Exception as e:
+            import traceback
             logger.error(f"Error initializing Text-to-Speech service: {e}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             self.client = None
             self.simulate_mode = True
     
