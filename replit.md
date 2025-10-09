@@ -86,14 +86,15 @@ Preferred communication style: Simple, everyday language.
 - ✅ Content delivery order correct: Media appears first with text as caption
 - ✅ Confirmation buttons appear after content (separate message)
 - ✅ Consistent experience across restart and scheduled delivery
-- ✅ 5-second delays added between messages to ensure proper ordering:
-  - Welcome message → 5 sec → Day 1 content → 5 sec → Confirmation buttons
+- ✅ 10-second delays added between messages to ensure proper ordering:
+  - Welcome message → 10 sec → Day 1 content → 10 sec → Confirmation buttons
+  - Increased from 5 to 10 seconds to accommodate slower media loading on WhatsApp
 
 **Files Modified**:
 - `main.py`: Added media support to welcome/greeting messages in `handle_start_command()`
-- `main.py`: Added 5-second delays after welcome messages (lines 1623, 1796)
+- `main.py`: Added 10-second delays after welcome messages (lines 1626, 1799)
 - `scheduler.py`: Fixed content delivery order using caption parameter for WhatsApp media
-- `scheduler.py`: Increased confirmation button delays from 2 to 5 seconds (lines 400, 450)
+- `scheduler.py`: Increased confirmation button delays to 10 seconds (lines 400, 450)
 
 ## System Architecture
 The system is a scalable and maintainable Flask web application in Python, utilizing a PostgreSQL relational database. It supports multiple independent bot instances, each with its own content, users, and configurations.
