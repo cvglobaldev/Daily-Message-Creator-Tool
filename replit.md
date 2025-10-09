@@ -29,6 +29,32 @@ Preferred communication style: Simple, everyday language.
 **Files Modified**:
 - `scheduler.py`: Enhanced `_handle_content_completion()` with duplicate prevention logic
 
+### Bug Fix: Missing Media on Restart/Start Commands (October 9, 2025)
+**Issue**: When users restart their journey (START/STOP command), the welcome and Day 1 content were not showing media (images/videos), but Day 2 and subsequent days showed media correctly.
+
+**Root Cause**:
+- The `handle_start_command()` function was only sending text messages
+- It completely ignored the `media_type` field and associated media files (image_filename, video_filename, etc.)
+- Meanwhile, the scheduler's normal delivery properly handled media using `_deliver_content_with_reflection()`
+- This created an inconsistency between fresh start and scheduled content delivery
+
+**Fix Implemented**:
+1. Modified `handle_start_command()` to use the scheduler's `_deliver_content_with_reflection()` method
+2. This method properly:
+   - Checks the content's `media_type`
+   - Validates if media files exist on disk
+   - Constructs proper media URLs
+   - Sends media (image/video/audio) first, then text content
+   - Includes confirmation buttons
+3. Applied fix to both restart path (existing users) and new user onboarding path
+
+**Data Issue Discovered**:
+- Day 1 content has `media_type = 'image'` but no actual `image_filename` in the database
+- To fully resolve: Upload an image for Day 1 content via CMS, or change media_type to 'text'
+
+**Files Modified**:
+- `main.py`: Updated `handle_start_command()` to use scheduler's media delivery method for both restart and new user paths
+
 ## System Architecture
 The system is a scalable and maintainable Flask web application in Python, utilizing a PostgreSQL relational database. It supports multiple independent bot instances, each with its own content, users, and configurations.
 

@@ -1563,6 +1563,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             )
             
             # Send Day 1 content directly (bypass scheduler for immediate delivery)
+            # **FIX: Use scheduler's delivery method to properly handle media (images/videos)**
             try:
                 logger.info(f"Attempting direct Day 1 content delivery for restart user {phone_number}")
                 user = db_manager.get_user_by_phone(phone_number)
@@ -1570,26 +1571,15 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                     # Get Day 1 content for this bot
                     content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
                     if content:
-                        # Format the message
-                        message = f"📖 Day 1 - {content.title}\n\n{content.content}"
-                        if content.reflection_question:
-                            message += f"\n\n{content.reflection_question}"
+                        # Use scheduler's delivery method which handles media properly
+                        content_dict = content.to_dict()
+                        success = scheduler._deliver_content_with_reflection(phone_number, content_dict)
                         
-                        # Send directly to the platform
-                        success, _ = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
                         if success:
-                            logger.info(f"✅ Day 1 content delivered successfully to restart user {phone_number}")
+                            logger.info(f"✅ Day 1 content (with media) delivered successfully to restart user {phone_number}")
                             # Advance user to Day 2
                             db_manager.update_user(phone_number, current_day=2)
-                            # Log the delivery
-                            db_manager.log_message(
-                                user=user,
-                                direction='outgoing',
-                                raw_text=message,
-                                sentiment='positive',
-                                tags=['DAY_1', 'CONTENT_DELIVERY', 'RESTART'],
-                                confidence=1.0
-                            )
+                            # Note: Message logging is handled inside _deliver_content_with_reflection
                         else:
                             logger.error(f"❌ Failed to send Day 1 content to restart user {phone_number}")
                     else:
@@ -1688,6 +1678,7 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             )
         
         # Send Day 1 content directly (bypass scheduler for immediate delivery)
+        # **FIX: Use scheduler's delivery method to properly handle media (images/videos)**
         try:
             logger.info(f"🔥 DEBUG: Attempting direct Day 1 content delivery for {phone_number}")
             user = db_manager.get_user_by_phone(phone_number)
@@ -1697,29 +1688,17 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                 content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
                 logger.info(f"🔥 DEBUG: Content found: {content.title if content else 'None'}")
                 if content:
-                    # Format the message
-                    message = f"📖 Day 1 - {content.title}\n\n{content.content}"
-                    if content.reflection_question:
-                        message += f"\n\n{content.reflection_question}"
+                    # Use scheduler's delivery method which handles media properly
+                    logger.info(f"🔥 DEBUG: Using scheduler delivery method for media support")
+                    content_dict = content.to_dict()
+                    success = scheduler._deliver_content_with_reflection(phone_number, content_dict)
+                    logger.info(f"🔥 DEBUG: Scheduler delivery result: {success}")
                     
-                    # Send directly to the platform
-                    logger.info(f"🔥 DEBUG: About to send message to {phone_number} on {platform} with bot_id {user.bot_id}")
-                    logger.info(f"🔥 DEBUG: Message preview: {message[:100]}...")
-                    success, _ = send_message_to_platform(phone_number, platform, message, bot_id=user.bot_id)
-                    logger.info(f"🔥 DEBUG: Message send result: {success}")
                     if success:
-                        logger.info(f"✅ Day 1 content delivered successfully to {phone_number}")
+                        logger.info(f"✅ Day 1 content (with media) delivered successfully to {phone_number}")
                         # Advance user to Day 2
                         db_manager.update_user(phone_number, current_day=2)
-                        # Log the delivery
-                        db_manager.log_message(
-                            user=user,
-                            direction='outgoing',
-                            raw_text=message,
-                            sentiment='positive',
-                            tags=['DAY_1', 'CONTENT_DELIVERY'],
-                            confidence=1.0
-                        )
+                        # Note: Message logging is handled inside _deliver_content_with_reflection
                     else:
                         logger.error(f"❌ Failed to send Day 1 content to {phone_number}")
                 else:
