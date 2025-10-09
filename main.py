@@ -1662,8 +1662,64 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
                                   f"• {'/human' if platform == 'telegram' else 'HUMAN'} - Chat directly with a human\n\n"
                                   "Day 1 content will arrive in a few seconds!")
         
-        logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
-        send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
+        # Check if greeting has media and send appropriately
+        media_sent = False
+        if greeting and greeting.media_type and greeting.media_type != 'text':
+            # Construct media URL from filename with validation
+            media_url = None
+            media_type = greeting.media_type
+            
+            if media_type == 'video' and greeting.video_filename:
+                file_path = f"static/uploads/videos/{greeting.video_filename}"
+                if os.path.exists(file_path):
+                    base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                    if not base_url.startswith('http'):
+                        base_url = f"https://{base_url}"
+                    media_url = f"{base_url}/static/uploads/videos/{greeting.video_filename}"
+                    logger.info(f"✅ Welcome video validated: {file_path}")
+                else:
+                    logger.error(f"❌ Welcome video not found: {file_path}")
+            elif media_type == 'image' and greeting.image_filename:
+                file_path = f"static/uploads/images/{greeting.image_filename}"
+                if os.path.exists(file_path):
+                    base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                    if not base_url.startswith('http'):
+                        base_url = f"https://{base_url}"
+                    media_url = f"{base_url}/static/uploads/images/{greeting.image_filename}"
+                    logger.info(f"✅ Welcome image validated: {file_path}")
+                else:
+                    logger.error(f"❌ Welcome image not found: {file_path}")
+            elif media_type == 'audio' and greeting.audio_filename:
+                file_path = f"static/uploads/audio/{greeting.audio_filename}"
+                if os.path.exists(file_path):
+                    base_url = os.environ.get('REPLIT_DOMAINS', 'localhost:5000').split(',')[0]
+                    if not base_url.startswith('http'):
+                        base_url = f"https://{base_url}"
+                    media_url = f"{base_url}/static/uploads/audio/{greeting.audio_filename}"
+                    logger.info(f"✅ Welcome audio validated: {file_path}")
+                else:
+                    logger.error(f"❌ Welcome audio not found: {file_path}")
+            
+            # Send media with welcome message as caption (only for WhatsApp)
+            if media_url and platform == "whatsapp":
+                whatsapp_svc = get_whatsapp_service_for_bot(bot_id)
+                if media_type == 'video':
+                    media_sent = whatsapp_svc.send_video(phone_number, media_url, caption=welcome_message)
+                    logger.info(f"WhatsApp welcome video sent with caption to {phone_number}")
+                elif media_type == 'image':
+                    media_sent = whatsapp_svc.send_media_message(phone_number, 'image', media_url, caption=welcome_message)
+                    logger.info(f"WhatsApp welcome image sent with caption to {phone_number}")
+                elif media_type == 'audio':
+                    # Audio doesn't support caption in WhatsApp, send separately
+                    whatsapp_svc.send_media_message(phone_number, 'audio', media_url)
+                    send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
+                    media_sent = True
+                    logger.info(f"WhatsApp welcome audio sent (caption sent separately) to {phone_number}")
+        
+        # If no media was sent, send text-only welcome message
+        if not media_sent:
+            logger.info(f"Sending welcome message to {phone_number}: {welcome_message[:100]}...")
+            send_message_to_platform(phone_number, platform, welcome_message, bot_id=bot_id)
         
         # Log the START command for chat management visibility
         user = db_manager.get_user_by_phone(phone_number)

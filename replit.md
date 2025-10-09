@@ -55,6 +55,42 @@ Preferred communication style: Simple, everyday language.
 **Files Modified**:
 - `main.py`: Updated `handle_start_command()` to use scheduler's media delivery method for both restart and new user paths
 
+### Enhancement: WhatsApp Welcome Message Media Support + Delivery Order Fix (October 9, 2025)
+**Issues**: 
+1. WhatsApp Bot 2 welcome message was ignoring video media configured in greeting
+2. Content delivery showed wrong order: Text → Video → Buttons (should be Video → Text → Buttons)
+
+**Root Causes**:
+1. Welcome message code only sent text content from greeting, never checked for media files
+2. Media and text were sent as **separate messages**, causing WhatsApp to display them out of order
+
+**Fix Implemented**:
+1. **Welcome Message Media Support** (main.py lines 1665-1722):
+   - Now checks if greeting has media (video/image/audio)
+   - Validates media file exists on disk
+   - Sends media WITH text as caption (single message for proper order)
+   - For video: `send_video(phone_number, media_url, caption=welcome_message)`
+   - For image: `send_media_message(phone_number, 'image', media_url, caption=welcome_message)`
+   - Audio sent separately (WhatsApp doesn't support audio captions)
+   - Falls back to text-only if no media or file missing
+
+2. **Content Delivery Order Fix** (scheduler.py lines 415-450):
+   - Changed from sending media + separate text → sends media WITH text as caption
+   - For video: `send_video(phone_number, media_url, caption=message)`
+   - For image: `send_media_message(phone_number, 'image', media_url, caption=message)`
+   - Ensures proper order: Media (with caption) → Buttons
+   - No more WhatsApp message reordering issues
+
+**Result**:
+- ✅ Welcome message now includes video with text as caption
+- ✅ Content delivery order correct: Media appears first with text as caption
+- ✅ Confirmation buttons appear after content (separate message)
+- ✅ Consistent experience across restart and scheduled delivery
+
+**Files Modified**:
+- `main.py`: Added media support to welcome/greeting messages in `handle_start_command()`
+- `scheduler.py`: Fixed content delivery order using caption parameter for WhatsApp media
+
 ## System Architecture
 The system is a scalable and maintainable Flask web application in Python, utilizing a PostgreSQL relational database. It supports multiple independent bot instances, each with its own content, users, and configurations.
 

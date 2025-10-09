@@ -413,31 +413,31 @@ class ContentScheduler:
                 if media_type == 'text' or not media_url:
                     content_delivered = whatsapp_service.send_message(phone_number, message)
                 elif media_type in ['image', 'video', 'audio']:
-                    # For WhatsApp, send media first, then text content
-                    media_sent = False
+                    # For WhatsApp, send media WITH text as caption (single message for proper order)
                     if media_url:
                         if media_type == 'image':
-                            # Send image via WhatsApp API
-                            media_sent = whatsapp_service.send_media_message(phone_number, 'image', media_url)
-                            logger.info(f"WhatsApp image sent to {phone_number}: {media_url}")
+                            # Send image with message text as caption
+                            content_delivered = whatsapp_service.send_media_message(phone_number, 'image', media_url, caption=message)
+                            logger.info(f"WhatsApp image sent with caption to {phone_number}: {media_url}")
                         elif media_type == 'video':
-                            # Send video via WhatsApp API
-                            media_sent = whatsapp_service.send_video(phone_number, media_url)
-                            logger.info(f"WhatsApp video sent to {phone_number}: {media_url}")
+                            # Send video with message text as caption
+                            content_delivered = whatsapp_service.send_video(phone_number, media_url, caption=message)
+                            logger.info(f"WhatsApp video sent with caption to {phone_number}: {media_url}")
                         elif media_type == 'audio':
-                            # Send audio via WhatsApp API
+                            # Audio doesn't support caption in WhatsApp, send separately
                             media_sent = whatsapp_service.send_media_message(phone_number, 'audio', media_url)
+                            if media_sent:
+                                time.sleep(1)
+                                content_delivered = whatsapp_service.send_message(phone_number, message)
+                            else:
+                                content_delivered = whatsapp_service.send_message(phone_number, message)
                             logger.info(f"WhatsApp audio sent to {phone_number}: {media_url}")
                         else:
                             # For other media types, log but don't implement yet
                             logger.info(f"Media content delivery to WhatsApp user {phone_number} - {media_type} not yet implemented, media URL: {media_url}")
-                    
-                    # Now send text content after media
-                    if media_sent:
-                        time.sleep(1)
-                        content_delivered = whatsapp_service.send_message(phone_number, message)
+                            content_delivered = whatsapp_service.send_message(phone_number, message)
                     else:
-                        # If media failed, still send text
+                        # If no media URL, send text only
                         content_delivered = whatsapp_service.send_message(phone_number, message)
                 else:
                     content_delivered = whatsapp_service.send_message(phone_number, message)
