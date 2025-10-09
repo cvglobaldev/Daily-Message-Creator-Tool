@@ -65,8 +65,8 @@ Preferred communication style: Simple, everyday language.
 2. Media and text were sent as **separate messages**, causing WhatsApp to display them out of order
 
 **Fix Implemented**:
-1. **Welcome Message Media Support** (main.py lines 1665-1722):
-   - Now checks if greeting has media (video/image/audio)
+1. **Welcome Message Media Support** (main.py lines 1557-1614 for RESTART path, 1665-1722 for new user path):
+   - Now checks if greeting has media (video/image/audio) for BOTH restart and new user flows
    - Validates media file exists on disk
    - Sends media WITH text as caption (single message for proper order)
    - For video: `send_video(phone_number, media_url, caption=welcome_message)`
