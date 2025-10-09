@@ -1050,12 +1050,22 @@ def process_voice_message(phone_number: str, audio_bytes: bytes, platform: str =
     try:
         logger.info(f"🎤 Processing voice message from {phone_number} ({platform})")
         
+        # Get bot's language for accurate transcription
+        from models import Bot
+        from language_mapper import get_language_code
+        
+        bot = Bot.query.get(bot_id)
+        bot_language = bot.language if bot else "English"
+        language_code = get_language_code(bot_language)
+        
+        logger.info(f"🎤 Using language '{bot_language}' (code: {language_code}) for voice transcription")
+        
         # Initialize voice services
         speech_to_text = SpeechToTextService()
         logger.info(f"🎤 STT Service initialized - Simulation mode: {speech_to_text.simulate_mode}")
         
-        # Transcribe audio to text
-        transcribed_text = speech_to_text.transcribe_audio(audio_bytes)
+        # Transcribe audio to text with bot's language
+        transcribed_text = speech_to_text.transcribe_audio(audio_bytes, language_code=language_code)
         logger.info(f"🎤 Transcription result: {transcribed_text[:100] if transcribed_text else 'None'}...")
         
         if transcribed_text:
@@ -1260,13 +1270,13 @@ def send_message_to_platform(phone_number: str, platform: str, message: str,
             
             # Get bot configuration for language
             from models import Bot
+            from language_mapper import get_language_code
+            
             bot = Bot.query.get(bot_id)
-            language_code = "en-US"
-            if bot and bot.name:
-                if "indonesia" in bot.name.lower():
-                    language_code = "id-ID"
-                elif "hindi" in bot.name.lower():
-                    language_code = "hi-IN"
+            bot_language = bot.language if bot else "English"
+            language_code = get_language_code(bot_language)
+            
+            logger.info(f"🔊 Using language '{bot_language}' (code: {language_code}) for voice synthesis")
             
             # Initialize TTS service
             tts_service = TextToSpeechService()
