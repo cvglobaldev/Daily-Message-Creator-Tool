@@ -2,11 +2,13 @@ import os
 import json
 import logging
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 import random
+from google.cloud import speech
+from google.cloud import texttospeech
 
 logger = logging.getLogger(__name__)
 
@@ -486,6 +488,53 @@ class TelegramService:
             logger.error(f"Error setting emoji status: {e}")
             return False
     
+    def send_voice(self, chat_id: str, voice_file_path: str, caption: str = None, duration: int = None) -> bool:
+        """Send voice message (OGG/OPUS format) via Telegram Bot API"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 TELEGRAM VOICE MESSAGE TO {chat_id}:")
+                print(f"   Voice File: {voice_file_path}")
+                if caption:
+                    print(f"   Caption: {caption}")
+                if duration:
+                    print(f"   Duration: {duration}s")
+                print("   ✅ Voice message simulated (development mode)")
+                return True
+            
+            import os
+            
+            if not os.path.exists(voice_file_path):
+                logger.error(f"Voice file not found: {voice_file_path}")
+                return False
+            
+            url = f"{self.api_base_url}/sendVoice"
+            
+            with open(voice_file_path, 'rb') as voice_file:
+                files = {'voice': voice_file}
+                data = {'chat_id': chat_id}
+                if caption:
+                    data['caption'] = caption
+                if duration:
+                    data['duration'] = duration
+                
+                response = requests.post(url, files=files, data=data, timeout=120)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("ok"):
+                    logger.info(f"Telegram voice message sent successfully to {chat_id}")
+                    return True
+                else:
+                    logger.error(f"Failed to send Telegram voice: {result.get('description', 'Unknown error')}")
+                    return False
+            else:
+                logger.error(f"Failed to send Telegram voice: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending Telegram voice message: {e}")
+            return False
+    
     def send_message_with_buttons(self, chat_id: str, message: str, buttons: list) -> bool:
         """Send message with inline keyboard buttons"""
         reply_markup = {"inline_keyboard": buttons}
@@ -655,6 +704,49 @@ class WhatsAppService:
                 
         except Exception as e:
             logger.error(f"Error sending WhatsApp video to {to}: {e}")
+            return False
+
+    def send_audio(self, to: str, audio_url: str, caption: str = None) -> bool:
+        """Send audio message (MP3 format) via WhatsApp Business API"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 WHATSAPP AUDIO MESSAGE TO {to}:")
+                print(f"   Audio URL: {audio_url}")
+                if caption:
+                    print(f"   Caption: {caption}")
+                print("   ✅ Audio message simulated (development mode)")
+                return True
+            
+            if not self.access_token or not self.phone_number_id:
+                logger.error("WhatsApp credentials not configured")
+                return False
+            
+            url = f"{self.base_url}/{self.phone_number_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": to.replace('+', ''),
+                "type": "audio",
+                "audio": {
+                    "link": audio_url
+                }
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                logger.info(f"WhatsApp audio sent successfully to {to}")
+                return True
+            else:
+                logger.error(f"Failed to send WhatsApp audio to {to}: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending WhatsApp audio to {to}: {e}")
             return False
 
     def send_interactive_buttons(self, to: str, message: str, buttons: list) -> bool:
@@ -1173,5 +1265,152 @@ Please respond in a way that shows you understand their current spiritual journe
             logger.error(f"Error determining human handoff: {e}")
             # Default to false to avoid unnecessary handoffs
             return False
+
+
+class SpeechToTextService:
+    """Service for Google Cloud Speech-to-Text integration"""
+    
+    def __init__(self):
+        try:
+            credentials_json = os.environ.get("GOOGLE_CLOUD_CREDENTIALS_JSON", "{}")
+            credentials_dict = json.loads(credentials_json)
+            
+            if not credentials_dict or credentials_dict == {}:
+                logger.warning("No Google Cloud credentials found, Speech-to-Text running in simulation mode")
+                self.client = None
+                self.simulate_mode = True
+            else:
+                from google.oauth2 import service_account
+                credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+                self.client = speech.SpeechClient(credentials=credentials)
+                self.simulate_mode = False
+                logger.info("Speech-to-Text service initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing Speech-to-Text service: {e}")
+            self.client = None
+            self.simulate_mode = True
+    
+    def transcribe_audio(self, audio_content: bytes, language_code: str = "en-US") -> Optional[str]:
+        """Transcribe audio bytes to text with auto-detection of encoding"""
+        try:
+            if self.simulate_mode:
+                logger.info(f"🎤 SPEECH-TO-TEXT (simulated): Transcribing audio ({len(audio_content)} bytes) in {language_code}")
+                return "This is a simulated transcription of the audio content."
+            
+            if not self.client:
+                logger.error("Speech-to-Text client not initialized")
+                return None
+            
+            audio = speech.RecognitionAudio(content=audio_content)
+            
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
+                sample_rate_hertz=16000,
+                language_code=language_code,
+                alternative_encodings=[
+                    speech.RecognitionConfig.AudioEncoding.LINEAR16,
+                    speech.RecognitionConfig.AudioEncoding.OGG_OPUS
+                ],
+                enable_automatic_punctuation=True,
+            )
+            
+            response = self.client.recognize(config=config, audio=audio)
+            
+            if not response.results:
+                logger.warning("No transcription results returned")
+                return None
+            
+            transcript = response.results[0].alternatives[0].transcript
+            confidence = response.results[0].alternatives[0].confidence
+            
+            logger.info(f"Audio transcribed successfully (confidence: {confidence:.2f}): {transcript[:50]}...")
+            return transcript
+            
+        except Exception as e:
+            logger.error(f"Error transcribing audio: {e}")
+            return None
+
+
+class TextToSpeechService:
+    """Service for Google Cloud Text-to-Speech integration"""
+    
+    def __init__(self):
+        try:
+            credentials_json = os.environ.get("GOOGLE_CLOUD_CREDENTIALS_JSON", "{}")
+            credentials_dict = json.loads(credentials_json)
+            
+            if not credentials_dict or credentials_dict == {}:
+                logger.warning("No Google Cloud credentials found, Text-to-Speech running in simulation mode")
+                self.client = None
+                self.simulate_mode = True
+            else:
+                from google.oauth2 import service_account
+                credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+                self.client = texttospeech.TextToSpeechClient(credentials=credentials)
+                self.simulate_mode = False
+                logger.info("Text-to-Speech service initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing Text-to-Speech service: {e}")
+            self.client = None
+            self.simulate_mode = True
+    
+    def synthesize_speech(
+        self, 
+        text: str, 
+        language_code: str = "en-US", 
+        voice_gender: str = "NEUTRAL",
+        audio_format: str = "MP3"
+    ) -> Optional[bytes]:
+        """Convert text to speech audio in MP3 or OGG_OPUS format"""
+        try:
+            if self.simulate_mode:
+                logger.info(f"🔊 TEXT-TO-SPEECH (simulated): Synthesizing '{text[:50]}...' in {language_code} ({voice_gender}, {audio_format})")
+                return b"simulated_audio_content"
+            
+            if not self.client:
+                logger.error("Text-to-Speech client not initialized")
+                return None
+            
+            synthesis_input = texttospeech.SynthesisInput(text=text)
+            
+            gender_mapping = {
+                "NEUTRAL": texttospeech.SsmlVoiceGender.NEUTRAL,
+                "MALE": texttospeech.SsmlVoiceGender.MALE,
+                "FEMALE": texttospeech.SsmlVoiceGender.FEMALE,
+            }
+            
+            voice_gender_enum = gender_mapping.get(voice_gender.upper(), texttospeech.SsmlVoiceGender.NEUTRAL)
+            
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                ssml_gender=voice_gender_enum,
+                name=f"{language_code}-Wavenet-A" if "Wavenet" in voice_gender else None
+            )
+            
+            audio_encoding_mapping = {
+                "MP3": texttospeech.AudioEncoding.MP3,
+                "OGG_OPUS": texttospeech.AudioEncoding.OGG_OPUS,
+            }
+            
+            audio_encoding = audio_encoding_mapping.get(audio_format.upper(), texttospeech.AudioEncoding.MP3)
+            
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=audio_encoding,
+                speaking_rate=1.0,
+                pitch=0.0,
+            )
+            
+            response = self.client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+            
+            logger.info(f"Text synthesized successfully: {len(response.audio_content)} bytes in {audio_format} format")
+            return response.audio_content
+            
+        except Exception as e:
+            logger.error(f"Error synthesizing speech: {e}")
+            return None
 
 
