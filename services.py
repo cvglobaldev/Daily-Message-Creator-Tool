@@ -1305,27 +1305,48 @@ class SpeechToTextService:
             
             audio = speech.RecognitionAudio(content=audio_content)
             
+            # Try with automatic encoding detection first (no encoding specified)
             config = speech.RecognitionConfig(
+                language_code=language_code,
+                enable_automatic_punctuation=True,
+                model="default",  # Use default model for best compatibility
+            )
+            
+            try:
+                response = self.client.recognize(config=config, audio=audio)
+                
+                if response.results and len(response.results) > 0:
+                    transcript = response.results[0].alternatives[0].transcript
+                    confidence = response.results[0].alternatives[0].confidence
+                    logger.info(f"✅ Audio transcribed successfully (confidence: {confidence:.2f}): {transcript[:50]}...")
+                    return transcript
+                else:
+                    logger.warning("⚠️ No transcription results with auto-detection, trying OGG_OPUS encoding")
+            except Exception as auto_error:
+                logger.warning(f"⚠️ Auto-detection failed: {auto_error}, trying explicit OGG_OPUS encoding")
+            
+            # Fallback: Try with explicit OGG_OPUS encoding
+            config_ogg = speech.RecognitionConfig(
                 encoding=speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
-                sample_rate_hertz=16000,
                 language_code=language_code,
                 enable_automatic_punctuation=True,
             )
             
-            response = self.client.recognize(config=config, audio=audio)
+            response = self.client.recognize(config=config_ogg, audio=audio)
             
-            if not response.results:
-                logger.warning("No transcription results returned")
-                return None
+            if response.results and len(response.results) > 0:
+                transcript = response.results[0].alternatives[0].transcript
+                confidence = response.results[0].alternatives[0].confidence
+                logger.info(f"✅ Audio transcribed with OGG_OPUS (confidence: {confidence:.2f}): {transcript[:50]}...")
+                return transcript
             
-            transcript = response.results[0].alternatives[0].transcript
-            confidence = response.results[0].alternatives[0].confidence
-            
-            logger.info(f"Audio transcribed successfully (confidence: {confidence:.2f}): {transcript[:50]}...")
-            return transcript
+            logger.warning("❌ No transcription results with any encoding")
+            return None
             
         except Exception as e:
-            logger.error(f"Error transcribing audio: {e}")
+            logger.error(f"❌ Error transcribing audio: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return None
 
 
