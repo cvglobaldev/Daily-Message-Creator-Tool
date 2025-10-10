@@ -40,6 +40,13 @@
         </div>
     </nav>
 <div class="container mt-4">
+    {% set breadcrumbs = [
+        {'name': 'Dashboard', 'url': '/dashboard'},
+        {'name': 'Bots', 'url': '/bots'},
+        {'name': 'Edit Bot: ' + bot.name, 'url': None}
+    ] %}
+    {% include '_breadcrumb.html' %}
+
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card cv-card">

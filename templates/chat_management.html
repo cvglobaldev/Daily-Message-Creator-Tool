@@ -63,6 +63,13 @@
     {% include '_navigation.html' %}
 
     <div class="container-fluid">
+        {% set breadcrumbs = [
+            {'name': 'Dashboard', 'url': '/dashboard'},
+            {'name': 'Bots', 'url': '/bots'},
+            {'name': bot.name + ' - Chats' if bot else 'Chats', 'url': None}
+        ] %}
+        {% include '_breadcrumb.html' %}
+
         <div class="row mb-4">
             <div class="col-12">
                 <div class="cv-section-header">

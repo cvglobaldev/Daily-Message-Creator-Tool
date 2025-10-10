@@ -45,7 +45,12 @@
     {% include '_navigation.html' %}
 
     <div class="container">
-
+        {% set breadcrumbs = [
+            {'name': 'Dashboard', 'url': '/dashboard'},
+            {'name': 'Bots', 'url': '/bots'},
+            {'name': bot.name if bot else 'Content', 'url': None}
+        ] %}
+        {% include '_breadcrumb.html' %}
 
         <!-- Content Overview -->
         <div class="row mb-4">

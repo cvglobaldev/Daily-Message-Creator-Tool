@@ -13,6 +13,7 @@ from scheduler import ContentScheduler
 import threading
 import time
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import CSRFProtect
 from forms import LoginForm, RegistrationForm, EditUserForm, ChangePasswordForm, ContentForm, AIContentGenerationForm
 from bot_forms import CreateBotForm, EditBotForm, BotContentForm
 from urllib.parse import urlparse
@@ -76,6 +77,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
+
+# Initialize CSRF Protection
+csrf = CSRFProtect(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -4206,17 +4210,47 @@ def bot_content_management(bot_id):
     logger.info(f"🔍 DEBUG: Bot content management accessed for bot_id {bot_id} - serving cms.html template")
     bot = Bot.query.get_or_404(bot_id)
     content_items = Content.query.filter_by(bot_id=bot_id).order_by(Content.day_number).all()
-    return render_template('cms.html', bot=bot, content_items=content_items, bot_specific=True)
+    
+    if current_user.role == 'super_admin':
+        available_bots = db_manager.get_all_bots()
+    else:
+        available_bots = db_manager.get_bots_by_creator(current_user.id)
+    
+    return render_template('cms.html', 
+        bot=bot, 
+        content_items=content_items, 
+        bot_specific=True,
+        show_bot_switcher=True,
+        current_bot=bot,
+        available_bots=available_bots,
+        bot_switch_url='/bots/',
+        bot_switch_suffix='/content'
+    )
 
 @app.route('/bots/<int:bot_id>/chats')
 @login_required  
 def bot_chat_management(bot_id):
     """Bot-specific chat management"""
     bot = Bot.query.get_or_404(bot_id)
-    # Get recent users for this specific bot
     recent_users = db_manager.get_recent_active_users(bot_id=bot_id)
     stats = db_manager.get_chat_management_stats(bot_id=bot_id)
-    return render_template('chat_management.html', bot=bot, recent_users=recent_users, stats=stats, bot_specific=True)
+    
+    if current_user.role == 'super_admin':
+        available_bots = db_manager.get_all_bots()
+    else:
+        available_bots = db_manager.get_bots_by_creator(current_user.id)
+    
+    return render_template('chat_management.html', 
+        bot=bot, 
+        recent_users=recent_users, 
+        stats=stats, 
+        bot_specific=True,
+        show_bot_switcher=True,
+        current_bot=bot,
+        available_bots=available_bots,
+        bot_switch_url='/bots/',
+        bot_switch_suffix='/chats'
+    )
 
 @app.route('/bots/<int:bot_id>/delete', methods=['POST'])
 @login_required
@@ -5234,6 +5268,44 @@ def cms_edit_content(content_id):
     except Exception as e:
         logger.error(f"Error updating CMS content: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """User profile and settings page"""
+    if request.method == 'POST':
+        full_name = request.form.get('full_name', '').strip()
+        email = request.form.get('email', '').strip()
+        
+        # Validation
+        if not full_name:
+            flash('Full name cannot be empty', 'danger')
+            return redirect(url_for('profile'))
+        
+        if not email:
+            flash('Email cannot be empty', 'danger')
+            return redirect(url_for('profile'))
+        
+        # Basic email validation
+        if '@' not in email or '.' not in email:
+            flash('Please enter a valid email address', 'danger')
+            return redirect(url_for('profile'))
+        
+        # Try to update
+        success = db_manager.update_admin_user(
+            current_user.id, 
+            full_name=full_name,
+            email=email
+        )
+        
+        if success:
+            flash('Profile updated successfully!', 'success')
+        else:
+            flash('Failed to update profile. Email may already be in use.', 'danger')
+        
+        return redirect(url_for('profile'))
+    
+    return render_template('profile.html', user=current_user)
 
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required

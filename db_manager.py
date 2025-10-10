@@ -1263,3 +1263,36 @@ Always maintain a respectful, caring tone and be ready to offer prayer or encour
             'enable_auto_tagging': True,
             'handoff_triggers': 'suicide, depression, abuse, crisis, emergency, help me, urgent'
         }
+    
+    # Admin User Management Methods
+    def update_admin_user(self, user_id: int, **kwargs) -> bool:
+        """Update admin user profile information"""
+        try:
+            from models import AdminUser
+            user = AdminUser.query.get(user_id)
+            if not user:
+                logger.error(f"Admin user {user_id} not found")
+                return False
+            
+            # Update allowed fields
+            if 'full_name' in kwargs:
+                user.full_name = kwargs['full_name']
+            
+            if 'email' in kwargs:
+                # Check for duplicate email (excluding current user)
+                existing = AdminUser.query.filter(
+                    AdminUser.email == kwargs['email'],
+                    AdminUser.id != user_id
+                ).first()
+                if existing:
+                    logger.warning(f"Email {kwargs['email']} already in use by another user")
+                    return False
+                user.email = kwargs['email']
+            
+            self.db.session.commit()
+            logger.info(f"Admin user {user_id} updated successfully")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error updating admin user {user_id}: {e}")
+            return False
