@@ -34,7 +34,7 @@ class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     full_name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=100)])
     role = SelectField('Role', choices=[('admin', 'Admin'), ('super_admin', 'Super Admin')])
-    is_active = BooleanField('Active')
+    active = BooleanField('Active')
     submit = SubmitField('Update User')
 
 class ChangePasswordForm(FlaskForm):

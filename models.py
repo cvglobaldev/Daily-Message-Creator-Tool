@@ -86,7 +86,7 @@ class AdminUser(UserMixin, db.Model):
             'email': self.email,
             'full_name': self.full_name,
             'role': self.role,
-            'is_active': self.is_active,
+            'active': self.active,
             'created_at': self.created_at.isoformat(),
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
