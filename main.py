@@ -343,10 +343,29 @@ def analytics_dashboard():
         if not days_filter and not start_date_str and not end_date_str:
             days_filter = 30
         
+        # Filter bots based on user role
+        if current_user.role == 'super_admin':
+            owned_bot_ids = [bot.id for bot in Bot.query.all()]
+        else:
+            # Regular admins can only see data from bots they created
+            owned_bot_ids = [bot.id for bot in Bot.query.filter_by(creator_id=current_user.id).all()]
+        
         query = User.query
         
+        # Filter to only show users from owned bots
+        if owned_bot_ids:
+            query = query.filter(User.bot_id.in_(owned_bot_ids))
+        else:
+            # If regular admin has no bots, show nothing
+            query = query.filter(User.bot_id == -1)
+        
         if bot_id:
-            query = query.filter(User.bot_id == bot_id)
+            # Additional filter by specific bot_id (must be owned)
+            if bot_id in owned_bot_ids:
+                query = query.filter(User.bot_id == bot_id)
+            else:
+                # Trying to access a bot they don't own - show nothing
+                query = query.filter(User.bot_id == -1)
         
         if start_date_str and end_date_str:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -442,7 +461,11 @@ def analytics_dashboard():
         
         total_faith_journeys = sum(faith_tags_distribution.values())
         
-        all_bots = Bot.query.filter_by(status='active').all()
+        # Filter bots based on user role for the dropdown
+        if current_user.role == 'super_admin':
+            all_bots = Bot.query.filter_by(status='active').all()
+        else:
+            all_bots = Bot.query.filter_by(status='active', creator_id=current_user.id).all()
         
         analytics_data = {
             'journey_funnel': journey_funnel,
@@ -3577,8 +3600,14 @@ def test_stop_start_cycle():
 def bot_management():
     """Bot management dashboard"""
     try:
-        bots = Bot.query.all()
-        logger.info(f"Found {len(bots)} bots")
+        # Filter bots based on user role
+        if current_user.role == 'super_admin':
+            bots = Bot.query.all()
+        else:
+            # Regular admins can only see bots they created
+            bots = Bot.query.filter_by(creator_id=current_user.id).all()
+        
+        logger.info(f"Found {len(bots)} bots for user {current_user.username} (role: {current_user.role})")
         # Add user and content counts for each bot
         for bot in bots:
             bot.user_count = User.query.filter_by(bot_id=bot.id).count()
@@ -3891,6 +3920,9 @@ Feel free to share your thoughts, ask questions, or explore further. I'm here to
             bot.journey_duration_days = form.journey_duration_days.data or 30
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
             bot.language = form.language.data or 'English'
+            
+            # Set creator to current user
+            bot.creator_id = current_user.id
             
             # Save bot first to get the ID
             db.session.add(bot)
@@ -4206,6 +4238,9 @@ def delete_bot(bot_id):
 @login_required
 def tag_management():
     """Tag management dashboard"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Only super admins can manage tags.', 'error')
+        return redirect('/dashboard')
     try:
         from models import TagRule
         # Order: Faith Journey first, Other Tags middle, Delivered Daily Content last
@@ -4228,6 +4263,9 @@ def tag_management():
 @login_required
 def create_tag_rule():
     """Create a new tag rule"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Only super admins can manage tags.', 'error')
+        return redirect('/dashboard')
     try:
         from forms import TagRuleForm
         from models import TagRule, db
@@ -4263,6 +4301,9 @@ def create_tag_rule():
 @login_required
 def create_rule_based_tag():
     """Create a new rule-based tag with When-If-Then logic"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Only super admins can manage tags.', 'error')
+        return redirect('/dashboard')
     try:
         from forms import RuleBasedTagForm
         from models import TagRule, db
@@ -4329,6 +4370,9 @@ def create_rule_based_tag():
 @login_required
 def edit_tag_rule(rule_id):
     """Edit an existing tag rule"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Only super admins can manage tags.', 'error')
+        return redirect('/dashboard')
     try:
         from forms import TagRuleForm
         from models import TagRule, db
@@ -4367,6 +4411,9 @@ def edit_tag_rule(rule_id):
 @login_required
 def delete_tag_rule(rule_id):
     """Delete a tag rule"""
+    if current_user.role != 'super_admin':
+        flash('Access denied. Only super admins can manage tags.', 'error')
+        return redirect('/dashboard')
     try:
         from models import TagRule, db
         
@@ -4387,6 +4434,8 @@ def delete_tag_rule(rule_id):
 @login_required
 def retag_all_messages():
     """Re-run AI tagging on all historical incoming messages with new tag system"""
+    if current_user.role != 'super_admin':
+        return jsonify({'success': False, 'error': 'Access denied. Only super admins can manage tags.'}), 403
     try:
         from models import MessageLog, TagRule, db
         
@@ -4439,6 +4488,8 @@ def retag_all_messages():
 @login_required
 def retag_user_messages(user_id):
     """Re-run AI tagging on all messages from a specific user"""
+    if current_user.role != 'super_admin':
+        return jsonify({'success': False, 'error': 'Access denied. Only super admins can manage tags.'}), 403
     try:
         from models import MessageLog, TagRule, User, db
         
@@ -4496,6 +4547,8 @@ def retag_user_messages(user_id):
 @login_required
 def initialize_other_tags():
     """Initialize Other Tags parent tag with operational/administrative sub-tags"""
+    if current_user.role != 'super_admin':
+        return jsonify({'success': False, 'error': 'Access denied. Only super admins can manage tags.'}), 403
     try:
         from models import TagRule, db
         
@@ -4583,6 +4636,8 @@ def initialize_other_tags():
 @login_required
 def initialize_predefined_tags():
     """Initialize predefined tag structure"""
+    if current_user.role != 'super_admin':
+        return jsonify({'success': False, 'error': 'Access denied. Only super admins can manage tags.'}), 403
     try:
         from models import TagRule, db
         

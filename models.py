@@ -65,6 +65,9 @@ class AdminUser(UserMixin, db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
+    # Relationships
+    bots: Mapped[List["Bot"]] = relationship("Bot", back_populates="creator")
+    
     def set_password(self, password):
         """Set password hash"""
         self.password_hash = generate_password_hash(password)
@@ -122,7 +125,11 @@ class Bot(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Bot ownership
+    creator_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('admin_users.id'), nullable=True, index=True)
+    
     # Relationships
+    creator: Mapped[Optional["AdminUser"]] = relationship("AdminUser", back_populates="bots")
     users: Mapped[List["User"]] = relationship("User", back_populates="bot", cascade="all, delete-orphan")
     content: Mapped[List["Content"]] = relationship("Content", back_populates="bot", cascade="all, delete-orphan")
     
