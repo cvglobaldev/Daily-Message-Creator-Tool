@@ -1,7 +1,7 @@
 # Daily Message Creator - WhatsApp Chatbot
 
 ## Overview
-This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide individuals from diverse non-Christian backgrounds through a spiritual journey to learn about Jesus. It delivers daily drip content, collects user reflections, and uses AI to analyze responses for engagement tracking and insights. The system aims to facilitate culturally sensitive spiritual exploration of customizable duration (10-90 days), enabling users to engage with Christian teachings at their own pace. The project's business vision is to provide a scalable and accessible tool for spiritual guidance, leveraging AI for personalized user interaction and content generation, with the ambition to reach a global audience.
+This project is a multi-platform chatbot (WhatsApp and Telegram) designed to guide individuals from diverse non-Christian backgrounds through a spiritual journey to learn about Jesus. It delivers daily drip content, collects user reflections, and uses AI to analyze responses for engagement tracking and insights. The system aims to facilitate culturally sensitive spiritual exploration of customizable duration (10-90 days). The business vision is to provide a scalable and accessible tool for spiritual guidance, leveraging AI for personalized user interaction and content generation, with the ambition to reach a global audience.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -16,27 +16,21 @@ A consistent "CV Global" design theme is applied across all management interface
 - **Backend**: Flask web application with Python.
 - **Database**: PostgreSQL for all data storage.
 - **AI Integration**: Leverages Google Gemini API for sentiment analysis, keyword tagging, and AI-powered content generation.
-- **Messaging Integration**: Integrates with WhatsApp Business API and Telegram Bot API for multi-platform support.
+- **Messaging Integration**: Integrates with WhatsApp Business API and Telegram Bot API.
 - **Scheduling**: A background thread-based scheduler manages daily content delivery and user progression.
-- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, multimedia delivery, and support for configurable journey durations and predefined faith journey tags.
-- **AI Content Generation**: Integrated AI-powered content creation using Google Gemini 2.5 Pro, offering audience customization.
-- **Chat Management System**: Provides an interface for consolidated user conversations, message sending, human handoff detection, real-time analytics, and user profiles.
-- **Authentication**: Implements Flask-Login for secure password hashing, session management, and role-based access control (RBAC) with admin and super_admin permissions.
-- **Voice Conversation Feature**: Includes end-to-end voice message handling with language-aware transcription and synthesis using Google Cloud Speech-to-Text and Text-to-Speech APIs, supporting multiple languages and platform-specific audio formats.
-- **Dual-Layer Tagging System**: Combines AI semantic analysis with rule-based automation (When-If-Then logic) for comprehensive message tagging.
-- **Atomic Lock System**: Implements a database-backed atomic locking system using PostgreSQL for duplicate message prevention during content delivery.
+- **Content Management System (CMS)**: Features an advanced content editor with live preview, tag management, CRUD operations, multimedia delivery, and support for configurable journey durations.
+- **Voice Conversation Feature**: Includes end-to-end voice message handling with language-aware transcription and synthesis using Google Cloud Speech-to-Text and Text-to-Speech APIs.
+- **Dual-Layer Tagging System**: Combines AI semantic analysis with rule-based automation.
+- **Atomic Lock System**: Implements a database-backed atomic locking system for duplicate message prevention.
 
 ### System Design Choices
-- **Multi-Bot System**: Enables creation and management of independent bots, each with its own content, user base, AI prompts, and platform configurations.
+- **Multi-Bot System**: Enables creation and management of independent bots.
 - **Culturally Sensitive Content**: Content is designed for diverse non-Christian backgrounds.
 - **AI Response Analysis**: AI analyzes user reflections for sentiment and tags them with spiritual milestones.
 - **Command System**: Recognizes user commands like "START," "STOP," "HELP," and "HUMAN."
 - **User Progression**: Tracks user progress through customizable journey durations (10-90 days).
-- **Error Handling & Simulation**: Includes robust error handling, user deactivation for inactive chats, and development-friendly API simulation modes.
-- **Phone Number Normalization**: Automatically handles various phone number formats.
-- **Media Management**: Comprehensive system for managing media files, including prevention of broken references.
 - **Contextual AI Response System**: AI responses are contextually aware of the user's current daily content, journey stage, and spiritual topic.
-- **Human Connection Option System**: Proactively offers users the option to connect with a human team member for sensitive topics, with intelligent detection and user choice priority.
+- **Human Connection Option System**: Proactively offers users the option to connect with a human team member for sensitive topics.
 
 ## External Dependencies
 
