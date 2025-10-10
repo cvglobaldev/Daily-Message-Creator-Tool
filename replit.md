@@ -8,6 +8,46 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Feature: Super Admin Delete All Conversation History (October 10, 2025)
+**Feature**: Super admin can now delete all conversation history for a user directly from the /chat page, enabling easy fresh starts for testing and development.
+
+**Implementation**:
+1. **UI Addition** (templates/full_chat.html):
+   - "Delete All History" button visible only to super_admin users
+   - Red danger button with trash icon in chat header
+   - Confirmation modal with clear warning about permanent deletion
+   - Lists what will be deleted: messages, tags, AI analysis, scheduler state
+
+2. **Backend Route** (main.py):
+   - `/api/delete-user-history/<int:user_id>` endpoint
+   - Super admin permission check (403 if unauthorized)
+   - Comprehensive deletion with audit logging
+
+3. **Database Method** (db_manager.py):
+   - `delete_user_conversation_history(user_id)` method
+   - Deletes all MessageLog entries for user
+   - Clears ALL SystemSettings entries containing user's phone_number:
+     - delivery_lock_{phone_number}
+     - Any future per-user scheduler state
+   - Resets user to fresh state:
+     - current_day = 1
+     - status = 'inactive'
+     - tags = []
+     - completion_date = None
+   - All operations in single transaction with rollback on error
+
+**Benefits**:
+- Easy testing: Developers can quickly reset users to test onboarding flow
+- Clean state: Removes all traces of conversation and scheduler state
+- Safe: Confirmation modal prevents accidental deletion
+- Secure: Restricted to super admin only
+- Comprehensive: Clears messages, scheduler locks, and all user-specific state
+
+**Files Modified**:
+- `templates/full_chat.html`: Added delete button, modal, JavaScript handler
+- `main.py`: Added route with permission checks
+- `db_manager.py`: Added comprehensive deletion method with pattern matching
+
 ### Bug Fix: Duplicate Completion Messages (October 9, 2025)
 **Issue**: Telegram Bot 1 users on day 11 were receiving the completion message repeatedly every 10 minutes. The bot also appeared unresponsive to START/STOP commands.
 
