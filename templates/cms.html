@@ -42,36 +42,7 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-primary mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
-                Daily Message Creator - Content Management System
-            </a>
-            <div class="navbar-nav flex-row">
-                <a class="nav-link me-3" href="/dashboard">
-                    <i class="fas fa-chart-line me-1"></i>Dashboard
-                </a>
-                {% if bot %}
-                <a class="nav-link me-3" href="/bots">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Bot Management
-                </a>
-                {% else %}
-                <a class="nav-link me-3" href="/bots">
-                    <i class="fas fa-robot me-1"></i>Bot Management
-                </a>
-                {% endif %}
-                {% if current_user.is_authenticated and current_user.role == 'super_admin' %}
-                <a class="nav-link me-3" href="/tags">
-                    <i class="fas fa-tags me-1"></i>Tag Management
-                </a>
-                {% endif %}
-                <a class="nav-link" href="/logout">
-                    <i class="fas fa-sign-out-alt me-1"></i>Logout
-                </a>
-            </div>
-        </div>
-    </nav>
+    {% include '_navigation.html' %}
 
     <div class="container">
 

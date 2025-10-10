@@ -1,0 +1,47 @@
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src="/static/favicon/cv-new-logo-favicon-32px.png" alt="CV Global Logo" class="me-2" style="width: 24px; height: 24px;">
+            Daily Message Creator
+        </a>
+        <div class="navbar-nav flex-row">
+            <a class="nav-link me-3" href="/dashboard">
+                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+            </a>
+            <a class="nav-link me-3" href="/bots">
+                <i class="fas fa-robot me-1"></i>Bots
+            </a>
+            <a class="nav-link me-3" href="/cms">
+                <i class="fas fa-edit me-1"></i>Content
+            </a>
+            <a class="nav-link me-3" href="/chat-management">
+                <i class="fas fa-comments me-1"></i>Chats
+            </a>
+            <a class="nav-link me-3" href="/analytics">
+                <i class="fas fa-chart-line me-1"></i>Analytics
+            </a>
+            {% if current_user.is_authenticated and current_user.role == 'super_admin' %}
+            <a class="nav-link me-3" href="/tags">
+                <i class="fas fa-tags me-1"></i>Tags
+            </a>
+            <a class="nav-link me-3" href="/user-management">
+                <i class="fas fa-users me-1"></i>Users
+            </a>
+            {% endif %}
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-user me-1"></i>{{ current_user.full_name if current_user.is_authenticated else 'Guest' }}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/change-password">
+                        <i class="fas fa-key me-2"></i>Change Password
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/logout">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>

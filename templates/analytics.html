@@ -12,9 +12,9 @@
     <meta name="theme-color" content="#00ff88">
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Feather Icons -->
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- CV Global Theme -->
@@ -101,39 +101,7 @@
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i data-feather="activity"></i>
-                Faith Journey
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">
-                            <i data-feather="home"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/analytics">
-                            <i data-feather="bar-chart-2"></i> Analytics
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/logout">
-                            <i data-feather="log-out"></i> Logout
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    {% include '_navigation.html' %}
 
     <!-- Main Content -->
     <div class="container-fluid mt-4">
@@ -141,11 +109,11 @@
         <div class="page-header">
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="page-title">
-                    <i data-feather="bar-chart-2"></i>
+                    <i class="fas fa-chart-bar"></i>
                     Analytics Dashboard
                 </h1>
                 <button class="btn btn-primary" onclick="location.reload()">
-                    <i data-feather="refresh-cw"></i> Refresh
+                    <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             </div>
         </div>
@@ -224,7 +192,7 @@
             <div class="col-lg-6">
                 <div class="chart-card">
                     <h3 class="chart-title">
-                        <i data-feather="trending-up"></i>
+                        <i class="fas fa-chart-line"></i>
                         Journey Completion Funnel
                     </h3>
                     {% if journey_funnel and journey_funnel.values()|sum > 0 %}
@@ -233,7 +201,7 @@
                     </div>
                     {% else %}
                     <div class="no-data-message">
-                        <i data-feather="inbox"></i>
+                        <i class="fas fa-inbox"></i>
                         <p>No journey data available</p>
                     </div>
                     {% endif %}
@@ -244,7 +212,7 @@
             <div class="col-lg-6">
                 <div class="chart-card">
                     <h3 class="chart-title">
-                        <i data-feather="activity"></i>
+                        <i class="fas fa-chart-area"></i>
                         Drop-off Rate by Day
                     </h3>
                     {% if dropoff_data %}
@@ -253,7 +221,7 @@
                     </div>
                     {% else %}
                     <div class="no-data-message">
-                        <i data-feather="inbox"></i>
+                        <i class="fas fa-inbox"></i>
                         <p>No drop-off data available</p>
                     </div>
                     {% endif %}
@@ -264,7 +232,7 @@
             <div class="col-lg-6">
                 <div class="chart-card">
                     <h3 class="chart-title">
-                        <i data-feather="pie-chart"></i>
+                        <i class="fas fa-chart-pie"></i>
                         Faith Journey Tag Distribution
                     </h3>
                     {% if faith_tags_distribution and faith_tags_distribution.values()|sum > 0 %}
@@ -273,7 +241,7 @@
                     </div>
                     {% else %}
                     <div class="no-data-message">
-                        <i data-feather="inbox"></i>
+                        <i class="fas fa-inbox"></i>
                         <p>No faith journey tags available</p>
                     </div>
                     {% endif %}
@@ -284,7 +252,7 @@
             <div class="col-lg-6">
                 <div class="chart-card">
                     <h3 class="chart-title">
-                        <i data-feather="calendar"></i>
+                        <i class="fas fa-calendar"></i>
                         Tag Timeline by Journey Day
                     </h3>
                     {% if tag_timeline %}
@@ -293,7 +261,7 @@
                     </div>
                     {% else %}
                     <div class="no-data-message">
-                        <i data-feather="inbox"></i>
+                        <i class="fas fa-inbox"></i>
                         <p>No tag timeline data available</p>
                     </div>
                     {% endif %}
@@ -305,7 +273,7 @@
         {% if faith_tags_distribution and faith_tags_distribution.values()|sum > 0 %}
         <div class="chart-card">
             <h3 class="chart-title">
-                <i data-feather="list"></i>
+                <i class="fas fa-list"></i>
                 Faith Journey Tag Details
             </h3>
             <div class="table-responsive">
@@ -342,8 +310,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        feather.replace();
-
         const cvColors = {
             green: '#00ff88',
             greenHover: '#00e677',
