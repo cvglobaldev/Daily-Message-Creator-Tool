@@ -143,6 +143,60 @@ class DatabaseManager:
             logger.error(f"Error updating user {phone_number}: {e}")
             return False
     
+    def delete_user_conversation_history(self, user_id: int) -> bool:
+        """Delete all conversation history for a user and reset to fresh state
+        
+        This comprehensively clears:
+        - All MessageLog entries (conversation messages)
+        - Delivery locks in SystemSettings
+        - User journey state (resets to day 1, inactive)
+        """
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                logger.error(f"User {user_id} not found for history deletion")
+                return False
+            
+            phone_number = user.phone_number
+            
+            # Delete all MessageLog entries for this user
+            deleted_count = MessageLog.query.filter_by(user_id=user_id).delete()
+            logger.info(f"Deleted {deleted_count} message logs for user {user_id}")
+            
+            # Clear ALL SystemSettings entries related to this user
+            # This includes delivery locks and any other user-specific state
+            from models import SystemSettings
+            from sqlalchemy import or_
+            
+            # Delete any SystemSettings key containing the user's phone_number
+            # This is future-proof and catches any user-specific keys like:
+            # - delivery_lock_{phone_number}
+            # - any future per-user scheduler state
+            settings_deleted = SystemSettings.query.filter(
+                or_(
+                    SystemSettings.key == f"delivery_lock_{phone_number}",
+                    SystemSettings.key.like(f"%{phone_number}%"),
+                    SystemSettings.description.like(f"%{phone_number}%")
+                )
+            ).delete(synchronize_session=False)
+            
+            if settings_deleted > 0:
+                logger.info(f"Deleted {settings_deleted} SystemSettings entries for user {phone_number}")
+            
+            # Reset user to fresh state
+            user.current_day = 1
+            user.status = 'inactive'
+            user.tags = []
+            user.completion_date = None
+            
+            self.db.session.commit()
+            logger.info(f"User {user_id} ({user.name or phone_number}) conversation history deleted and reset to fresh state")
+            return True
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error deleting conversation history for user {user_id}: {e}")
+            return False
+    
     def get_active_users(self) -> List[User]:
         """Get all active users"""
         try:

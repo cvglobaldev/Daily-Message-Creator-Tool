@@ -3460,6 +3460,35 @@ def update_message_tags():
         logger.error(f"Error updating message tags: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/delete-user-history/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user_history(user_id):
+    """Delete all conversation history for a user (super admin only)"""
+    if current_user.role != 'super_admin':
+        logger.warning(f"Unauthorized attempt to delete user history by {current_user.username}")
+        return jsonify({'success': False, 'error': 'Access denied. Super admin privileges required.'}), 403
+    
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        user_name = user.name or user.phone_number
+        success = db_manager.delete_user_conversation_history(user_id)
+        
+        if success:
+            logger.info(f"Super admin {current_user.username} deleted all conversation history for user {user_id} ({user_name})")
+            return jsonify({
+                'success': True, 
+                'message': f'All conversation history deleted for user {user_name}'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete conversation history'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting user history for user {user_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/settings', methods=['POST'])
 def save_chatbot_settings():
     """Save chatbot settings"""
