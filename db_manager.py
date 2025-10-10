@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func, desc, or_, and_, case
-from models import db, User, Content, MessageLog, SystemSettings
+from models import db, User, Content, MessageLog, SystemSettings, Bot
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +230,31 @@ class DatabaseManager:
         except SQLAlchemyError as e:
             logger.error(f"Error getting user stats: {e}")
             return {'total_users': 0, 'active_users': 0, 'completed_users': 0, 'inactive_users': 0}
+    
+    # Bot Management Methods
+    def get_all_bots(self) -> List[Bot]:
+        """Get all bots"""
+        try:
+            bots = Bot.query.all()
+            for bot in bots:
+                bot.user_count = User.query.filter_by(bot_id=bot.id).count()
+                bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
+            return bots
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting all bots: {e}")
+            return []
+    
+    def get_bots_by_creator(self, creator_id: int) -> List[Bot]:
+        """Get bots by creator ID"""
+        try:
+            bots = Bot.query.filter_by(creator_id=creator_id).all()
+            for bot in bots:
+                bot.user_count = User.query.filter_by(bot_id=bot.id).count()
+                bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
+            return bots
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting bots by creator {creator_id}: {e}")
+            return []
     
     # Content Management Methods
     def get_content_by_day(self, day: int, bot_id: int = 1) -> Optional[Content]:

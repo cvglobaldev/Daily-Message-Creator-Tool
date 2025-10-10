@@ -3127,9 +3127,14 @@ def test_interface():
 @app.route('/cms')
 @login_required
 def cms():
-    """Content Management System for 30-day journey content with multimedia support"""
-    logger.info("🔍 DEBUG: CMS route accessed - serving cms.html template")
-    return render_template('cms.html', user=current_user)
+    """Bot selection page for content management"""
+    # Get bots based on user role
+    if current_user.role == 'super_admin':
+        bots = db_manager.get_all_bots()
+    else:
+        bots = db_manager.get_bots_by_creator(current_user.id)
+    
+    return render_template('bot_selection_cms.html', bots=bots)
 
 @app.route('/api/content', methods=['GET'])
 def get_all_content():
@@ -4756,13 +4761,14 @@ def initialize_predefined_tags():
 @app.route('/chat-management')
 @login_required
 def chat_management_page():
-    """Display chat management page"""
-    try:
-        stats = db_manager.get_chat_management_stats()
-        return render_template('chat_management.html', stats=stats, user=current_user)
-    except Exception as e:
-        logger.error(f"Error loading chat management page: {e}")
-        return f"Error loading chat management page: {e}", 500
+    """Bot selection page for chat management"""
+    # Get bots based on user role
+    if current_user.role == 'super_admin':
+        bots = db_manager.get_all_bots()
+    else:
+        bots = db_manager.get_bots_by_creator(current_user.id)
+    
+    return render_template('bot_selection_chat.html', bots=bots)
 
 @app.route('/api/chat-management/messages')
 def get_filtered_messages():

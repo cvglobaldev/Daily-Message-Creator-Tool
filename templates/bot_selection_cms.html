@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Bot - Content Management - Daily Message Creator</title>
+    
+    <!-- CV Global Favicon Implementation -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="msapplication-TileColor" content="#000000">
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
+</head>
+<body>
+    {% include '_navigation.html' %}
+    
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-4">
+                    <h2><i class="fas fa-edit me-2"></i>Select Bot - Content Management</h2>
+                    <p class="text-muted">Choose a bot to manage its content</p>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Bot List -->
+                <div class="row">
+                    {% for bot in bots %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">{{ bot.name }}</h5>
+                                <span class="badge bg-{{ 'success' if bot.status == 'active' else 'secondary' }}">
+                                    {{ 'Active' if bot.status == 'active' else 'Inactive' }}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                {% if bot.description %}
+                                    <p class="card-text text-muted small mb-3">{{ bot.description[:100] }}{% if bot.description|length > 100 %}...{% endif %}</p>
+                                {% endif %}
+                                
+                                <!-- Platforms -->
+                                <div class="mb-3">
+                                    <strong>Platforms:</strong>
+                                    <div class="mt-1">
+                                        {% for platform in bot.platforms %}
+                                            <span class="badge bg-info me-1">
+                                                {% if platform == 'whatsapp' %}
+                                                    <i class="fab fa-whatsapp"></i>
+                                                {% elif platform == 'telegram' %}
+                                                    <i class="fab fa-telegram"></i>
+                                                {% endif %}
+                                                {{ platform.title() }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <!-- Stats -->
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="border-end">
+                                            <h6 class="mb-0">{{ bot.user_count|default(0) }}</h6>
+                                            <small class="text-muted">Users</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <h6 class="mb-0">{{ bot.content_count|default(0) }}</h6>
+                                        <small class="text-muted">Content</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/bots/{{ bot.id }}/content" class="btn btn-primary w-100">
+                                    <i class="fas fa-file-alt me-2"></i>Manage Content
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if not bots %}
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                                <h4>No Bots Available</h4>
+                                <p class="text-muted">You haven't created any bots yet. Create your first bot to get started.</p>
+                                <a href="/bots" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Create Your First Bot
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
