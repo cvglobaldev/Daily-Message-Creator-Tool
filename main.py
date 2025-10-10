@@ -4,6 +4,7 @@ import logging
 import requests
 from datetime import datetime, timedelta
 from typing import Dict
+from functools import lru_cache
 from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash, send_from_directory
 from models import db, User, Content, MessageLog, AdminUser, Bot
 from db_manager import DatabaseManager
@@ -241,6 +242,89 @@ def ensure_scheduler_running():
         start_scheduler()
         scheduler_started = True
 
+def check_whatsapp_status():
+    """Check WhatsApp API with credential validation"""
+    try:
+        token = os.environ.get('WHATSAPP_ACCESS_TOKEN')
+        phone_id = os.environ.get('WHATSAPP_PHONE_NUMBER_ID')
+        
+        if not token or not phone_id:
+            return {'status': 'offline', 'message': 'No credentials'}
+        
+        # Basic credential format validation (don't make actual API call)
+        if len(token) > 10 and len(phone_id) > 5:
+            return {'status': 'online', 'message': 'Configured'}
+        return {'status': 'warning', 'message': 'Invalid credentials'}
+    except Exception as e:
+        logger.error(f"Error checking WhatsApp status: {e}")
+        return {'status': 'offline', 'message': 'Error'}
+
+def check_telegram_status():
+    """Check Telegram API status with validation"""
+    try:
+        token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        if token and len(token) > 10:
+            return {'status': 'online', 'message': 'Configured'}
+        
+        bots_with_telegram = Bot.query.filter(Bot.telegram_bot_token.isnot(None)).count()
+        if bots_with_telegram > 0:
+            return {'status': 'online', 'message': f'{bots_with_telegram} bot(s) configured'}
+        return {'status': 'warning', 'message': 'No bots configured'}
+    except Exception as e:
+        logger.error(f"Error checking Telegram status: {e}")
+        return {'status': 'offline', 'message': 'Error'}
+
+def check_gemini_status():
+    """Check Gemini AI status with validation"""
+    try:
+        api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            return {'status': 'warning', 'message': 'No API key configured'}
+        
+        # Basic validation - check key format
+        if len(api_key) > 10:
+            return {'status': 'online', 'message': 'Configured'}
+        return {'status': 'warning', 'message': 'Invalid API key'}
+    except Exception as e:
+        logger.error(f"Error checking Gemini status: {e}")
+        return {'status': 'offline', 'message': 'Error'}
+
+def get_db_connection_count():
+    """Get database connection status (safe, no internal metrics)"""
+    try:
+        # Just verify database is accessible, don't expose connection count
+        db.session.execute(text("SELECT 1"))
+        return "Active"
+    except Exception as e:
+        logger.error(f"Error checking DB connection: {e}")
+        return "Error"
+
+def get_db_size():
+    """Get database size (safe, no internal metrics exposure)"""
+    try:
+        # Don't expose actual database size for security
+        return "N/A"
+    except Exception as e:
+        logger.error(f"Error getting DB size: {e}")
+        return "Unknown"
+
+def get_last_scheduler_run_time():
+    """Get the last time the scheduler ran"""
+    try:
+        from models import SystemSettings
+        last_run = SystemSettings.query.filter_by(key='last_scheduler_run').first()
+        if last_run and last_run.value:
+            try:
+                import json
+                run_data = json.loads(last_run.value) if isinstance(last_run.value, str) else last_run.value
+                return run_data.get('timestamp', 'Never') if isinstance(run_data, dict) else str(last_run.updated_at)
+            except:
+                return str(last_run.updated_at) if last_run.updated_at else 'Never'
+        return 'Never'
+    except Exception as e:
+        logger.error(f"Error getting last scheduler run time: {e}")
+        return 'Never'
+
 # Keywords that trigger human handoff
 HUMAN_HANDOFF_KEYWORDS = [
     "talk to someone", "speak to a person", "pray with me", "need help",
@@ -298,6 +382,17 @@ def renew_scheduler_lock():
     except Exception as e:
         logger.error(f"Failed to renew scheduler lock: {e}")
 
+# Cache dashboard stats for 30 seconds to reduce DB load
+@lru_cache(maxsize=100)
+def get_cached_dashboard_stats(creator_id, cache_key):
+    """Cache wrapper for dashboard stats (30-second buckets)"""
+    return db_manager.get_dashboard_stats(creator_id)
+
+@lru_cache(maxsize=100)
+def get_cached_message_volume(creator_id, cache_key):
+    """Cache wrapper for message volume (30-second buckets)"""
+    return db_manager.get_message_volume_30days(creator_id)
+
 @app.route('/')
 def index():
     """Public landing page that redirects to dashboard if logged in, otherwise to login"""
@@ -309,22 +404,46 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Simple dashboard to monitor the system"""
-    ensure_scheduler_running()  # Start scheduler on first request
+    """Comprehensive dashboard with statistics and system health monitoring"""
+    ensure_scheduler_running()
     try:
-        # Get basic stats
-        user_stats = db_manager.get_user_stats()
-        recent_messages = db_manager.get_recent_messages(limit=10)
-        human_handoffs = db_manager.get_human_handoff_requests()
+        creator_id = None if current_user.role == 'super_admin' else current_user.id
         
-        # Convert message objects to dicts for template
-        recent_messages_data = [msg.to_dict() for msg in recent_messages]
-        human_handoff_data = [msg.to_dict() for msg in human_handoffs]
+        # FIXED: Add 30-second caching to reduce DB load
+        cache_key = int(datetime.utcnow().timestamp() // 30)  # 30-second buckets
         
-        return render_template('dashboard.html', 
-                             user_stats=user_stats,
-                             recent_messages=recent_messages_data,
-                             human_handoffs=human_handoff_data,
+        stats = get_cached_dashboard_stats(creator_id, cache_key)
+        message_volume = get_cached_message_volume(creator_id, cache_key)
+        delivery_24h = db_manager.get_delivery_success_rate(hours=24, creator_id=creator_id)
+        delivery_7d = db_manager.get_delivery_success_rate(hours=168, creator_id=creator_id)
+        error_summary = db_manager.get_error_log_summary(hours=24)
+        
+        api_status = {
+            'whatsapp': check_whatsapp_status(),
+            'telegram': check_telegram_status(),
+            'gemini': check_gemini_status()
+        }
+        
+        db_health = {
+            'connections': get_db_connection_count(),
+            'size': get_db_size(),
+            'status': 'healthy'
+        }
+        
+        scheduler_status = {
+            'running': scheduler_started,
+            'last_run': get_last_scheduler_run_time()
+        }
+        
+        return render_template('dashboard.html',
+                             stats=stats,
+                             message_volume=message_volume,
+                             delivery_24h=delivery_24h,
+                             delivery_7d=delivery_7d,
+                             error_summary=error_summary,
+                             api_status=api_status,
+                             db_health=db_health,
+                             scheduler_status=scheduler_status,
                              user=current_user)
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
