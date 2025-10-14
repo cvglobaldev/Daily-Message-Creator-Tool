@@ -170,8 +170,14 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     {{ form.whatsapp_webhook_url.label(class="form-label") }}
-                                    {{ form.whatsapp_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/whatsapp") }}
-                                    <div class="form-text">URL where WhatsApp will send webhook notifications</div>
+                                    <div class="input-group">
+                                        {{ form.whatsapp_webhook_url(class="form-control", placeholder="https://yourapp.replit.app/whatsapp", readonly=True) }}
+                                        <button type="button" class="btn btn-outline-primary" onclick="setupWebhook('whatsapp')" id="whatsapp-webhook-btn">
+                                            <i class="fas fa-sync-alt me-1"></i>Setup
+                                        </button>
+                                    </div>
+                                    <div class="form-text"><i class="fas fa-magic me-1 cv-text-primary"></i>Automatically managed - updates when credentials change</div>
+                                    <div id="whatsapp-webhook-status" class="mt-2"></div>
                                 </div>
                                 <div class="col-md-6">
                                     {{ form.whatsapp_verify_token.label(class="form-label") }}
@@ -183,8 +189,6 @@
                                     {% endif %}
                                     <div class="form-text">Token for webhook verification with Meta</div>
                                 </div>
-                            </div>
-                                <div class="form-text">URL where WhatsApp will send webhook notifications</div>
                             </div>
                         </div>
 
@@ -202,8 +206,14 @@
                                 </div>
                                 <div class="col-md-6">
                                     {{ form.telegram_webhook_url.label(class="form-label") }}
-                                    {{ form.telegram_webhook_url(class="form-control", readonly=true) }}
-                                    <div class="form-text"><i class="fas fa-magic me-1 text-success"></i>Automatically managed - updates when token changes</div>
+                                    <div class="input-group">
+                                        {{ form.telegram_webhook_url(class="form-control", readonly=True) }}
+                                        <button type="button" class="btn btn-outline-primary" onclick="setupWebhook('telegram')" id="telegram-webhook-btn">
+                                            <i class="fas fa-sync-alt me-1"></i>Setup
+                                        </button>
+                                    </div>
+                                    <div class="form-text"><i class="fas fa-magic me-1 cv-text-primary"></i>Automatically managed - updates when token changes</div>
+                                    <div id="telegram-webhook-status" class="mt-2"></div>
                                 </div>
                             </div>
                         </div>
@@ -401,6 +411,70 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function setupWebhook(platform) {
+    const botId = {{ bot.id }};
+    const btn = document.getElementById(`${platform}-webhook-btn`);
+    const statusDiv = document.getElementById(`${platform}-webhook-status`);
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Setting up...';
+    statusDiv.innerHTML = '';
+    
+    fetch(`/bots/${botId}/setup-webhook`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok && response.status !== 400 && response.status !== 500) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Setup';
+        
+        // Find result for this specific platform
+        const result = data.results ? data.results.find(r => r.platform.toLowerCase() === platform) : null;
+        
+        if (result) {
+            // Platform was attempted - show specific result
+            if (result.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success mt-2"><i class="fas fa-check-circle me-2"></i>Webhook configured: ${result.url}</div>`;
+                
+                // If overall success (not partial), reload page
+                if (data.success && !data.partial) {
+                    setTimeout(() => window.location.reload(), 2000);
+                } else if (data.partial) {
+                    // Show partial success warning
+                    statusDiv.innerHTML += `<div class="alert alert-warning mt-2"><i class="fas fa-exclamation-triangle me-2"></i>${data.message}</div>`;
+                }
+            } else {
+                // This platform failed
+                statusDiv.innerHTML = `<div class="alert alert-danger mt-2"><i class="fas fa-exclamation-circle me-2"></i>Setup failed: ${result.error}</div>`;
+            }
+        } else {
+            // Platform wasn't attempted (not configured)
+            if (data.success) {
+                // Other platforms succeeded but not this one
+                statusDiv.innerHTML = `<div class="alert alert-warning mt-2"><i class="fas fa-info-circle me-2"></i>${platform.charAt(0).toUpperCase() + platform.slice(1)} is not configured for this bot</div>`;
+            } else {
+                // Overall failure with general error
+                statusDiv.innerHTML = `<div class="alert alert-danger mt-2"><i class="fas fa-exclamation-circle me-2"></i>${data.error || 'Unknown error'}</div>`;
+            }
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Setup';
+        statusDiv.innerHTML = `<div class="alert alert-danger mt-2"><i class="fas fa-exclamation-circle me-2"></i>Network error: ${error.message}</div>`;
+    });
+}
 </script>
 
 </div>

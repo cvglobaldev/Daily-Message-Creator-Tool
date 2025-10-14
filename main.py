@@ -4300,6 +4300,100 @@ def edit_bot(bot_id):
     
     return render_template('edit_bot.html', form=form, bot=bot)
 
+@app.route('/bots/<int:bot_id>/setup-webhook', methods=['POST'])
+@login_required
+def setup_bot_webhook(bot_id):
+    """Manually trigger webhook setup for a bot (admin only)"""
+    try:
+        bot = Bot.query.get_or_404(bot_id)
+        
+        # Check authorization
+        if current_user.role != 'super_admin' and bot.creator_id != current_user.id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        webhook_results = []
+        attempted = False
+        success_count = 0
+        
+        # Setup Telegram webhook if enabled
+        if 'telegram' in (bot.platforms or []) and bot.telegram_bot_token:
+            attempted = True
+            try:
+                webhook_url, error = setup_telegram_webhook(bot.id, bot.telegram_bot_token)
+                if webhook_url:
+                    bot.telegram_webhook_url = webhook_url
+                    webhook_results.append({'platform': 'Telegram', 'success': True, 'url': webhook_url})
+                    success_count += 1
+                else:
+                    webhook_results.append({'platform': 'Telegram', 'success': False, 'error': error or 'Unknown error'})
+            except Exception as e:
+                logger.error(f"Exception setting up Telegram webhook: {e}")
+                webhook_results.append({'platform': 'Telegram', 'success': False, 'error': f'Exception: {str(e)}'})
+        
+        # Setup WhatsApp webhook if enabled
+        if 'whatsapp' in (bot.platforms or []) and bot.whatsapp_access_token and bot.whatsapp_phone_number_id:
+            attempted = True
+            try:
+                webhook_url, error = setup_whatsapp_webhook(bot.id, bot.whatsapp_access_token, bot.whatsapp_phone_number_id)
+                if webhook_url:
+                    bot.whatsapp_webhook_url = webhook_url
+                    webhook_results.append({'platform': 'WhatsApp', 'success': True, 'url': webhook_url})
+                    success_count += 1
+                else:
+                    webhook_results.append({'platform': 'WhatsApp', 'success': False, 'error': error or 'Unknown error'})
+            except Exception as e:
+                logger.error(f"Exception setting up WhatsApp webhook: {e}")
+                webhook_results.append({'platform': 'WhatsApp', 'success': False, 'error': f'Exception: {str(e)}'})
+        
+        # Check if any webhooks were attempted
+        if not attempted:
+            return jsonify({
+                'success': False,
+                'error': 'No platforms configured for webhook setup. Please enable a platform and add credentials first.',
+                'results': []
+            }), 400
+        
+        # Check if all attempts failed
+        if success_count == 0:
+            # Clear any partial webhook URLs on complete failure
+            bot.telegram_webhook_url = None
+            bot.whatsapp_webhook_url = None
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'error': 'All webhook setup attempts failed. See details below.',
+                'results': webhook_results
+            }), 500
+        
+        # Partial or complete success - commit changes
+        db.session.commit()
+        
+        # Determine overall status
+        total_attempted = len(webhook_results)
+        if success_count == total_attempted:
+            # Complete success
+            return jsonify({
+                'success': True,
+                'message': f'All {success_count} webhook(s) configured successfully',
+                'results': webhook_results
+            })
+        else:
+            # Partial success
+            return jsonify({
+                'success': True,
+                'partial': True,
+                'message': f'{success_count} of {total_attempted} webhook(s) configured successfully',
+                'results': webhook_results
+            })
+            
+    except Exception as e:
+        logger.error(f"Exception in setup_bot_webhook: {e}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
 @app.route('/api/bots/<int:bot_id>/status', methods=['POST'])
 @login_required
 def toggle_bot_status(bot_id):
