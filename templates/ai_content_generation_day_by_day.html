@@ -102,6 +102,33 @@
             color: white;
             box-shadow: 0 0 0 0.2rem rgba(0, 255, 136, 0.25);
         }
+        
+        .btn-generate.loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        .btn-generate .spinner {
+            display: none;
+            margin-right: 8px;
+        }
+        
+        .btn-generate.loading .spinner {
+            display: inline-block;
+        }
+        
+        .btn-generate.loading .generate-icon {
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="dark-theme">
@@ -170,8 +197,10 @@
                             <form method="POST" id="generateForm">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="action" value="generate">
-                                <button type="submit" class="btn btn-generate btn-lg">
-                                    <i class="fas fa-brain me-2"></i>Generate Day {{ current_day }} Content
+                                <button type="submit" class="btn btn-generate btn-lg" id="generateBtn">
+                                    <i class="fas fa-spinner spinner"></i>
+                                    <i class="fas fa-brain me-2 generate-icon"></i>
+                                    <span id="generateBtnText">Generate Day {{ current_day }} Content</span>
                                 </button>
                             </form>
                             <p class="text-muted mt-3">This will generate title, content, reflection question, and tags</p>
@@ -310,6 +339,23 @@
                 this.style.height = this.scrollHeight + 'px';
             });
         });
+
+        // Handle generate button loading state
+        const generateForm = document.getElementById('generateForm');
+        if (generateForm) {
+            generateForm.addEventListener('submit', function(e) {
+                const generateBtn = document.getElementById('generateBtn');
+                const generateBtnText = document.getElementById('generateBtnText');
+                
+                if (generateBtn) {
+                    generateBtn.classList.add('loading');
+                    generateBtn.disabled = true;
+                    if (generateBtnText) {
+                        generateBtnText.textContent = 'Generating AI Content...';
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
