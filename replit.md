@@ -25,6 +25,7 @@ A consistent "CV Global" design theme is applied across all management interface
 - **Multi-Language Support**: Supports 40+ languages including Hausa, with culturally appropriate AI prompts and templates for diverse audiences.
 - **Manual Webhook Setup**: Admin interface includes manual webhook configuration for recovering from failed automatic setups.
 - **Double-Submit Prevention**: Form submission protection prevents duplicate bot creation during long-running operations.
+- **AI Tag Validation System**: AI content generation enforces strict tag alignment with the tag management system. The AI fetches active tags from the TagRule database on initialization, validates all AI-generated tags against this list, and filters out any unauthorized tags. Fallback content uses only managed tags, and if no tags exist in the database, content is created with empty tags rather than hardcoded defaults. All tag validations are logged for monitoring and debugging.
 
 ### System Design Choices
 - **Multi-Bot System**: Enables creation and management of independent bots.
