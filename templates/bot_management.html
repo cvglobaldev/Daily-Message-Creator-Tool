@@ -12,6 +12,7 @@
     <link rel="shortcut icon" href="/static/favicon.ico">
     <meta name="theme-color" content="#00ff88">
     <meta name="msapplication-TileColor" content="#000000">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/static/cvglobal-theme.css">
@@ -111,6 +112,13 @@
                                     </button>
                                 {% endif %}
                             </div>
+                            {% if current_user.role == 'super_admin' %}
+                            <div class="mt-2">
+                                <button class="btn btn-danger btn-sm w-100" onclick="showDeleteModal({{ bot.id }}, '{{ bot.name }}')">
+                                    <i class="fas fa-trash me-1"></i>Delete Bot
+                                </button>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -157,6 +165,114 @@ function toggleBotStatus(botId, newStatus) {
             alert('Error updating bot status: ' + error);
         });
     }
+}
+</script>
+
+<!-- Delete Bot Warning Modal -->
+<div class="modal fade" id="deleteBotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Bot Warning
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone!
+                </div>
+                
+                <p>You are about to delete bot: <strong id="deleteBotName"></strong></p>
+                
+                <h6 class="mt-4 mb-3">Choose deletion method:</h6>
+                
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="deletionType" id="softDelete" value="soft" checked>
+                            <label class="form-check-label" for="softDelete">
+                                <strong>Soft Delete (Recommended)</strong>
+                                <p class="text-muted mb-0 mt-1">
+                                    • Deletes the bot and all content<br>
+                                    • <strong>Preserves</strong> chat history and user statistics<br>
+                                    • Users will be orphaned but data remains for analytics
+                                </p>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card border-danger">
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="deletionType" id="hardDelete" value="hard">
+                            <label class="form-check-label" for="hardDelete">
+                                <strong>Hard Delete (Permanent)</strong>
+                                <p class="text-muted mb-0 mt-1">
+                                    • Deletes the bot and all content<br>
+                                    • <strong>Permanently removes</strong> all chat history<br>
+                                    • <strong>Permanently removes</strong> all user data and statistics<br>
+                                    • <span class="text-danger">This is irreversible!</span>
+                                </p>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteBot()">
+                    <i class="fas fa-trash me-1"></i>Delete Bot
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentBotId = null;
+
+function showDeleteModal(botId, botName) {
+    currentBotId = botId;
+    document.getElementById('deleteBotName').textContent = botName;
+    const modal = new bootstrap.Modal(document.getElementById('deleteBotModal'));
+    modal.show();
+}
+
+function confirmDeleteBot() {
+    if (!currentBotId) return;
+    
+    const deletionType = document.querySelector('input[name="deletionType"]:checked').value;
+    
+    fetch(`/bots/${currentBotId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            deletion_type: deletionType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('deleteBotModal')).hide();
+            // Reload page to show updated bot list
+            window.location.reload();
+        } else {
+            alert('Error deleting bot: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting bot: ' + error);
+    });
 }
 </script>
 

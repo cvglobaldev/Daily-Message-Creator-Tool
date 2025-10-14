@@ -165,7 +165,7 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    bot_id: Mapped[int] = mapped_column(Integer, ForeignKey('bots.id'), nullable=False, index=True)
+    bot_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('bots.id'), nullable=True, index=True)
     phone_number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -194,7 +194,7 @@ class User(db.Model):
     tags: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=list)
     
     # Relationships
-    bot: Mapped["Bot"] = relationship("Bot", back_populates="users")
+    bot: Mapped[Optional["Bot"]] = relationship("Bot", back_populates="users")
     messages: Mapped[List["MessageLog"]] = relationship("MessageLog", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):

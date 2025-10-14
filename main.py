@@ -4374,18 +4374,45 @@ def bot_chat_management(bot_id):
 @app.route('/bots/<int:bot_id>/delete', methods=['POST'])
 @login_required
 def delete_bot(bot_id):
-    """Delete a bot and all associated data"""
+    """Delete a bot with two deletion options (super admin only)"""
+    # Super admin only
+    if current_user.role != 'super_admin':
+        return jsonify({'success': False, 'error': 'Unauthorized. Only super admins can delete bots.'}), 403
+    
     try:
         bot = Bot.query.get_or_404(bot_id)
         bot_name = bot.name
         
-        # Delete the bot (cascade will handle users and content)
-        db.session.delete(bot)
-        db.session.commit()
+        # Get deletion type from request
+        deletion_type = request.json.get('deletion_type', 'soft')  # 'soft' or 'hard'
         
-        flash(f'Bot "{bot_name}" and all associated data deleted successfully.', 'success')
-        return jsonify({'success': True})
+        if deletion_type == 'soft':
+            # Option 1: Delete bot and content, but keep users and chat history
+            # Set bot_id to NULL for all users to orphan them (preserves chat history)
+            User.query.filter_by(bot_id=bot_id).update({'bot_id': None})
+            
+            # Delete all content associated with the bot
+            Content.query.filter_by(bot_id=bot_id).delete()
+            
+            # Delete the bot itself
+            db.session.delete(bot)
+            db.session.commit()
+            
+            flash(f'Bot "{bot_name}" deleted. Content removed, but chat history and user data preserved.', 'success')
+            return jsonify({'success': True, 'message': 'Bot deleted (chat history preserved)'})
+            
+        elif deletion_type == 'hard':
+            # Option 2: Delete everything (bot, content, users, message logs)
+            # Cascade will handle deleting users and their message logs
+            db.session.delete(bot)
+            db.session.commit()
+            
+            flash(f'Bot "{bot_name}" and ALL associated data (including chat history) deleted permanently.', 'warning')
+            return jsonify({'success': True, 'message': 'Bot and all data deleted permanently'})
         
+        else:
+            return jsonify({'success': False, 'error': 'Invalid deletion type'}), 400
+            
     except Exception as e:
         logger.error(f"Error deleting bot: {e}")
         db.session.rollback()
