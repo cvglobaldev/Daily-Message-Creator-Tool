@@ -29,6 +29,37 @@ class ContentGenerationRequest(BaseModel):
 class AIContentGenerator:
     def __init__(self):
         self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        self.available_tags = self._get_available_tags()
+    
+    def _get_available_tags(self) -> List[str]:
+        """Fetch available tags from tag management system"""
+        try:
+            from models import TagRule
+            tags = TagRule.query.filter_by(is_active=True).all()
+            tag_names = [tag.tag_name for tag in tags]
+            if tag_names:
+                logger.info(f"Loaded {len(tag_names)} available tags from tag management: {tag_names}")
+                return tag_names
+            else:
+                logger.warning("No active tags found in tag management system. Content will have empty tags.")
+                return []
+        except Exception as e:
+            logger.error(f"Failed to load tags from database: {e}. Content will have empty tags.")
+            return []
+    
+    def _validate_tags(self, tags: List[str]) -> List[str]:
+        """Validate and filter tags to only include those from tag management system"""
+        if not self.available_tags:
+            logger.warning("No available tags to validate against. Returning empty tag list.")
+            return []
+        
+        validated_tags = [tag for tag in tags if tag in self.available_tags]
+        
+        if len(validated_tags) < len(tags):
+            invalid_tags = [tag for tag in tags if tag not in self.available_tags]
+            logger.warning(f"Removed invalid tags not in tag management: {invalid_tags}. Valid tags: {validated_tags}")
+        
+        return validated_tags
         
     def generate_journey_content(self, request: ContentGenerationRequest) -> List[DailyContent]:
         """Generate complete journey content based on user specifications"""
@@ -108,6 +139,10 @@ class AIContentGenerator:
         else:
             stage = "integration"
         
+        # Select appropriate tags from available tags based on content
+        # Use first 2-3 tags from available tags (already validated from tag management)
+        fallback_tags = self.available_tags[:3] if len(self.available_tags) >= 3 else self.available_tags
+        
         # Customize content based on audience and stage
         if "atheist" in request.target_audience.lower():
             if language == "indonesian":
@@ -118,7 +153,7 @@ class AIContentGenerator:
                 title = f"Day {day}: Philosophical Reflection"
                 content = f"Day {day} - Let's explore profound questions about meaning and purpose in life. Without relying on supernatural beliefs, we can discover deep values in human relationships, ethics, and the search for truth. Today, let's reflect on how we can live with integrity and compassion toward others."
                 question = f"What values are most important to you in living a meaningful life?"
-            tags = ["philosophy", "ethics", "humanism", "meaning"]
+            tags = fallback_tags  # Already validated - from tag management only
         else:
             # Default spiritual content for other audiences
             if language == "indonesian":
@@ -129,7 +164,7 @@ class AIContentGenerator:
                 title = f"Day {day}: Spiritual Journey"
                 content = f"Day {day} of your spiritual journey. Let's explore themes of love, hope, and personal growth that can enrich our lives."
                 question = f"How can you apply today's learning in your daily life?"
-            tags = ["spiritual", "growth", "journey"]
+            tags = fallback_tags  # Already validated - from tag management only
         
         return title, content, question, tags
     
@@ -210,12 +245,16 @@ class AIContentGenerator:
             daily_contents = []
             
             for item in content_data.get("daily_content", []):
+                # Get tags from AI response and validate them
+                ai_tags = item.get("tags", [])
+                validated_tags = self._validate_tags(ai_tags)
+                
                 daily_content = DailyContent(
                     day_number=item["day_number"],
                     title=item["title"],
                     content=item["content"],
                     reflection_question=item["reflection_question"],
-                    tags=item.get("tags", ["growth", "reflection"])
+                    tags=validated_tags
                 )
                 daily_contents.append(daily_content)
             
@@ -256,6 +295,9 @@ class AIContentGenerator:
         avoid = ", ".join(config["avoid"])
         focus = config["focus"]
         
+        # Format available tags for the prompt
+        available_tags_str = '", "'.join(self.available_tags)
+        
         days_text = f"{request.journey_duration} days" if request.journey_duration > 1 else "1 day"
         if start_day > 1:
             journey_context = f"This is part of a longer journey. You are creating days {start_day} to {start_day + request.journey_duration - 1}."
@@ -284,6 +326,9 @@ Create {days_text} of personal development content with the following specificat
 **Custom Requirements:**
 {request.content_prompt}
 
+**Available Tags (IMPORTANT - You MUST ONLY use tags from this list):**
+["{available_tags_str}"]
+
 **Output Format:**
 Generate content as a JSON object with this exact structure:
 
@@ -294,7 +339,7 @@ Generate content as a JSON object with this exact structure:
       "title": "Clear, engaging title for the day",
       "content": "Main content (200-400 words). Be respectful, encouraging, and culturally appropriate. Focus on {focus}. Use {tone} tone.",
       "reflection_question": "Thoughtful question that encourages personal reflection and growth",
-      "tags": ["relevant", "themes", "from", "list"]
+      "tags": ["tag1", "tag2"]
     }},
     // ... continue for all {request.journey_duration} days
   ]
@@ -309,6 +354,7 @@ Generate content as a JSON object with this exact structure:
 6. **Respectful Language**: Use inclusive, accessible language appropriate for the demographic
 7. **Varied Content**: Mix philosophical insights, practical exercises, and personal reflection
 8. **Safe Space**: Create content that feels welcoming and non-threatening
+9. **TAGS RESTRICTION**: You MUST select tags ONLY from the provided "Available Tags" list above. Do not create new tags.
 
 Ensure the content progression makes logical sense and builds a coherent journey of personal growth."""
 
