@@ -6270,24 +6270,33 @@ def bot_ai_content_generation_day_by_day(bot_id):
                 # Check if content already exists for this day
                 existing = Content.query.filter_by(bot_id=bot_id, day_number=current_day).first()
                 if existing:
-                    db.session.delete(existing)
+                    # Update existing content instead of delete+insert
+                    existing.title = title
+                    existing.content = content_text
+                    existing.reflection_question = reflection_question
+                    existing.tags = tags
+                    # Preserve existing media fields - don't clear them
+                    # existing.media_type, image_filename, video_filename, etc. remain unchanged
+                    existing.is_active = True
+                    logger.info(f"Updated existing content for bot {bot_id}, day {current_day} (media preserved)")
+                else:
+                    # Create new content
+                    content = Content()
+                    content.bot_id = bot_id
+                    content.day_number = current_day
+                    content.title = title
+                    content.content = content_text
+                    content.reflection_question = reflection_question
+                    content.tags = tags
+                    content.media_type = 'text'
+                    content.image_filename = None
+                    content.video_filename = None
+                    content.youtube_url = None
+                    content.audio_filename = None
+                    content.is_active = True
+                    db.session.add(content)
+                    logger.info(f"Created new content for bot {bot_id}, day {current_day}")
                 
-                # Create new content
-                content = Content()
-                content.bot_id = bot_id
-                content.day_number = current_day
-                content.title = title
-                content.content = content_text
-                content.reflection_question = reflection_question
-                content.tags = tags
-                content.media_type = 'text'
-                content.image_filename = None
-                content.video_filename = None
-                content.youtube_url = None
-                content.audio_filename = None
-                content.is_active = True
-                
-                db.session.add(content)
                 db.session.commit()
                 
                 flash(f'✅ Day {current_day} content saved successfully!', 'success')
