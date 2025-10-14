@@ -22,6 +22,9 @@ A consistent "CV Global" design theme is applied across all management interface
 - **Voice Conversation Feature**: Includes end-to-end voice message handling with language-aware transcription and synthesis using Google Cloud Speech-to-Text and Text-to-Speech APIs.
 - **Dual-Layer Tagging System**: Combines AI semantic analysis with rule-based automation.
 - **Atomic Lock System**: Implements a database-backed atomic locking system for duplicate message prevention.
+- **Multi-Language Support**: Supports 40+ languages including Hausa, with culturally appropriate AI prompts and templates for diverse audiences.
+- **Manual Webhook Setup**: Admin interface includes manual webhook configuration for recovering from failed automatic setups.
+- **Double-Submit Prevention**: Form submission protection prevents duplicate bot creation during long-running operations.
 
 ### System Design Choices
 - **Multi-Bot System**: Enables creation and management of independent bots.
