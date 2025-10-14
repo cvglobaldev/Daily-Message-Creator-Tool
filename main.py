@@ -4037,6 +4037,65 @@ Thank you for taking this journey with us. We hope it has been meaningful and en
 • Type 'START' or '/start' to restart the journey
 
 Feel free to share your thoughts, ask questions, or explore further. I'm here to help! 💬"""
+            
+            elif hasattr(form, 'bot_template') and form.bot_template.data == 'hausa_general':
+                bot.ai_prompt = """Kai jagoran ruhaniya ne mai tausayi wanda ke taimaka wa mutane su bincike tafiyar imansu kuma su koyi game da Yesu Almasihu. Hanyar ka yakamata ta kasance:
+
+SALON SADARWA:
+- Mai dumi, abokantaka, kuma marar hukunci
+- Yi amfani da yare na yau da kullun, yaren yau da kullun
+- Kasance mai haquri kuma mai fahimtar abubuwa daban-daban
+- Qara tambayoyi da bincike na gaskiya
+
+TSARIN ADDINI:
+- Mai da hankali ga qaunar Allah da alheri ta Yesu Almasihu
+- Gabatar da gaskiyar Littafi Mai Tsarki da tausayi da mutuntawa
+- Gina gada tsakanin bambancin al'adu da addini da hikima
+- Guje wa wa'azi mai qarfafawa ko matsawa
+- Jaddada dangantaka ta sirri da Yesu
+
+JAGORORIN TATTAUNAWA:
+- Saurari tambayoyin masu amfani da tunani da kyau
+- Bayar da amsoshi masu tunani, tushen Littafi Mai Tsarki
+- Yi tambayoyin ci gaba don karfafa tunani mai zurfi
+- Raba ayoyin Littafi Mai Tsarki masu dacewa lokacin da ya dace
+- Mutunta saurin tafiyar ruhaniya na mai amfani
+
+Ka tuna: Kai jagora ne da abokin tafiya, ba mai wa'azi ba. Hadu da mutane inda suke kuma taimaka musu su dauki mataki na gaba zuwa ga Yesu."""
+
+                bot.help_message = """🤝 Umarni da ake samu:
+
+📖 START - Fara ko sake farawa tafiyar imani
+⏹️ STOP - Tsayar da tafiya
+❓ HELP - Nuna wannan sakon taimako
+👤 HUMAN - Haɗu da mai ba da shawara na ɗan adam
+
+Ina nan don in jagorance ku a cikin tafiya mai ma'ana ta ruhaniya. Ji dadin yin tambayoyi ko bayyana tunanin ku koyaushe!"""
+
+                bot.stop_message = """⏸️ An dakatar da tafiyar imanku.
+
+Ɗauki lokacin ku lokacin da kuke shirye ku ci gaba. Aika START don ci gaba da tafiyar ku, ko HUMAN idan kuna son magana da wani.
+
+Ka tuna, wannan filin ku ne na sirri don binciken ruhaniya. Babu matsi - ku tafi a saurinku. 🙏"""
+
+                bot.human_message = """👤 An Nemi Tallafi na Ɗan Adam
+
+Na alamta tattaunawar ku don masu ba da shawarar mu na ɗan adam waɗanda za su amsa da sannu a hankali. An horar da su a jagoran ruhaniya kuma suna nan don tallafa muku.
+
+A halin yanzu, ji dadin ci gaba da raba tunanin ku ko tambayoyi. Ana kula da duk abin da kuka raba da kulawa da sirri. 💝"""
+
+                bot.completion_message = """🎉 Kun kammala abubuwan tafiya da ake samu!
+
+Na gode da karbar wannan tafiya tare da mu. Muna fatan ya kasance mai ma'ana da wadata a gare ku.
+
+📱 Me kuke so ku yi gaba?
+
+• Ci gaba da bincike tare da tattaunawar da AI ke jagoranta
+• Rubuta 'HUMAN' ko '/human' don haɗu da mai ba da shawara
+• Rubuta 'START' ko '/start' don sake farawa tafiya
+
+Ji dadin raba tunanin ku, yi tambayoyi, ko ƙara bincike. Ina nan don taimako! 💬"""
+            
             else:
                 # Use custom form values
                 bot.ai_prompt = form.ai_prompt.data or ""

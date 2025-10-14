@@ -91,6 +91,7 @@ Your goal is to create respectful, meaningful conversations that invite people t
                               ('German', 'German'),
                               ('Greek', 'Greek'),
                               ('Gujarati', 'Gujarati'),
+                              ('Hausa', 'Hausa'),
                               ('Hebrew', 'Hebrew'),
                               ('Hindi', 'Hindi'),
                               ('Hungarian', 'Hungarian'),
@@ -163,6 +164,7 @@ Your goal is to create respectful, meaningful conversations that invite people t
         choices=[
             ('english_general', 'English - General Christian Outreach'),
             ('indonesian_muslim', 'Indonesian - Muslim Background (Bang Kris Style)'),
+            ('hausa_general', 'Hausa - General Christian Outreach'),
             ('custom', 'Custom - Define your own prompts')
         ],
         default='custom',
@@ -191,6 +193,7 @@ Your goal is to create respectful, meaningful conversations that invite people t
                                        ('German', 'German'),
                                        ('Greek', 'Greek'),
                                        ('Gujarati', 'Gujarati'),
+                                       ('Hausa', 'Hausa'),
                                        ('Hebrew', 'Hebrew'),
                                        ('Hindi', 'Hindi'),
                                        ('Hungarian', 'Hungarian'),
@@ -267,6 +270,7 @@ class EditBotForm(FlaskForm):
         choices=[
             ('english_general', 'English - General Christian Outreach'),
             ('indonesian_muslim', 'Indonesian - Muslim Background (Bang Kris Style)'),
+            ('hausa_general', 'Hausa - General Christian Outreach'),
             ('custom', 'Custom - Define your own prompts')
         ],
         default='custom',
@@ -308,6 +312,7 @@ class EditBotForm(FlaskForm):
                               ('German', 'German'),
                               ('Greek', 'Greek'),
                               ('Gujarati', 'Gujarati'),
+                              ('Hausa', 'Hausa'),
                               ('Hebrew', 'Hebrew'),
                               ('Hindi', 'Hindi'),
                               ('Hungarian', 'Hungarian'),
