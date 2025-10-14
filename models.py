@@ -130,7 +130,7 @@ class Bot(db.Model):
     
     # Relationships
     creator: Mapped[Optional["AdminUser"]] = relationship("AdminUser", back_populates="bots")
-    users: Mapped[List["User"]] = relationship("User", back_populates="bot", cascade="all, delete-orphan")
+    users: Mapped[List["User"]] = relationship("User", back_populates="bot", cascade="all, delete-orphan", passive_deletes=True)
     content: Mapped[List["Content"]] = relationship("Content", back_populates="bot", cascade="all, delete-orphan")
     
     def __repr__(self):

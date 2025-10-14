@@ -4387,27 +4387,71 @@ def delete_bot(bot_id):
         deletion_type = request.json.get('deletion_type', 'soft')  # 'soft' or 'hard'
         
         if deletion_type == 'soft':
-            # Option 1: Delete bot and content, but keep users and chat history
-            # Set bot_id to NULL for all users to orphan them (preserves chat history)
-            User.query.filter_by(bot_id=bot_id).update({'bot_id': None})
+            # Option 1: Delete bot and content, preserve users and chat history
+            # Use raw SQL to bypass ORM cascade relationships
             
-            # Delete all content associated with the bot
+            # Count users BEFORE loading relationship (prevents ORM cascade trigger)
+            user_count = db.session.execute(
+                text("SELECT COUNT(*) FROM users WHERE bot_id = :bot_id"),
+                {'bot_id': bot_id}
+            ).scalar()
+            
+            # Orphan users using raw SQL (preserves users and their message logs)
+            # This bypasses the ORM cascade="all, delete-orphan" configuration
+            db.session.execute(
+                text("UPDATE users SET bot_id = NULL WHERE bot_id = :bot_id"),
+                {'bot_id': bot_id}
+            )
+            
+            # Delete all content
             Content.query.filter_by(bot_id=bot_id).delete()
             
-            # Delete the bot itself
+            # Expire bot instance to remove loaded relationships from session
+            db.session.expire(bot)
+            
+            # Delete the bot (no cascade because relationships are expired)
             db.session.delete(bot)
             db.session.commit()
             
-            flash(f'Bot "{bot_name}" deleted. Content removed, but chat history and user data preserved.', 'success')
+            flash(f'Bot "{bot_name}" deleted. Content removed, but {user_count} user records and chat history preserved for analytics.', 'success')
             return jsonify({'success': True, 'message': 'Bot deleted (chat history preserved)'})
             
         elif deletion_type == 'hard':
-            # Option 2: Delete everything (bot, content, users, message logs)
-            # Cascade will handle deleting users and their message logs
+            # Option 2: Delete everything via ORM cascade
+            # Count users before deletion (raw SQL to avoid loading into session)
+            user_count = db.session.execute(
+                text("SELECT COUNT(*) FROM users WHERE bot_id = :bot_id"),
+                {'bot_id': bot_id}
+            ).scalar()
+            
+            # For hard delete, we CAN'T use passive_deletes because we WANT the cascade
+            # Solution: Temporarily set bot.users relationship to use cascade, or just iterate
+            
+            # Option A: Delete bot and let cascade handle everything
+            # But passive_deletes=True might prevent this...
+            # So we need to explicitly delete MessageLogs and Users
+            
+            # Delete MessageLogs first (to avoid FK constraint violation)
+            from models import MessageLog
+            user_ids = db.session.execute(
+                text("SELECT id FROM users WHERE bot_id = :bot_id"),
+                {'bot_id': bot_id}
+            ).scalars().all()
+            
+            if user_ids:
+                MessageLog.query.filter(MessageLog.user_id.in_(user_ids)).delete(synchronize_session=False)
+            
+            # Delete users
+            User.query.filter_by(bot_id=bot_id).delete(synchronize_session=False)
+            
+            # Delete content
+            Content.query.filter_by(bot_id=bot_id).delete(synchronize_session=False)
+            
+            # Delete bot
             db.session.delete(bot)
             db.session.commit()
             
-            flash(f'Bot "{bot_name}" and ALL associated data (including chat history) deleted permanently.', 'warning')
+            flash(f'Bot "{bot_name}" and ALL data ({user_count} users and chat history) deleted permanently.', 'warning')
             return jsonify({'success': True, 'message': 'Bot and all data deleted permanently'})
         
         else:
