@@ -594,6 +594,29 @@ Feel free to share your thoughts, ask questions, or explore further. I'm here to
     if (enableAiContent && enableAiContent.checked) {
         aiContentConfig.style.display = 'block';
     }
+
+    // Double-submit prevention
+    const createBotForm = document.querySelector('form');
+    const submitButton = document.querySelector('button[type="submit"], input[type="submit"]');
+    
+    if (createBotForm && submitButton) {
+        createBotForm.addEventListener('submit', function(e) {
+            // Disable the submit button to prevent double-clicking
+            submitButton.disabled = true;
+            
+            // Change button text to show loading state
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Bot...';
+            
+            // Re-enable after 3 seconds in case of validation errors
+            setTimeout(function() {
+                if (!createBotForm.checkValidity()) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            }, 3000);
+        });
+    }
 });
 </script>
 
