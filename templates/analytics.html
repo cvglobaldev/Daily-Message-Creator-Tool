@@ -98,9 +98,78 @@
             background: var(--cv-green) !important;
             color: var(--cv-dark) !important;
         }
+        
+        /* Loading Skeleton Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(18, 18, 18, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            color: var(--cv-green);
+        }
+        
+        .loading-spinner i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, var(--cv-gray-700) 25%, var(--cv-gray-600) 50%, var(--cv-gray-700) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: var(--cv-radius-md);
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .skeleton-text {
+            height: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .skeleton-number {
+            height: 3rem;
+            width: 60%;
+            margin: 0 auto 0.5rem;
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-chart-line fa-spin"></i>
+            <h4>Loading Analytics...</h4>
+            <p>Optimizing queries for faster performance</p>
+        </div>
+    </div>
+
     {% include '_navigation.html' %}
 
     <!-- Main Content -->
@@ -515,6 +584,20 @@
             }
         });
         {% endif %}
+        
+        // Hide loading overlay when page is fully loaded
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 300); // Small delay for smooth transition
+        });
+        
+        // Also hide if DOM is already loaded
+        if (document.readyState === 'complete') {
+            setTimeout(function() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 300);
+        }
     </script>
 </body>
 </html>

@@ -501,34 +501,58 @@ def analytics_dashboard():
             cutoff_date = datetime.utcnow() - timedelta(days=days_filter)
             query = query.filter(User.join_date >= cutoff_date)
         
+        # OPTIMIZED: Single query for journey funnel using CASE statements
+        from sqlalchemy import case
+        funnel_result = db.session.query(
+            func.sum(case((User.current_day.between(1, 10), 1), else_=0)).label('day_1_10'),
+            func.sum(case((User.current_day.between(11, 20), 1), else_=0)).label('day_11_20'),
+            func.sum(case((User.current_day.between(21, 30), 1), else_=0)).label('day_21_30'),
+            func.sum(case((User.current_day.between(31, 40), 1), else_=0)).label('day_31_40'),
+            func.sum(case((User.current_day.between(41, 50), 1), else_=0)).label('day_41_50'),
+            func.sum(case((User.current_day.between(51, 60), 1), else_=0)).label('day_51_60'),
+            func.sum(case((User.current_day.between(61, 70), 1), else_=0)).label('day_61_70'),
+            func.sum(case((User.current_day.between(71, 80), 1), else_=0)).label('day_71_80'),
+            func.sum(case((User.current_day.between(81, 90), 1), else_=0)).label('day_81_90'),
+            func.sum(case((User.status == 'completed', 1), else_=0)).label('completed'),
+            func.count(User.id).label('total'),
+            func.avg(case((User.status == 'active', User.current_day), else_=None)).label('avg_days')
+        ).filter(query.whereclause).first()
+        
         journey_funnel = {
-            'Day 1-10': query.filter(User.current_day.between(1, 10)).count(),
-            'Day 11-20': query.filter(User.current_day.between(11, 20)).count(),
-            'Day 21-30': query.filter(User.current_day.between(21, 30)).count(),
-            'Day 31-40': query.filter(User.current_day.between(31, 40)).count(),
-            'Day 41-50': query.filter(User.current_day.between(41, 50)).count(),
-            'Day 51-60': query.filter(User.current_day.between(51, 60)).count(),
-            'Day 61-70': query.filter(User.current_day.between(61, 70)).count(),
-            'Day 71-80': query.filter(User.current_day.between(71, 80)).count(),
-            'Day 81-90': query.filter(User.current_day.between(81, 90)).count(),
-            'Completed': query.filter(User.status == 'completed').count()
+            'Day 1-10': funnel_result.day_1_10 or 0,
+            'Day 11-20': funnel_result.day_11_20 or 0,
+            'Day 21-30': funnel_result.day_21_30 or 0,
+            'Day 31-40': funnel_result.day_31_40 or 0,
+            'Day 41-50': funnel_result.day_41_50 or 0,
+            'Day 51-60': funnel_result.day_51_60 or 0,
+            'Day 61-70': funnel_result.day_61_70 or 0,
+            'Day 71-80': funnel_result.day_71_80 or 0,
+            'Day 81-90': funnel_result.day_81_90 or 0,
+            'Completed': funnel_result.completed or 0
         }
         
+        # OPTIMIZED: Calculate dropoff with just 2 queries instead of 180
+        # Get all users' current_day and status in one query
+        user_data = db.session.query(
+            User.current_day,
+            User.status
+        ).filter(query.whereclause).all()
+        
+        # Calculate dropoff in Python (much faster than 180 DB queries)
         dropoff_data = {}
         for day in range(1, 91):
-            total_reached = query.filter(User.current_day >= day).count()
-            stopped_at = query.filter(User.current_day == day, User.status == 'stopped').count()
+            total_reached = sum(1 for cd, _ in user_data if cd >= day)
+            stopped_at = sum(1 for cd, status in user_data if cd == day and status == 'stopped')
             if total_reached > 0:
                 dropoff_data[day] = round((stopped_at / total_reached) * 100, 2)
             else:
                 dropoff_data[day] = 0
         
-        active_users = query.filter(User.status == 'active').all()
-        avg_days = round(sum(u.current_day for u in active_users) / len(active_users), 1) if active_users else 0
-        
-        total_users = query.count()
-        completed_users = query.filter(User.status == 'completed').count()
+        # Use values from the funnel_result query
+        total_users = funnel_result.total or 0
+        completed_users = funnel_result.completed or 0
         completion_rate = round((completed_users / total_users) * 100, 1) if total_users > 0 else 0
+        avg_days = round(funnel_result.avg_days, 1) if funnel_result.avg_days else 0
         
         faith_journey_parent = TagRule.query.filter(
             TagRule.tag_name == 'Faith Journey',
