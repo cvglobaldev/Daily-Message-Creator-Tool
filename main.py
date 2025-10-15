@@ -6267,9 +6267,27 @@ def bot_ai_content_generation_day_by_day(bot_id):
         flash('Please start the AI generation process first.', 'warning')
         return redirect(url_for('bot_ai_content_generation', bot_id=bot_id))
     
-    generation_settings = session['ai_generation']
-    current_day = generation_settings['current_day']
-    total_days = generation_settings['journey_duration']
+    try:
+        generation_settings = session['ai_generation']
+        current_day = generation_settings['current_day']
+        total_days = generation_settings['journey_duration']
+        
+        # Validate that all required fields exist in session
+        required_fields = ['target_audience', 'audience_language', 'audience_religion', 
+                          'audience_age_group', 'content_prompt', 'journey_duration']
+        missing_fields = [field for field in required_fields if field not in generation_settings]
+        
+        if missing_fields:
+            logger.error(f"Missing required fields in session for bot {bot_id}: {missing_fields}")
+            flash(f'❌ Session data is incomplete. Please restart the AI generation process.', 'danger')
+            session.pop('ai_generation', None)
+            return redirect(url_for('bot_ai_content_generation', bot_id=bot_id))
+            
+    except (KeyError, TypeError) as e:
+        logger.error(f"Error accessing session data for bot {bot_id}: {e}")
+        flash('❌ Session data is corrupted. Please restart the AI generation process.', 'danger')
+        session.pop('ai_generation', None)
+        return redirect(url_for('bot_ai_content_generation', bot_id=bot_id))
     
     generated_content = None
     error_message = None
