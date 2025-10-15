@@ -26,6 +26,7 @@ A consistent "CV Global" design theme is applied across all management interface
 - **Manual Webhook Setup**: Admin interface includes manual webhook configuration for recovering from failed automatic setups.
 - **Double-Submit Prevention**: Form submission protection prevents duplicate bot creation during long-running operations.
 - **AI Tag Validation System**: AI content generation enforces strict tag alignment with the tag management system. The AI fetches active tags from the TagRule database on initialization, validates all AI-generated tags against this list, and filters out any unauthorized tags. Fallback content uses only managed tags, and if no tags exist in the database, content is created with empty tags rather than hardcoded defaults. All tag validations are logged for monitoring and debugging.
+- **Context-Aware Day-by-Day AI Generation**: The day-by-day AI content generation system includes journey memory and continuity. When generating content for any day, the AI receives a summary of the previous 5 days' content, ensuring progressive learning without topic repetition. The system fetches previous content from the database, creates a token-efficient summary, and instructs the AI to build upon prior days while avoiding repetition. This ensures each day feels like a natural progression of the journey rather than a standalone piece.
 
 ### System Design Choices
 - **Multi-Bot System**: Enables creation and management of independent bots.
