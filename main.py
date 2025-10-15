@@ -333,30 +333,33 @@ HUMAN_HANDOFF_KEYWORDS = [
 ]
 
 def start_scheduler():
-    """Start the background scheduler in a separate thread with thread-safe initialization"""
+    """Start the background scheduler in a separate thread with database lock to prevent duplicates"""
     global scheduler_started
     
-    # Thread-safe check and initialization
+    # Thread-safe check within this process
     with scheduler_lock:
-        # Double-check inside lock to prevent race conditions
         if scheduler_started:
-            logger.warning("Scheduler already running, skipping duplicate start")
+            logger.warning("Scheduler already running in this process, skipping duplicate start")
             return
-        
-        # Set flag immediately to prevent other threads from starting
         scheduler_started = True
     
-    # Start the scheduler thread (outside lock to avoid blocking)
+    # Try to acquire database lock (prevents other workers from running scheduler)
+    with app.app_context():
+        if not try_acquire_scheduler_lock():
+            logger.info("Another worker owns the scheduler lock - this worker will not run scheduler")
+            return
+    
+    # Start the scheduler thread
     def run_scheduler():
         while True:
             try:
                 logger.info("Running content scheduler with bot-specific intervals...")
-                with app.app_context():  # Ensure Flask app context for database operations
+                with app.app_context():
                     # Renew lock to show this worker is still active
                     renew_scheduler_lock()
                     # Run scheduler
                     scheduler.send_daily_content()
-                # Sleep for 1 minute before checking again (allows for different bot intervals)
+                # Sleep for 1 minute before checking again
                 time.sleep(60)
             except Exception as e:
                 logger.error(f"Error in scheduler: {e}")
