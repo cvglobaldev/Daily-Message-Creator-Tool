@@ -61,7 +61,7 @@
                 </div>
                 <div class="card cv-card">
                     <div class="card-header cv-bg-secondary d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 cv-text-primary"><i class="fas fa-calendar-alt me-2"></i><span id="journeyTitle">30-Day</span> Journey Overview</h5>
+                        <h5 class="mb-0 cv-text-primary"><i class="fas fa-calendar-alt me-2"></i><span id="journeyTitle">{{ bot.journey_duration_days if bot else 30 }}-Day</span> Journey Overview</h5>
                         <div class="d-flex align-items-center gap-3">
                             <button class="btn btn-success btn-sm" id="aiGeneratedContentBtn">
                                 <i class="fas fa-robot me-1"></i>Generate AI Content
@@ -69,10 +69,26 @@
                             <div class="form-group mb-0">
                                 <label for="journeyDays" class="form-label mb-1 small">Journey Length:</label>
                                 <select class="form-select form-select-sm" id="journeyDays">
-                                    <option value="10">10 Days</option>
-                                    <option value="30" selected>30 Days</option>
-                                    <option value="60">60 Days</option>
-                                    <option value="90">90 Days</option>
+                                    {% if bot %}
+                                        {% set bot_duration = bot.journey_duration_days %}
+                                        {% set standard_durations = [10, 30, 60, 90] %}
+                                        
+                                        {# Add bot's actual duration if it's not in standard list #}
+                                        {% if bot_duration not in standard_durations %}
+                                            <option value="{{ bot_duration }}" selected>{{ bot_duration }} Days (Current)</option>
+                                        {% endif %}
+                                        
+                                        {# Show standard options #}
+                                        <option value="10" {% if bot_duration == 10 %}selected{% endif %}>10 Days</option>
+                                        <option value="30" {% if bot_duration == 30 %}selected{% endif %}>30 Days</option>
+                                        <option value="60" {% if bot_duration == 60 %}selected{% endif %}>60 Days</option>
+                                        <option value="90" {% if bot_duration == 90 %}selected{% endif %}>90 Days</option>
+                                    {% else %}
+                                        <option value="10">10 Days</option>
+                                        <option value="30" selected>30 Days</option>
+                                        <option value="60">60 Days</option>
+                                        <option value="90">90 Days</option>
+                                    {% endif %}
                                 </select>
                             </div>
                             <button class="btn cv-btn-primary" id="addNewDayBtn">
