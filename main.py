@@ -3729,21 +3729,40 @@ def test_stop_start_cycle():
 @app.route('/bots')
 @login_required
 def bot_management():
-    """Bot management dashboard"""
+    """Bot management dashboard - optimized with single query"""
     try:
-        # Filter bots based on user role
+        from sqlalchemy import func
+        
+        # Build optimized query with counts in a single query
         if current_user.role == 'super_admin':
-            bots = Bot.query.all()
+            query = db.session.query(
+                Bot,
+                func.count(User.id.distinct()).label('user_count'),
+                func.count(Content.id.distinct()).label('content_count')
+            ).outerjoin(User, Bot.id == User.bot_id)\
+             .outerjoin(Content, Bot.id == Content.bot_id)\
+             .group_by(Bot.id)
         else:
             # Regular admins can only see bots they created
-            bots = Bot.query.filter_by(creator_id=current_user.id).all()
+            query = db.session.query(
+                Bot,
+                func.count(User.id.distinct()).label('user_count'),
+                func.count(Content.id.distinct()).label('content_count')
+            ).filter(Bot.creator_id == current_user.id)\
+             .outerjoin(User, Bot.id == User.bot_id)\
+             .outerjoin(Content, Bot.id == Content.bot_id)\
+             .group_by(Bot.id)
+        
+        results = query.all()
+        
+        # Attach counts to bot objects
+        bots = []
+        for bot, user_count, content_count in results:
+            bot.user_count = user_count
+            bot.content_count = content_count
+            bots.append(bot)
         
         logger.info(f"Found {len(bots)} bots for user {current_user.username} (role: {current_user.role})")
-        # Add user and content counts for each bot
-        for bot in bots:
-            bot.user_count = User.query.filter_by(bot_id=bot.id).count()
-            bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
-        
         return render_template('bot_management.html', bots=bots)
     except Exception as e:
         logger.error(f"Bot management error: {e}")

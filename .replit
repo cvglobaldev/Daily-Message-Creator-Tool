@@ -50,10 +50,6 @@ localPort = 33721
 externalPort = 3001
 
 [[ports]]
-localPort = 34255
-externalPort = 8080
-
-[[ports]]
 localPort = 34265
 externalPort = 6800
 
@@ -80,6 +76,10 @@ externalPort = 5173
 [[ports]]
 localPort = 44865
 externalPort = 3003
+
+[[ports]]
+localPort = 46101
+externalPort = 8080
 
 [agent]
 integrations = ["python_log_in_with_replit==1.0.0", "python_gemini==1.0.0", "web_scraper==1.0.0", "python_database==1.0.0", "styling_replit==1.0.0"]
