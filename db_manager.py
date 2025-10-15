@@ -497,24 +497,55 @@ class DatabaseManager:
     
     # Bot Management Methods
     def get_all_bots(self) -> List[Bot]:
-        """Get all bots"""
+        """Get all bots - optimized with single query"""
         try:
-            bots = Bot.query.all()
-            for bot in bots:
-                bot.user_count = User.query.filter_by(bot_id=bot.id).count()
-                bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
+            from sqlalchemy import func
+            
+            # Use single query with joins and aggregations
+            results = self.db.session.query(
+                Bot,
+                func.count(User.id.distinct()).label('user_count'),
+                func.count(Content.id.distinct()).label('content_count')
+            ).outerjoin(User, Bot.id == User.bot_id)\
+             .outerjoin(Content, Bot.id == Content.bot_id)\
+             .group_by(Bot.id)\
+             .all()
+            
+            # Attach counts to bot objects
+            bots = []
+            for bot, user_count, content_count in results:
+                bot.user_count = user_count
+                bot.content_count = content_count
+                bots.append(bot)
+            
             return bots
         except SQLAlchemyError as e:
             logger.error(f"Error getting all bots: {e}")
             return []
     
     def get_bots_by_creator(self, creator_id: int) -> List[Bot]:
-        """Get bots by creator ID"""
+        """Get bots by creator ID - optimized with single query"""
         try:
-            bots = Bot.query.filter_by(creator_id=creator_id).all()
-            for bot in bots:
-                bot.user_count = User.query.filter_by(bot_id=bot.id).count()
-                bot.content_count = Content.query.filter_by(bot_id=bot.id).count()
+            from sqlalchemy import func
+            
+            # Use single query with joins and aggregations
+            results = self.db.session.query(
+                Bot,
+                func.count(User.id.distinct()).label('user_count'),
+                func.count(Content.id.distinct()).label('content_count')
+            ).filter(Bot.creator_id == creator_id)\
+             .outerjoin(User, Bot.id == User.bot_id)\
+             .outerjoin(Content, Bot.id == Content.bot_id)\
+             .group_by(Bot.id)\
+             .all()
+            
+            # Attach counts to bot objects
+            bots = []
+            for bot, user_count, content_count in results:
+                bot.user_count = user_count
+                bot.content_count = content_count
+                bots.append(bot)
+            
             return bots
         except SQLAlchemyError as e:
             logger.error(f"Error getting bots by creator {creator_id}: {e}")
