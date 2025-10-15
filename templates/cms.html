@@ -677,7 +677,7 @@ Day 1 content will arrive in 10 seconds!`;
                 });
         }
 
-        let currentJourneyDays = 30;
+        let currentJourneyDays = {% if bot %}{{ bot.journey_duration_days }}{% else %}30{% endif %};
 
         function updateJourneyLength() {
             currentJourneyDays = parseInt(document.getElementById('journeyDays').value);
