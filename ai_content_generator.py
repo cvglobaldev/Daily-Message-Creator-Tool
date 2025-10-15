@@ -60,6 +60,99 @@ class AIContentGenerator:
             logger.warning(f"Removed invalid tags not in tag management: {invalid_tags}. Valid tags: {validated_tags}")
         
         return validated_tags
+    
+    def _fetch_previous_content(self, bot_id: Optional[int], current_day: int) -> List[Dict]:
+        """Fetch previous days' content from database for context"""
+        try:
+            from models import Content
+            
+            # Get content for days 1 to (current_day - 1)
+            if bot_id:
+                previous_content = Content.query.filter(
+                    Content.bot_id == bot_id,
+                    Content.day_number < current_day,
+                    Content.day_number >= 1
+                ).order_by(Content.day_number).all()
+            else:
+                # Global content (no bot_id)
+                previous_content = Content.query.filter(
+                    Content.bot_id.is_(None),
+                    Content.day_number < current_day,
+                    Content.day_number >= 1
+                ).order_by(Content.day_number).all()
+            
+            # Convert to dict format for context
+            context = []
+            for content in previous_content:
+                context.append({
+                    'day_number': content.day_number,
+                    'title': content.title,
+                    'content': content.content,
+                    'reflection_question': content.reflection_question,
+                    'tags': content.tags or []
+                })
+            
+            logger.info(f"Fetched {len(context)} previous days for context (bot_id: {bot_id}, current_day: {current_day})")
+            return context
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch previous content: {e}")
+            return []
+    
+    def _create_context_summary(self, previous_content: List[Dict], max_days: int = 5) -> str:
+        """Create a concise summary of previous days' content for AI context"""
+        if not previous_content:
+            return "This is the first day of the journey. No previous content exists."
+        
+        # Limit to last N days for token efficiency
+        recent_content = previous_content[-max_days:] if len(previous_content) > max_days else previous_content
+        
+        summary_parts = []
+        summary_parts.append(f"Previous journey content (Days {recent_content[0]['day_number']} to {recent_content[-1]['day_number']}):")
+        
+        for content in recent_content:
+            summary_parts.append(f"\nDay {content['day_number']}: {content['title']}")
+            # Truncate content to first 150 chars for brevity
+            content_preview = content['content'][:150] + "..." if len(content['content']) > 150 else content['content']
+            summary_parts.append(f"  Summary: {content_preview}")
+            if content['tags']:
+                summary_parts.append(f"  Topics covered: {', '.join(content['tags'][:3])}")
+        
+        return "\n".join(summary_parts)
+    
+    def generate_single_day_with_context(self, request: ContentGenerationRequest, 
+                                         current_day: int, 
+                                         bot_id: Optional[int] = None) -> DailyContent:
+        """Generate content for a single day with context from previous days"""
+        # Get audience-specific content configuration (needed for both try and fallback)
+        content_config = self._get_audience_content_config(request)
+        
+        try:
+            logger.info(f"Generating day {current_day} with context (bot_id: {bot_id})")
+            
+            # Fetch previous content for context
+            previous_content = self._fetch_previous_content(bot_id, current_day)
+            context_summary = self._create_context_summary(previous_content)
+            
+            # Generate content with context
+            daily_content = self._generate_single_day_content_with_context(
+                request, current_day, context_summary, content_config
+            )
+            
+            logger.info(f"Successfully generated day {current_day} content with context")
+            return daily_content
+            
+        except Exception as e:
+            logger.error(f"Error generating day {current_day} with context: {e}")
+            # Fallback to simple generation without context
+            title, content, question, tags = self._generate_day_content(current_day, request, content_config)
+            return DailyContent(
+                day_number=current_day,
+                title=title,
+                content=content,
+                reflection_question=question,
+                tags=tags
+            )
         
     def generate_journey_content(self, request: ContentGenerationRequest) -> List[DailyContent]:
         """Generate complete journey content based on user specifications"""
@@ -357,6 +450,142 @@ Generate content as a JSON object with this exact structure:
 9. **TAGS RESTRICTION**: You MUST select tags ONLY from the provided "Available Tags" list above. Do not create new tags.
 
 Ensure the content progression makes logical sense and builds a coherent journey of personal growth."""
+
+        return prompt
+    
+    def _generate_single_day_content_with_context(self, request: ContentGenerationRequest, 
+                                                   current_day: int, 
+                                                   context_summary: str, 
+                                                   config: Dict) -> DailyContent:
+        """Generate content for a single day using AI with context from previous days"""
+        try:
+            # Build prompt with context
+            prompt = self._build_single_day_prompt_with_context(
+                request, current_day, context_summary, config
+            )
+            
+            logger.info(f"Generating day {current_day} content with Gemini AI (with context)")
+            
+            # Generate content using Gemini
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+            
+            if not response.text:
+                raise Exception("Gemini returned empty response")
+            
+            # Parse the JSON response
+            content_data = json.loads(response.text)
+            
+            if "daily_content" in content_data and len(content_data["daily_content"]) > 0:
+                item = content_data["daily_content"][0]
+                
+                # Get tags from AI response and validate them
+                ai_tags = item.get("tags", [])
+                validated_tags = self._validate_tags(ai_tags)
+                
+                return DailyContent(
+                    day_number=current_day,
+                    title=item["title"],
+                    content=item["content"],
+                    reflection_question=item["reflection_question"],
+                    tags=validated_tags
+                )
+            else:
+                raise Exception("Invalid response format from AI")
+                
+        except Exception as e:
+            logger.error(f"AI generation failed for day {current_day}: {e}")
+            # Return fallback content
+            title, content, question, tags = self._generate_day_content(current_day, request, config)
+            return DailyContent(
+                day_number=current_day,
+                title=title,
+                content=content,
+                reflection_question=question,
+                tags=tags
+            )
+    
+    def _build_single_day_prompt_with_context(self, request: ContentGenerationRequest, 
+                                              current_day: int, 
+                                              context_summary: str, 
+                                              config: Dict) -> str:
+        """Build AI prompt for single day with context from previous days"""
+        
+        approach = config["approach"]
+        tone = config["tone"]
+        themes = ", ".join(config["themes"])
+        avoid = ", ".join(config["avoid"])
+        focus = config["focus"]
+        
+        # Format available tags for the prompt
+        available_tags_str = '", "'.join(self.available_tags)
+        
+        prompt = f"""You are an expert content creator specializing in culturally sensitive personal growth journeys.
+
+Create content for Day {current_day} of a personal development journey.
+
+**IMPORTANT - Previous Journey Context:**
+{context_summary}
+
+**Target Audience:**
+- Demographics: {request.target_audience}
+- Age Group: {request.audience_age_group}
+- Current Background: {request.audience_religion}
+- Language: {request.audience_language}
+
+**Content Approach:**
+- Approach: {approach}
+- Tone: {tone}
+- Key Themes: {themes}
+- Areas to Avoid: {avoid}
+- Primary Focus: {focus}
+
+**Custom Requirements:**
+{request.content_prompt}
+
+**Available Tags (IMPORTANT - You MUST ONLY use tags from this list):**
+["{available_tags_str}"]
+
+**Critical Instructions for Day {current_day}:**
+1. **Build on Previous Content**: Review the previous journey content above and create Day {current_day} that naturally follows and builds upon what came before
+2. **Avoid Repetition**: Do NOT repeat topics or themes already covered in previous days
+3. **Progressive Learning**: Introduce new concepts or deepen existing ones from previous days
+4. **Maintain Continuity**: Reference or build upon insights from earlier days when appropriate
+5. **Natural Progression**: Ensure this day feels like the next logical step in the journey
+
+**Output Format:**
+Generate content as a JSON object with this exact structure:
+
+{{
+  "daily_content": [
+    {{
+      "day_number": {current_day},
+      "title": "Clear, engaging title for Day {current_day}",
+      "content": "Main content (200-400 words). Be respectful, encouraging, and culturally appropriate. Focus on {focus}. Use {tone} tone. Build upon previous days' content.",
+      "reflection_question": "Thoughtful question that encourages personal reflection and growth, ideally connecting to the journey so far",
+      "tags": ["tag1", "tag2"]
+    }}
+  ]
+}}
+
+**Critical Guidelines:**
+1. **Cultural Sensitivity**: Deeply respect the audience's background and beliefs
+2. **Journey Continuity**: This is Day {current_day} - ensure content builds naturally from previous days
+3. **Practical Application**: Include actionable insights and real-world applications
+4. **Encouraging Tone**: Maintain supportive, non-judgmental approach
+5. **Personal Growth**: Focus on universal human values like compassion, integrity, purpose
+6. **Respectful Language**: Use inclusive, accessible language appropriate for the demographic
+7. **Varied Content**: Mix philosophical insights, practical exercises, and personal reflection
+8. **Safe Space**: Create content that feels welcoming and non-threatening
+9. **TAGS RESTRICTION**: You MUST select tags ONLY from the provided "Available Tags" list above. Do not create new tags.
+10. **NO REPETITION**: Do not cover topics already addressed in previous days shown in the context above
+
+Ensure Day {current_day} content feels like a natural progression of the journey, not a standalone piece."""
 
         return prompt
     

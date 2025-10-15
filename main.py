@@ -6232,7 +6232,7 @@ def bot_ai_content_generation_day_by_day(bot_id):
         action = request.form.get('action')
         
         if action == 'generate':
-            # Generate content for current day
+            # Generate content for current day with context from previous days
             try:
                 from ai_content_generator import AIContentGenerator, ContentGenerationRequest
                 
@@ -6243,16 +6243,18 @@ def bot_ai_content_generation_day_by_day(bot_id):
                     audience_religion=generation_settings['audience_religion'],
                     audience_age_group=generation_settings['audience_age_group'],
                     content_prompt=generation_settings['content_prompt'],
-                    journey_duration=1  # Generate only 1 day
+                    journey_duration=generation_settings['journey_duration']  # Full journey duration for context
                 )
                 
                 generator = AIContentGenerator()
-                daily_contents = generator.generate_journey_content(content_request)
+                # Use new context-aware generation method
+                generated_content = generator.generate_single_day_with_context(
+                    request=content_request,
+                    current_day=current_day,
+                    bot_id=bot_id
+                )
                 
-                if daily_contents:
-                    generated_content = daily_contents[0]
-                    # Adjust day number to current day
-                    generated_content.day_number = current_day
+                logger.info(f"Generated day {current_day} content with context from previous days")
                     
             except Exception as e:
                 error_message = f"Failed to generate content: {str(e)}"
