@@ -97,9 +97,56 @@ class ContentForm(FlaskForm):
                                  description="e.g., Young Muslim adults, Christian seekers, etc.")
     audience_language = SelectField('Audience Language', 
                                    choices=[
+                                       # Major Languages
                                        ('English', 'English'),
-                                       ('Indonesian', 'Bahasa Indonesia'),
-                                       ('Spanish', 'Spanish'),
+                                       ('Spanish', 'Spanish (Español)'),
+                                       ('French', 'French (Français)'),
+                                       ('German', 'German (Deutsch)'),
+                                       ('Italian', 'Italian (Italiano)'),
+                                       ('Portuguese', 'Portuguese (Português)'),
+                                       ('Russian', 'Russian (Русский)'),
+                                       
+                                       # Asian Languages
+                                       ('Arabic', 'Arabic (العربية)'),
+                                       ('Bengali', 'Bengali (বাংলা)'),
+                                       ('Chinese (Simplified)', 'Chinese Simplified (简体中文)'),
+                                       ('Chinese (Traditional)', 'Chinese Traditional (繁體中文)'),
+                                       ('Hindi', 'Hindi (हिन्दी)'),
+                                       ('Indonesian', 'Indonesian (Bahasa Indonesia)'),
+                                       ('Japanese', 'Japanese (日本語)'),
+                                       ('Korean', 'Korean (한국어)'),
+                                       ('Thai', 'Thai (ไทย)'),
+                                       ('Turkish', 'Turkish (Türkçe)'),
+                                       ('Vietnamese', 'Vietnamese (Tiếng Việt)'),
+                                       ('Urdu', 'Urdu (اردو)'),
+                                       
+                                       # European Languages
+                                       ('Czech', 'Czech (Čeština)'),
+                                       ('Danish', 'Danish (Dansk)'),
+                                       ('Dutch', 'Dutch (Nederlands)'),
+                                       ('Finnish', 'Finnish (Suomi)'),
+                                       ('Greek', 'Greek (Ελληνικά)'),
+                                       ('Hebrew', 'Hebrew (עברית)'),
+                                       ('Hungarian', 'Hungarian (Magyar)'),
+                                       ('Norwegian', 'Norwegian (Norsk)'),
+                                       ('Polish', 'Polish (Polski)'),
+                                       ('Romanian', 'Romanian (Română)'),
+                                       ('Swedish', 'Swedish (Svenska)'),
+                                       ('Ukrainian', 'Ukrainian (Українська)'),
+                                       
+                                       # African Languages
+                                       ('Hausa', 'Hausa'),
+                                       ('Swahili', 'Swahili (Kiswahili)'),
+                                       ('Yoruba', 'Yoruba (Èdè Yorùbá)'),
+                                       ('Igbo', 'Igbo (Asụsụ Igbo)'),
+                                       ('Amharic', 'Amharic (አማርኛ)'),
+                                       ('Afrikaans', 'Afrikaans'),
+                                       ('Zulu', 'Zulu (isiZulu)'),
+                                       ('Somali', 'Somali (Soomaali)'),
+                                       
+                                       # Other Languages
+                                       ('Malay', 'Malay (Bahasa Melayu)'),
+                                       ('Tagalog', 'Tagalog (Filipino)'),
                                        ('Other', 'Other (specify in content prompt)')
                                    ],
                                    default="English", 
@@ -153,9 +200,56 @@ class AIContentGenerationForm(FlaskForm):
                                  description="e.g., Young Muslim adults, Christian seekers, etc.")
     audience_language = SelectField('Audience Language', 
                                    choices=[
+                                       # Major Languages
                                        ('English', 'English'),
-                                       ('Indonesian', 'Bahasa Indonesia'),
-                                       ('Spanish', 'Spanish'),
+                                       ('Spanish', 'Spanish (Español)'),
+                                       ('French', 'French (Français)'),
+                                       ('German', 'German (Deutsch)'),
+                                       ('Italian', 'Italian (Italiano)'),
+                                       ('Portuguese', 'Portuguese (Português)'),
+                                       ('Russian', 'Russian (Русский)'),
+                                       
+                                       # Asian Languages
+                                       ('Arabic', 'Arabic (العربية)'),
+                                       ('Bengali', 'Bengali (বাংলা)'),
+                                       ('Chinese (Simplified)', 'Chinese Simplified (简体中文)'),
+                                       ('Chinese (Traditional)', 'Chinese Traditional (繁體中文)'),
+                                       ('Hindi', 'Hindi (हिन्दी)'),
+                                       ('Indonesian', 'Indonesian (Bahasa Indonesia)'),
+                                       ('Japanese', 'Japanese (日本語)'),
+                                       ('Korean', 'Korean (한국어)'),
+                                       ('Thai', 'Thai (ไทย)'),
+                                       ('Turkish', 'Turkish (Türkçe)'),
+                                       ('Vietnamese', 'Vietnamese (Tiếng Việt)'),
+                                       ('Urdu', 'Urdu (اردو)'),
+                                       
+                                       # European Languages
+                                       ('Czech', 'Czech (Čeština)'),
+                                       ('Danish', 'Danish (Dansk)'),
+                                       ('Dutch', 'Dutch (Nederlands)'),
+                                       ('Finnish', 'Finnish (Suomi)'),
+                                       ('Greek', 'Greek (Ελληνικά)'),
+                                       ('Hebrew', 'Hebrew (עברית)'),
+                                       ('Hungarian', 'Hungarian (Magyar)'),
+                                       ('Norwegian', 'Norwegian (Norsk)'),
+                                       ('Polish', 'Polish (Polski)'),
+                                       ('Romanian', 'Romanian (Română)'),
+                                       ('Swedish', 'Swedish (Svenska)'),
+                                       ('Ukrainian', 'Ukrainian (Українська)'),
+                                       
+                                       # African Languages
+                                       ('Hausa', 'Hausa'),
+                                       ('Swahili', 'Swahili (Kiswahili)'),
+                                       ('Yoruba', 'Yoruba (Èdè Yorùbá)'),
+                                       ('Igbo', 'Igbo (Asụsụ Igbo)'),
+                                       ('Amharic', 'Amharic (አማርኛ)'),
+                                       ('Afrikaans', 'Afrikaans'),
+                                       ('Zulu', 'Zulu (isiZulu)'),
+                                       ('Somali', 'Somali (Soomaali)'),
+                                       
+                                       # Other Languages
+                                       ('Malay', 'Malay (Bahasa Melayu)'),
+                                       ('Tagalog', 'Tagalog (Filipino)'),
                                        ('Other', 'Other (specify in content prompt)')
                                    ],
                                    default="English", 
