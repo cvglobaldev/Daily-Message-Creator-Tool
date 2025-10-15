@@ -584,20 +584,30 @@
             }
         });
         {% endif %}
-        
-        // Hide loading overlay when page is fully loaded
-        window.addEventListener('load', function() {
+    </script>
+    
+    <!-- Hide Loading Overlay Script (separate for reliability) -->
+    <script>
+        // Hide loading overlay when DOM content is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Give charts a moment to initialize, then hide overlay
             setTimeout(function() {
-                document.getElementById('loadingOverlay').classList.add('hidden');
-            }, 300); // Small delay for smooth transition
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                }
+            }, 500);
         });
         
-        // Also hide if DOM is already loaded
-        if (document.readyState === 'complete') {
+        // Backup: Also try on window load
+        window.addEventListener('load', function() {
             setTimeout(function() {
-                document.getElementById('loadingOverlay').classList.add('hidden');
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                }
             }, 300);
-        }
+        });
     </script>
 </body>
 </html>
