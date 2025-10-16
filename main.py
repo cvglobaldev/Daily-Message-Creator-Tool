@@ -1806,35 +1806,38 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
             # Launch background thread to deliver Day 1 content after delay
             # This prevents blocking the webhook request
             def deliver_day1_content_async():
-                time.sleep(10)  # 10 second delay before Day 1 content
+                time.sleep(10)  # 10 second delay before Day 1 content (outside app context)
                 
                 # Send Day 1 content directly (bypass scheduler for immediate delivery)
                 # **FIX: Use scheduler's delivery method to properly handle media (images/videos)**
                 try:
-                    logger.info(f"Attempting direct Day 1 content delivery for restart user {phone_number}")
-                    user = db_manager.get_user_by_phone(phone_number)
-                    if user and user.bot_id:
-                        # Get Day 1 content for this bot
-                        content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
-                        if content:
-                            # Use scheduler's delivery method which handles media properly
-                            content_dict = content.to_dict()
-                            success = scheduler._deliver_content_with_reflection(phone_number, content_dict)
-                            
-                            if success:
-                                logger.info(f"✅ Day 1 content (with media) delivered successfully to restart user {phone_number}")
-                                # Advance user to Day 2
-                                db_manager.update_user(phone_number, current_day=2)
-                                # Note: Message logging is handled inside _deliver_content_with_reflection
+                    with app.app_context():  # Open context only for DB operations
+                        logger.info(f"Attempting direct Day 1 content delivery for restart user {phone_number}")
+                        user = db_manager.get_user_by_phone(phone_number)
+                        if user and user.bot_id:
+                            # Get Day 1 content for this bot
+                            content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
+                            if content:
+                                # Use scheduler's delivery method which handles media properly
+                                content_dict = content.to_dict()
+                                success = scheduler._deliver_content_with_reflection(phone_number, content_dict)
+                                
+                                if success:
+                                    logger.info(f"✅ Day 1 content (with media) delivered successfully to restart user {phone_number}")
+                                    # Advance user to Day 2
+                                    db_manager.update_user(phone_number, current_day=2)
+                                    # Note: Message logging is handled inside _deliver_content_with_reflection
+                                else:
+                                    logger.error(f"❌ Failed to send Day 1 content to restart user {phone_number}")
                             else:
-                                logger.error(f"❌ Failed to send Day 1 content to restart user {phone_number}")
+                                logger.error(f"❌ No Day 1 content found for restart user bot_id {user.bot_id}")
                         else:
-                            logger.error(f"❌ No Day 1 content found for restart user bot_id {user.bot_id}")
-                    else:
-                        logger.error(f"❌ No restart user found for {phone_number}")
+                            logger.error(f"❌ No restart user found for {phone_number}")
+                        logger.info(f"User {phone_number} restarted journey from Day 1")
                 except Exception as e:
                     logger.error(f"❌ Exception delivering direct content for restart {phone_number}: {e}")
-                logger.info(f"User {phone_number} restarted journey from Day 1")
+                    import traceback
+                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
             
             # Start background thread and return immediately
             thread = threading.Thread(target=deliver_day1_content_async, daemon=True)
@@ -1987,40 +1990,42 @@ def handle_start_command(phone_number: str, platform: str = "whatsapp", user_dat
         # Launch background thread to deliver Day 1 content after delay
         # This prevents blocking the webhook request
         def deliver_day1_content_async():
-            time.sleep(10)  # 10 second delay before Day 1 content
+            time.sleep(10)  # 10 second delay before Day 1 content (outside app context)
             
             # Send Day 1 content directly (bypass scheduler for immediate delivery)
             # **FIX: Use scheduler's delivery method to properly handle media (images/videos)**
             try:
-                logger.info(f"🔥 DEBUG: Attempting direct Day 1 content delivery for {phone_number}")
-                user = db_manager.get_user_by_phone(phone_number)
-                logger.info(f"🔥 DEBUG: User found: {user.phone_number if user else 'None'}, bot_id: {user.bot_id if user else 'None'}")
-                if user and user.bot_id:
-                    # Get Day 1 content for this bot
-                    content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
-                    logger.info(f"🔥 DEBUG: Content found: {content.title if content else 'None'}")
-                    if content:
-                        # Use scheduler's delivery method which handles media properly
-                        logger.info(f"🔥 DEBUG: Using scheduler delivery method for media support")
-                        content_dict = content.to_dict()
-                        success = scheduler._deliver_content_with_reflection(phone_number, content_dict)
-                        logger.info(f"🔥 DEBUG: Scheduler delivery result: {success}")
-                        
-                        if success:
-                            logger.info(f"✅ Day 1 content (with media) delivered successfully to {phone_number}")
-                            # Advance user to Day 2
-                            db_manager.update_user(phone_number, current_day=2)
-                            # Note: Message logging is handled inside _deliver_content_with_reflection
+                with app.app_context():  # Open context only for DB operations
+                    logger.info(f"🔥 DEBUG: Attempting direct Day 1 content delivery for {phone_number}")
+                    user = db_manager.get_user_by_phone(phone_number)
+                    logger.info(f"🔥 DEBUG: User found: {user.phone_number if user else 'None'}, bot_id: {user.bot_id if user else 'None'}")
+                    if user and user.bot_id:
+                        # Get Day 1 content for this bot
+                        content = db_manager.get_content_by_day(1, bot_id=user.bot_id)
+                        logger.info(f"🔥 DEBUG: Content found: {content.title if content else 'None'}")
+                        if content:
+                            # Use scheduler's delivery method which handles media properly
+                            logger.info(f"🔥 DEBUG: Using scheduler delivery method for media support")
+                            content_dict = content.to_dict()
+                            success = scheduler._deliver_content_with_reflection(phone_number, content_dict)
+                            logger.info(f"🔥 DEBUG: Scheduler delivery result: {success}")
+                            
+                            if success:
+                                logger.info(f"✅ Day 1 content (with media) delivered successfully to {phone_number}")
+                                # Advance user to Day 2
+                                db_manager.update_user(phone_number, current_day=2)
+                                # Note: Message logging is handled inside _deliver_content_with_reflection
+                            else:
+                                logger.error(f"❌ Failed to send Day 1 content to {phone_number}")
                         else:
-                            logger.error(f"❌ Failed to send Day 1 content to {phone_number}")
+                            logger.error(f"❌ No Day 1 content found for bot_id {user.bot_id}")
                     else:
-                        logger.error(f"❌ No Day 1 content found for bot_id {user.bot_id}")
-                else:
-                    logger.error(f"❌ No user found for {phone_number}")
+                        logger.error(f"❌ No user found for {phone_number}")
+                    logger.info(f"User {phone_number} successfully onboarded")
             except Exception as e:
                 logger.error(f"❌ Exception delivering direct content for {phone_number}: {e}")
-            
-            logger.info(f"User {phone_number} successfully onboarded")
+                import traceback
+                logger.error(f"❌ Traceback: {traceback.format_exc()}")
         
         # Start background thread and return immediately
         thread = threading.Thread(target=deliver_day1_content_async, daemon=True)
