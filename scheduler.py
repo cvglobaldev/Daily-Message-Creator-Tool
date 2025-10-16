@@ -112,7 +112,7 @@ class ContentScheduler:
             logger.error(f"Error in daily content delivery: {e}")
     
     def _should_send_content_for_bot(self, bot) -> bool:
-        """Check if it's time to send content for a specific bot based on its delivery interval"""
+        """Check if it's time to send content for a specific bot based on scheduled time or delivery interval"""
         try:
             from models import SystemSettings
             import datetime
@@ -121,6 +121,63 @@ class ContentScheduler:
             key = f"bot_{bot.id}_last_delivery"
             setting = SystemSettings.query.filter_by(key=key).first()
             
+            # Check if bot has timezone-based scheduling configured
+            if bot.timezone and bot.scheduled_delivery_time:
+                # TIMEZONE-AWARE SCHEDULED DELIVERY
+                try:
+                    # Parse bot's timezone
+                    try:
+                        bot_tz = pytz.timezone(bot.timezone)
+                    except pytz.exceptions.UnknownTimeZoneError:
+                        logger.warning(f"Invalid timezone '{bot.timezone}' for bot {bot.id}, falling back to interval-based")
+                        # Fall back to interval-based logic below
+                        raise ValueError("Invalid timezone")
+                    
+                    # Get current time in bot's timezone
+                    now_in_bot_tz = datetime.datetime.now(bot_tz)
+                    
+                    # Parse scheduled delivery time (format: "19:00")
+                    try:
+                        time_parts = bot.scheduled_delivery_time.split(':')
+                        scheduled_hour = int(time_parts[0])
+                        scheduled_minute = int(time_parts[1])
+                        
+                        # Create today's scheduled delivery datetime in bot's timezone
+                        scheduled_today = now_in_bot_tz.replace(
+                            hour=scheduled_hour, 
+                            minute=scheduled_minute, 
+                            second=0, 
+                            microsecond=0
+                        )
+                    except (ValueError, IndexError, AttributeError) as e:
+                        logger.warning(f"Invalid scheduled time '{bot.scheduled_delivery_time}' for bot {bot.id}, falling back to interval-based")
+                        raise ValueError("Invalid scheduled time")
+                    
+                    # Check if we've passed the scheduled time today
+                    if now_in_bot_tz < scheduled_today:
+                        logger.debug(f"Bot {bot.id}: Not yet scheduled time ({now_in_bot_tz.strftime('%H:%M')} < {bot.scheduled_delivery_time})")
+                        return False
+                    
+                    # Check if we've already sent content today
+                    if setting:
+                        last_delivery_utc = datetime.datetime.fromisoformat(setting.value)
+                        # Convert last delivery to bot's timezone
+                        last_delivery_in_bot_tz = pytz.UTC.localize(last_delivery_utc).astimezone(bot_tz)
+                        
+                        # If last delivery was today after the scheduled time, don't send again
+                        if last_delivery_in_bot_tz.date() == now_in_bot_tz.date() and last_delivery_in_bot_tz >= scheduled_today:
+                            logger.debug(f"Bot {bot.id}: Already sent content today at {last_delivery_in_bot_tz.strftime('%H:%M')}")
+                            return False
+                    
+                    # It's past the scheduled time and we haven't sent today
+                    logger.info(f"Bot {bot.id}: Time to send content (scheduled: {bot.scheduled_delivery_time} {bot.timezone})")
+                    return True
+                    
+                except ValueError:
+                    # Fall through to interval-based logic
+                    pass
+            
+            # INTERVAL-BASED DELIVERY (fallback or default)
             if not setting:
                 # First time sending content for this bot
                 return True
@@ -132,7 +189,12 @@ class ContentScheduler:
             minutes_since = (datetime.datetime.utcnow() - last_delivery).total_seconds() / 60
             
             # Check if enough time has passed based on bot's interval
-            return minutes_since >= bot.delivery_interval_minutes
+            should_send = minutes_since >= bot.delivery_interval_minutes
+            
+            if should_send:
+                logger.info(f"Bot {bot.id}: Time to send content (interval-based: {minutes_since:.0f} >= {bot.delivery_interval_minutes} min)")
+            
+            return should_send
             
         except Exception as e:
             logger.error(f"Error checking delivery time for bot {bot.id}: {e}")

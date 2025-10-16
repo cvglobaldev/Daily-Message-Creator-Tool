@@ -4176,6 +4176,8 @@ Ji dadin raba tunanin ku, yi tambayoyi, ko Æ™ara bincike. Ina nan don taimako! ð
             
             bot.journey_duration_days = form.journey_duration_days.data or 30
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
+            bot.timezone = form.timezone.data if form.timezone.data else None
+            bot.scheduled_delivery_time = form.scheduled_delivery_time.data if form.scheduled_delivery_time.data else None
             bot.language = form.language.data or 'English'
             
             # Set creator to current user
@@ -4336,6 +4338,8 @@ def edit_bot(bot_id):
         form.ai_prompt.data = bot.ai_prompt
         form.journey_duration_days.data = bot.journey_duration_days
         form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+        form.timezone.data = bot.timezone if hasattr(bot, 'timezone') else ''
+        form.scheduled_delivery_time.data = bot.scheduled_delivery_time if hasattr(bot, 'scheduled_delivery_time') else ''
         form.language.data = bot.language if hasattr(bot, 'language') else 'English'
         form.help_message.data = bot.help_message
         form.stop_message.data = bot.stop_message
@@ -4365,6 +4369,8 @@ def edit_bot(bot_id):
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data
+            bot.timezone = form.timezone.data if form.timezone.data else None
+            bot.scheduled_delivery_time = form.scheduled_delivery_time.data if form.scheduled_delivery_time.data else None
             bot.language = form.language.data or 'English'
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data

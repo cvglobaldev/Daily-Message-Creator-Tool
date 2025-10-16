@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectMultipleField, IntegerField, SubmitField, BooleanField, SelectField
-from wtforms.validators import DataRequired, Length, Optional, NumberRange
+from wtforms.validators import DataRequired, Length, Optional, NumberRange, Regexp
 from wtforms.widgets import CheckboxInput, ListWidget
 
 class MultiCheckboxField(SelectMultipleField):
@@ -69,6 +69,52 @@ Your goal is to create respectful, meaningful conversations that invite people t
         validators=[DataRequired(), NumberRange(min=1, max=1440)],
         default=10,
         description="How often to deliver daily content (1-1440 minutes). Default: 10 minutes for testing, 1440 for daily delivery."
+    )
+    
+    # Timezone-based scheduling
+    timezone = SelectField(
+        'Bot Timezone (Optional)',
+        choices=[
+            ('', '-- Select Timezone (Optional) --'),
+            ('Africa/Cairo', 'Africa/Cairo (GMT+2)'),
+            ('Africa/Johannesburg', 'Africa/Johannesburg (GMT+2)'),
+            ('Africa/Lagos', 'Africa/Lagos (GMT+1)'),
+            ('America/Chicago', 'America/Chicago (GMT-6)'),
+            ('America/Los_Angeles', 'America/Los Angeles (GMT-8)'),
+            ('America/New_York', 'America/New York (GMT-5)'),
+            ('America/Sao_Paulo', 'America/Sao Paulo (GMT-3)'),
+            ('Asia/Bangkok', 'Asia/Bangkok (GMT+7)'),
+            ('Asia/Dhaka', 'Asia/Dhaka (GMT+6)'),
+            ('Asia/Dubai', 'Asia/Dubai (GMT+4)'),
+            ('Asia/Hong_Kong', 'Asia/Hong Kong (GMT+8)'),
+            ('Asia/Jakarta', 'Asia/Jakarta (GMT+7)'),
+            ('Asia/Karachi', 'Asia/Karachi (GMT+5)'),
+            ('Asia/Kolkata', 'Asia/Kolkata (GMT+5:30)'),
+            ('Asia/Manila', 'Asia/Manila (GMT+8)'),
+            ('Asia/Seoul', 'Asia/Seoul (GMT+9)'),
+            ('Asia/Shanghai', 'Asia/Shanghai (GMT+8)'),
+            ('Asia/Singapore', 'Asia/Singapore (GMT+8)'),
+            ('Asia/Tokyo', 'Asia/Tokyo (GMT+9)'),
+            ('Australia/Sydney', 'Australia/Sydney (GMT+10)'),
+            ('Europe/Amsterdam', 'Europe/Amsterdam (GMT+1)'),
+            ('Europe/Berlin', 'Europe/Berlin (GMT+1)'),
+            ('Europe/Istanbul', 'Europe/Istanbul (GMT+3)'),
+            ('Europe/London', 'Europe/London (GMT+0)'),
+            ('Europe/Madrid', 'Europe/Madrid (GMT+1)'),
+            ('Europe/Moscow', 'Europe/Moscow (GMT+3)'),
+            ('Europe/Paris', 'Europe/Paris (GMT+1)'),
+            ('Europe/Rome', 'Europe/Rome (GMT+1)'),
+            ('Pacific/Auckland', 'Pacific/Auckland (GMT+12)'),
+            ('UTC', 'UTC (GMT+0)')
+        ],
+        validators=[Optional()],
+        description="Select the timezone for scheduled content delivery. Leave empty to use interval-based delivery."
+    )
+    
+    scheduled_delivery_time = StringField(
+        'Scheduled Delivery Time (Optional)',
+        validators=[Optional(), Regexp(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', message='Time must be in HH:MM format (e.g., 19:00)')],
+        description="Daily delivery time in bot's timezone (HH:MM format, e.g., 19:00 for 7pm). Requires timezone to be set."
     )
     
     # Language setting (same as audience_language for consistency)
@@ -290,6 +336,52 @@ class EditBotForm(FlaskForm):
         'Content Delivery Interval (Minutes)',
         validators=[DataRequired(), NumberRange(min=1, max=1440)],
         description="How often to deliver daily content (1-1440 minutes). Default: 10 minutes for testing, 1440 for daily delivery."
+    )
+    
+    # Timezone-based scheduling
+    timezone = SelectField(
+        'Bot Timezone (Optional)',
+        choices=[
+            ('', '-- Select Timezone (Optional) --'),
+            ('Africa/Cairo', 'Africa/Cairo (GMT+2)'),
+            ('Africa/Johannesburg', 'Africa/Johannesburg (GMT+2)'),
+            ('Africa/Lagos', 'Africa/Lagos (GMT+1)'),
+            ('America/Chicago', 'America/Chicago (GMT-6)'),
+            ('America/Los_Angeles', 'America/Los Angeles (GMT-8)'),
+            ('America/New_York', 'America/New York (GMT-5)'),
+            ('America/Sao_Paulo', 'America/Sao Paulo (GMT-3)'),
+            ('Asia/Bangkok', 'Asia/Bangkok (GMT+7)'),
+            ('Asia/Dhaka', 'Asia/Dhaka (GMT+6)'),
+            ('Asia/Dubai', 'Asia/Dubai (GMT+4)'),
+            ('Asia/Hong_Kong', 'Asia/Hong Kong (GMT+8)'),
+            ('Asia/Jakarta', 'Asia/Jakarta (GMT+7)'),
+            ('Asia/Karachi', 'Asia/Karachi (GMT+5)'),
+            ('Asia/Kolkata', 'Asia/Kolkata (GMT+5:30)'),
+            ('Asia/Manila', 'Asia/Manila (GMT+8)'),
+            ('Asia/Seoul', 'Asia/Seoul (GMT+9)'),
+            ('Asia/Shanghai', 'Asia/Shanghai (GMT+8)'),
+            ('Asia/Singapore', 'Asia/Singapore (GMT+8)'),
+            ('Asia/Tokyo', 'Asia/Tokyo (GMT+9)'),
+            ('Australia/Sydney', 'Australia/Sydney (GMT+10)'),
+            ('Europe/Amsterdam', 'Europe/Amsterdam (GMT+1)'),
+            ('Europe/Berlin', 'Europe/Berlin (GMT+1)'),
+            ('Europe/Istanbul', 'Europe/Istanbul (GMT+3)'),
+            ('Europe/London', 'Europe/London (GMT+0)'),
+            ('Europe/Madrid', 'Europe/Madrid (GMT+1)'),
+            ('Europe/Moscow', 'Europe/Moscow (GMT+3)'),
+            ('Europe/Paris', 'Europe/Paris (GMT+1)'),
+            ('Europe/Rome', 'Europe/Rome (GMT+1)'),
+            ('Pacific/Auckland', 'Pacific/Auckland (GMT+12)'),
+            ('UTC', 'UTC (GMT+0)')
+        ],
+        validators=[Optional()],
+        description="Select the timezone for scheduled content delivery. Leave empty to use interval-based delivery."
+    )
+    
+    scheduled_delivery_time = StringField(
+        'Scheduled Delivery Time (Optional)',
+        validators=[Optional(), Regexp(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', message='Time must be in HH:MM format (e.g., 19:00)')],
+        description="Daily delivery time in bot's timezone (HH:MM format, e.g., 19:00 for 7pm). Requires timezone to be set."
     )
     
     # Language setting
