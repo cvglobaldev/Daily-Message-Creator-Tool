@@ -33,6 +33,7 @@ A consistent "CV Global" design theme is applied across all management interface
   - **Analytics Dashboard**: Reduced from 200+ queries to 3-4 queries using SQL CASE aggregations for journey funnel data and bulk fetching for dropoff calculations, achieving 50x performance improvement.
   - **Progressive Loading UX**: Analytics page displays a loading animation while data loads, improving perceived performance and user experience.
 - **Dynamic Journey Length Management in CMS**: The content management system dynamically adapts to each bot's configured journey duration. The journey length filter dropdown automatically includes the bot's actual duration as a selected option (even for non-standard durations like 10 or 45 days), and JavaScript initialization uses the bot's journey_duration_days to display the correct day range on page load. This ensures UI consistency between the filter display and content cards across all journey configurations.
+- **API Endpoint Authentication Pattern**: API endpoints that return JSON (e.g., `/api/delete-user-history`, `/api/media/browse`) use manual authentication checks with `current_user.is_authenticated` instead of `@login_required` decorator. This prevents Flask-Login from redirecting to HTML login pages when sessions expire, ensuring consistent JSON responses (401 errors) that frontend JavaScript can properly parse and handle.
 
 ### System Design Choices
 - **Multi-Bot System**: Enables creation and management of independent bots.

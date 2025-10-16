@@ -5798,9 +5798,12 @@ def serve_uploaded_file(subfolder, filename):
     return send_from_directory(file_path, safe_filename)
 
 @app.route('/api/media/browse')
-@login_required
 def api_media_browse():
     """API endpoint to browse available media files"""
+    # Check authentication (return JSON instead of redirecting to HTML login page)
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': 'Please log in to access this feature.'}), 401
+    
     try:
         from media_file_browser import get_available_media_files
         
