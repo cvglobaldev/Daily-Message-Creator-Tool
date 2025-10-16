@@ -5875,8 +5875,8 @@ def save_uploaded_file(file, subfolder, allowed_extensions, bot_id=None):
 @login_required
 def cms_content_create():
     """Create new multimedia content"""
-    # Handle JavaScript FormData submissions from CMS (identified by dayNumber field which is only sent by JS)
-    if request.method == 'POST' and 'dayNumber' in request.form:
+    # Handle JavaScript FormData submissions from CMS (identified by content_type field which is only sent by JS)
+    if request.method == 'POST' and 'content_type' in request.form:
         logger.info(f"🔍 CMS content create - FormData detected. Form keys: {list(request.form.keys())}")
         try:
             # Get bot_id for media validation (required for CMS submissions)
@@ -5958,7 +5958,7 @@ def cms_content_create():
             reflection_question = request.form.get('reflection_question')
             media_type = request.form.get('media_type', 'text')
             is_active = request.form.get('is_active') == 'true'
-            day_number = request.form.get('dayNumber', type=int)
+            day_number = request.form.get('day_number', type=int)  # JavaScript sends 'day_number' with underscore
             content_type = request.form.get('content_type', 'daily')
             
             # Get confirmation button customization fields
