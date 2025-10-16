@@ -653,6 +653,7 @@ def analytics_dashboard():
 
 @app.route('/telegram', methods=['POST'])
 @app.route('/telegram/<int:bot_id>', methods=['POST'])
+@csrf.exempt
 def telegram_webhook(bot_id=1):
     """Handle incoming Telegram messages"""
     try:
@@ -860,6 +861,7 @@ def telegram_webhook(bot_id=1):
 
 @app.route('/whatsapp/<int:bot_id>', methods=['GET', 'POST'])
 @app.route('/whatsapp', methods=['GET', 'POST'])
+@csrf.exempt
 def whatsapp_webhook(bot_id=1):
     """Handle WhatsApp webhook verification and incoming messages"""
     
@@ -3312,6 +3314,7 @@ def get_all_content():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/greeting', methods=['POST'])
+@csrf.exempt
 def create_or_update_greeting():
     """API endpoint to create or update greeting content"""
     try:
@@ -3347,6 +3350,7 @@ def get_bot_greeting(bot_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/content', methods=['POST'])
+@csrf.exempt
 def create_content():
     """API endpoint to create new content with multimedia support"""
     try:
@@ -3372,6 +3376,7 @@ def create_content():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/content/<int:content_id>', methods=['PUT'])
+@csrf.exempt
 def update_content(content_id):
     """API endpoint to update content"""
     try:
@@ -3390,6 +3395,7 @@ def update_content(content_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/content/<int:content_id>', methods=['DELETE'])
+@csrf.exempt
 def delete_content(content_id):
     """API endpoint to delete content"""
     try:
@@ -3444,6 +3450,7 @@ Use this context to provide relevant, personalized responses to the user's messa
 # Removed redundant settings route - settings are now handled per bot in bot management
 
 @app.route('/api/send-message', methods=['POST'])
+@csrf.exempt
 def send_message_to_user():
     """Send a message from admin to user (legacy endpoint)"""
     try:
@@ -3475,6 +3482,7 @@ def send_message_to_user():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/send-admin-message', methods=['POST'])
+@csrf.exempt
 def send_admin_message():
     """Send a message from admin to user (new endpoint for full chat interface)"""
     try:
@@ -3633,6 +3641,7 @@ def upload_audio(bot_id=None):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/update-message-tags', methods=['POST'])
+@csrf.exempt
 def update_message_tags():
     """Update tags for a specific message"""
     try:
@@ -3647,6 +3656,7 @@ def update_message_tags():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/delete-user-history/<int:user_id>', methods=['POST'])
+@csrf.exempt
 def delete_user_history(user_id):
     """Delete all conversation history for a user (super admin only)"""
     # Check authentication (return JSON instead of redirecting to HTML login page)
@@ -3679,6 +3689,7 @@ def delete_user_history(user_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/settings', methods=['POST'])
+@csrf.exempt
 def save_chatbot_settings():
     """Save chatbot settings"""
     try:
@@ -3690,6 +3701,7 @@ def save_chatbot_settings():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/settings/reset', methods=['POST'])
+@csrf.exempt
 def reset_chatbot_settings():
     """Reset chatbot settings to defaults"""
     try:
@@ -3700,6 +3712,7 @@ def reset_chatbot_settings():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/test-response', methods=['POST'])
+@csrf.exempt
 def test_chatbot_response():
     """Test chatbot response with current settings"""
     try:
