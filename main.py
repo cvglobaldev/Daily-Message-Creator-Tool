@@ -4176,8 +4176,17 @@ Ji dadin raba tunanin ku, yi tambayoyi, ko Æ™ara bincike. Ina nan don taimako! ð
             
             bot.journey_duration_days = form.journey_duration_days.data or 30
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
-            bot.timezone = form.timezone.data if form.timezone.data else None
-            bot.scheduled_delivery_time = form.scheduled_delivery_time.data if form.scheduled_delivery_time.data else None
+            
+            # Validate timezone and scheduled delivery time consistency
+            timezone_data = form.timezone.data if form.timezone.data else None
+            delivery_time_data = form.scheduled_delivery_time.data if form.scheduled_delivery_time.data else None
+            
+            if delivery_time_data and not timezone_data:
+                flash('Cannot set scheduled delivery time without selecting a timezone. Please select a timezone or leave delivery time empty.', 'danger')
+                return render_template('create_bot.html', form=form)
+            
+            bot.timezone = timezone_data
+            bot.scheduled_delivery_time = delivery_time_data
             bot.language = form.language.data or 'English'
             
             # Set creator to current user
@@ -4369,8 +4378,17 @@ def edit_bot(bot_id):
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
             bot.delivery_interval_minutes = form.delivery_interval_minutes.data
-            bot.timezone = form.timezone.data if form.timezone.data else None
-            bot.scheduled_delivery_time = form.scheduled_delivery_time.data if form.scheduled_delivery_time.data else None
+            
+            # Validate timezone and scheduled delivery time consistency
+            timezone_data = form.timezone.data if form.timezone.data else None
+            delivery_time_data = form.scheduled_delivery_time.data if form.scheduled_delivery_time.data else None
+            
+            if delivery_time_data and not timezone_data:
+                flash('Cannot set scheduled delivery time without selecting a timezone. Please select a timezone or leave delivery time empty.', 'danger')
+                return render_template('edit_bot.html', form=form, bot=bot)
+            
+            bot.timezone = timezone_data
+            bot.scheduled_delivery_time = delivery_time_data
             bot.language = form.language.data or 'English'
             bot.help_message = form.help_message.data
             bot.stop_message = form.stop_message.data
