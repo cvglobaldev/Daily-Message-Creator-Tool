@@ -114,6 +114,34 @@
                             <div class="form-text">Optional description of your bot's purpose</div>
                         </div>
 
+                        <!-- Content Delivery Schedule -->
+                        <div class="section-header cv-section-header">
+                            <h5><i class="fas fa-clock me-2 cv-text-primary"></i>Content Delivery Schedule</h5>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                {{ form.timezone.label(class="form-label") }}
+                                {{ form.timezone(class="form-select" + (" is-invalid" if form.timezone.errors else "")) }}
+                                {% if form.timezone.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.timezone.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.timezone.description }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.scheduled_delivery_time.label(class="form-label") }}
+                                {{ form.scheduled_delivery_time(class="form-control" + (" is-invalid" if form.scheduled_delivery_time.errors else ""), placeholder="09:00") }}
+                                {% if form.scheduled_delivery_time.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.scheduled_delivery_time.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.scheduled_delivery_time.description }}</div>
+                            </div>
+                        </div>
+
                         <!-- Status -->
                         <div class="mb-4">
                             <div class="form-check form-switch">
