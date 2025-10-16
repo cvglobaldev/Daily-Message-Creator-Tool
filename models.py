@@ -114,6 +114,11 @@ class Bot(db.Model):
     ai_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="You are a helpful spiritual guide chatbot.")
     journey_duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     delivery_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    
+    # Timezone-based scheduling
+    timezone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # e.g., "Asia/Jakarta" or "GMT+7"
+    scheduled_delivery_time: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)  # Format: "19:00" for 7pm in bot's timezone
+    
     language: Mapped[str] = mapped_column(String(50), nullable=False, default='English')
     
     # Customizable command messages
@@ -151,6 +156,8 @@ class Bot(db.Model):
             'ai_prompt': self.ai_prompt,
             'journey_duration_days': self.journey_duration_days,
             'delivery_interval_minutes': self.delivery_interval_minutes,
+            'timezone': self.timezone,
+            'scheduled_delivery_time': self.scheduled_delivery_time,
             'language': self.language,
             'help_message': self.help_message,
             'stop_message': self.stop_message,
