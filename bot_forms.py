@@ -111,10 +111,37 @@ Your goal is to create respectful, meaningful conversations that invite people t
         description="Select the timezone for scheduled content delivery. Leave empty to use interval-based delivery."
     )
     
-    scheduled_delivery_time = StringField(
+    scheduled_delivery_time = SelectField(
         'Scheduled Delivery Time (Optional)',
-        validators=[Optional(), Regexp(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', message='Time must be in HH:MM format (e.g., 19:00)')],
-        description="Daily delivery time in bot's timezone (HH:MM format, e.g., 19:00 for 7pm). Requires timezone to be set."
+        choices=[
+            ('', '-- Select Time (Optional) --'),
+            ('00:00', '00:00 (12:00 AM)'),
+            ('01:00', '01:00 (1:00 AM)'),
+            ('02:00', '02:00 (2:00 AM)'),
+            ('03:00', '03:00 (3:00 AM)'),
+            ('04:00', '04:00 (4:00 AM)'),
+            ('05:00', '05:00 (5:00 AM)'),
+            ('06:00', '06:00 (6:00 AM)'),
+            ('07:00', '07:00 (7:00 AM)'),
+            ('08:00', '08:00 (8:00 AM)'),
+            ('09:00', '09:00 (9:00 AM)'),
+            ('10:00', '10:00 (10:00 AM)'),
+            ('11:00', '11:00 (11:00 AM)'),
+            ('12:00', '12:00 (12:00 PM)'),
+            ('13:00', '13:00 (1:00 PM)'),
+            ('14:00', '14:00 (2:00 PM)'),
+            ('15:00', '15:00 (3:00 PM)'),
+            ('16:00', '16:00 (4:00 PM)'),
+            ('17:00', '17:00 (5:00 PM)'),
+            ('18:00', '18:00 (6:00 PM)'),
+            ('19:00', '19:00 (7:00 PM)'),
+            ('20:00', '20:00 (8:00 PM)'),
+            ('21:00', '21:00 (9:00 PM)'),
+            ('22:00', '22:00 (10:00 PM)'),
+            ('23:00', '23:00 (11:00 PM)')
+        ],
+        validators=[Optional()],
+        description="Daily delivery time in bot's timezone. Requires timezone to be set."
     )
     
     # Language setting (same as audience_language for consistency)
@@ -378,10 +405,37 @@ class EditBotForm(FlaskForm):
         description="Select the timezone for scheduled content delivery. Leave empty to use interval-based delivery."
     )
     
-    scheduled_delivery_time = StringField(
+    scheduled_delivery_time = SelectField(
         'Scheduled Delivery Time (Optional)',
-        validators=[Optional(), Regexp(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', message='Time must be in HH:MM format (e.g., 19:00)')],
-        description="Daily delivery time in bot's timezone (HH:MM format, e.g., 19:00 for 7pm). Requires timezone to be set."
+        choices=[
+            ('', '-- Select Time (Optional) --'),
+            ('00:00', '00:00 (12:00 AM)'),
+            ('01:00', '01:00 (1:00 AM)'),
+            ('02:00', '02:00 (2:00 AM)'),
+            ('03:00', '03:00 (3:00 AM)'),
+            ('04:00', '04:00 (4:00 AM)'),
+            ('05:00', '05:00 (5:00 AM)'),
+            ('06:00', '06:00 (6:00 AM)'),
+            ('07:00', '07:00 (7:00 AM)'),
+            ('08:00', '08:00 (8:00 AM)'),
+            ('09:00', '09:00 (9:00 AM)'),
+            ('10:00', '10:00 (10:00 AM)'),
+            ('11:00', '11:00 (11:00 AM)'),
+            ('12:00', '12:00 (12:00 PM)'),
+            ('13:00', '13:00 (1:00 PM)'),
+            ('14:00', '14:00 (2:00 PM)'),
+            ('15:00', '15:00 (3:00 PM)'),
+            ('16:00', '16:00 (4:00 PM)'),
+            ('17:00', '17:00 (5:00 PM)'),
+            ('18:00', '18:00 (6:00 PM)'),
+            ('19:00', '19:00 (7:00 PM)'),
+            ('20:00', '20:00 (8:00 PM)'),
+            ('21:00', '21:00 (9:00 PM)'),
+            ('22:00', '22:00 (10:00 PM)'),
+            ('23:00', '23:00 (11:00 PM)')
+        ],
+        validators=[Optional()],
+        description="Daily delivery time in bot's timezone. Requires timezone to be set."
     )
     
     # Language setting
