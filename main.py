@@ -3647,9 +3647,12 @@ def update_message_tags():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/delete-user-history/<int:user_id>', methods=['POST'])
-@login_required
 def delete_user_history(user_id):
     """Delete all conversation history for a user (super admin only)"""
+    # Check authentication (return JSON instead of redirecting to HTML login page)
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': 'Please log in to access this feature.'}), 401
+    
     if current_user.role != 'super_admin':
         logger.warning(f"Unauthorized attempt to delete user history by {current_user.username}")
         return jsonify({'success': False, 'error': 'Access denied. Super admin privileges required.'}), 403
