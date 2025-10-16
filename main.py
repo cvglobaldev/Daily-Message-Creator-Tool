@@ -5877,10 +5877,13 @@ def cms_content_create():
     """Create new multimedia content"""
     # Handle JavaScript FormData submissions from CMS (identified by dayNumber field which is only sent by JS)
     if request.method == 'POST' and 'dayNumber' in request.form:
+        logger.info(f"🔍 CMS content create - FormData detected. Form keys: {list(request.form.keys())}")
         try:
             # Get bot_id for media validation (required for CMS submissions)
             bot_id = request.form.get('bot_id', type=int)
+            logger.info(f"🔍 CMS content create - bot_id from form: {bot_id}")
             if not bot_id:
+                logger.error("❌ CMS content create - bot_id is missing from FormData")
                 return jsonify({'success': False, 'error': 'bot_id is required'}), 400
             
             # Initialize media filenames
