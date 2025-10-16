@@ -863,7 +863,8 @@ class DatabaseManager:
     
     def create_content(self, day_number, title, content, reflection_question, tags=None, 
                       media_type='text', image_filename=None, video_filename=None, 
-                      youtube_url=None, audio_filename=None, is_active=True, bot_id=1, content_type='daily'):
+                      youtube_url=None, audio_filename=None, is_active=True, bot_id=1, content_type='daily',
+                      confirmation_message=None, yes_button_text=None, no_button_text=None):
         """Create new multimedia content"""
         try:
             new_content = Content()
@@ -880,6 +881,9 @@ class DatabaseManager:
             new_content.is_active = is_active
             new_content.bot_id = bot_id
             new_content.content_type = content_type
+            new_content.confirmation_message = confirmation_message
+            new_content.yes_button_text = yes_button_text
+            new_content.no_button_text = no_button_text
             self.db.session.add(new_content)
             self.db.session.commit()
             logger.info(f"Content for day {day_number} created successfully with media type: {media_type}")
