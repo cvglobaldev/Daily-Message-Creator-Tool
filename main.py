@@ -5530,6 +5530,7 @@ def edit_user(user_id):
 
 
 @app.route('/cms/content/edit/<int:content_id>', methods=['POST'])
+@csrf.exempt
 @login_required
 def cms_edit_content(content_id):
     """Handle CMS content editing with file uploads"""
@@ -5870,6 +5871,7 @@ def save_uploaded_file(file, subfolder, allowed_extensions, bot_id=None):
 # Enhanced CMS Routes with Multimedia Support
 
 @app.route('/cms/content/create', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def cms_content_create():
     """Create new multimedia content"""
