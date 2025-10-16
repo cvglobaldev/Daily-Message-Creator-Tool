@@ -1,10 +1,11 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, time as datetime_time
 from typing import List
 from db_manager import DatabaseManager
 from services import WhatsAppService, TelegramService, GeminiService
 import time
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,55 @@ class ContentScheduler:
         self.db = db
         self.whatsapp_service = whatsapp_service
         self.telegram_service = telegram_service
+    
+    def is_user_in_quiet_hours(self, user) -> bool:
+        """Check if user is currently in their quiet hours period"""
+        try:
+            # Return False if quiet hours is disabled or not enabled
+            if not user.quiet_hours_enabled:
+                return False
+            
+            # Return False if quiet hours times are not set
+            if not user.quiet_hours_start or not user.quiet_hours_end:
+                return False
+            
+            # Get user's timezone, default to UTC if not set
+            user_tz_str = user.timezone or 'UTC'
+            
+            try:
+                user_tz = pytz.timezone(user_tz_str)
+            except pytz.exceptions.UnknownTimeZoneError:
+                logger.warning(f"Invalid timezone '{user_tz_str}' for user {user.phone_number}, using UTC")
+                user_tz = pytz.UTC
+            
+            # Get current time in user's timezone
+            current_time = datetime.now(user_tz).time()
+            
+            # Parse quiet hours start and end times
+            try:
+                start_parts = user.quiet_hours_start.split(':')
+                end_parts = user.quiet_hours_end.split(':')
+                
+                quiet_start = datetime_time(int(start_parts[0]), int(start_parts[1]))
+                quiet_end = datetime_time(int(end_parts[0]), int(end_parts[1]))
+            except (ValueError, IndexError, AttributeError) as e:
+                logger.warning(f"Invalid quiet hours time format for user {user.phone_number}: {e}")
+                return False
+            
+            # Handle wraparound cases (e.g., 22:00 to 08:00 spans midnight)
+            if quiet_start <= quiet_end:
+                # Normal case: quiet hours within same day (e.g., 08:00 to 22:00)
+                in_quiet_hours = quiet_start <= current_time <= quiet_end
+            else:
+                # Wraparound case: quiet hours span midnight (e.g., 22:00 to 08:00)
+                in_quiet_hours = current_time >= quiet_start or current_time <= quiet_end
+            
+            return in_quiet_hours
+            
+        except Exception as e:
+            logger.error(f"Error checking quiet hours for user {user.phone_number}: {e}")
+            # On error, default to not skipping (return False)
+            return False
     
     def send_daily_content(self) -> None:
         """Send daily content to users based on their bot's delivery interval"""
@@ -39,6 +89,11 @@ class ContentScheduler:
                         
                         for user in active_users:
                             try:
+                                # Check if user is in quiet hours
+                                if self.is_user_in_quiet_hours(user):
+                                    logger.info(f"Skipping user {user.phone_number} - in quiet hours ({user.quiet_hours_start} to {user.quiet_hours_end} {user.timezone or 'UTC'})")
+                                    continue
+                                
                                 self.send_content_to_user(user.phone_number)
                                 # Small delay between users to avoid rate limiting
                                 time.sleep(1)

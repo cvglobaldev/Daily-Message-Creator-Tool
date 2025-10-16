@@ -120,6 +120,14 @@ scheduler_lock = threading.Lock()
 bot_telegram_services = {}
 bot_whatsapp_services = {}
 
+def get_published_base_url():
+    """
+    Get the published base URL for webhooks.
+    Returns the actual published URL for this Replit app.
+    """
+    # Use the actual published URL
+    return "https://smart-budget-cvglobaldev.replit.app"
+
 def get_whatsapp_service_for_bot(bot_id):
     """Get bot-specific WhatsApp service using environment variables"""
     logger.info(f"🔥 DEBUG: Getting WhatsApp service for bot_id {bot_id}")
@@ -3802,7 +3810,7 @@ def setup_telegram_webhook(bot_id, telegram_token):
             return None, "No Telegram token provided"
         
         # Generate bot-specific webhook URL
-        webhook_url = f"https://smart-budget-cvglobaldev.replit.app/telegram/{bot_id}"
+        webhook_url = f"{get_published_base_url()}/telegram/{bot_id}"
         
         # Set webhook via Telegram API
         import requests
@@ -3836,7 +3844,7 @@ def setup_whatsapp_webhook(bot_id, whatsapp_access_token, whatsapp_phone_number_
             return None, "Missing WhatsApp access token or phone number ID"
         
         # Generate bot-specific webhook URL
-        webhook_url = f"https://smart-budget-cvglobaldev.replit.app/whatsapp/{bot_id}"
+        webhook_url = f"{get_published_base_url()}/whatsapp/{bot_id}"
         
         # Set webhook via WhatsApp Business API
         import requests

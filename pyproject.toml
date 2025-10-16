@@ -26,4 +26,5 @@ dependencies = [
     "google-cloud-speech>=2.33.0",
     "google-cloud-texttospeech>=2.31.0",
     "pydub>=0.25.1",
+    "pytz>=2025.2",
 ]
