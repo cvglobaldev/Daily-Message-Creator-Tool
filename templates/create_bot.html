@@ -81,7 +81,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 {{ form.delivery_interval_minutes.label(class="form-label") }}
-                                {{ form.delivery_interval_minutes(class="form-control" + (" is-invalid" if form.delivery_interval_minutes.errors else "")) }}
+                                {{ form.delivery_interval_minutes(class="form-select" + (" is-invalid" if form.delivery_interval_minutes.errors else "")) }}
                                 {% if form.delivery_interval_minutes.errors %}
                                     <div class="invalid-feedback">
                                         {% for error in form.delivery_interval_minutes.errors %}{{ error }}{% endfor %}
