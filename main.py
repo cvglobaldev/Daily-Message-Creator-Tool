@@ -5875,6 +5875,132 @@ def save_uploaded_file(file, subfolder, allowed_extensions, bot_id=None):
 @login_required
 def cms_content_create():
     """Create new multimedia content"""
+    # Handle JavaScript FormData submissions from CMS (identified by dayNumber field which is only sent by JS)
+    if request.method == 'POST' and 'dayNumber' in request.form:
+        try:
+            # Get bot_id for media validation (required for CMS submissions)
+            bot_id = request.form.get('bot_id', type=int)
+            if not bot_id:
+                return jsonify({'success': False, 'error': 'bot_id is required'}), 400
+            
+            # Initialize media filenames
+            image_filename = None
+            video_filename = None
+            audio_filename = None
+            
+            # Process image upload
+            if 'image_file' in request.files:
+                image_file = request.files['image_file']
+                if image_file and image_file.filename:
+                    upload_result = validate_and_upload_with_prevention(image_file, 'image', bot_id)
+                    if upload_result['success']:
+                        image_filename = upload_result['filename']
+                        logger.info(f"✅ Image uploaded: {image_filename}")
+                    else:
+                        logger.error(f"❌ Image upload failed: {upload_result['errors']}")
+                        return jsonify({'success': False, 'error': f"Image upload failed: {', '.join(upload_result['errors'])}"}), 400
+            
+            # Process video upload
+            if 'video_file' in request.files:
+                video_file = request.files['video_file']
+                if video_file and video_file.filename:
+                    upload_result = validate_and_upload_with_prevention(video_file, 'video', bot_id)
+                    if upload_result['success']:
+                        video_filename = upload_result['filename']
+                        logger.info(f"✅ Video uploaded: {video_filename}")
+                    else:
+                        logger.error(f"❌ Video upload failed: {upload_result['errors']}")
+                        return jsonify({'success': False, 'error': f"Video upload failed: {', '.join(upload_result['errors'])}"}), 400
+            
+            # Process audio upload
+            if 'audio_file' in request.files:
+                audio_file = request.files['audio_file']
+                if audio_file and audio_file.filename:
+                    upload_result = validate_and_upload_with_prevention(audio_file, 'audio', bot_id)
+                    if upload_result['success']:
+                        audio_filename = upload_result['filename']
+                        logger.info(f"✅ Audio uploaded: {audio_filename}")
+                    else:
+                        logger.error(f"❌ Audio upload failed: {upload_result['errors']}")
+                        return jsonify({'success': False, 'error': f"Audio upload failed: {', '.join(upload_result['errors'])}"}), 400
+            
+            # Handle selection of existing files
+            if not image_filename and 'selected_image' in request.form:
+                selected_image = request.form.get('selected_image', '').strip()
+                if selected_image:
+                    from media_file_browser import validate_media_file_exists
+                    if validate_media_file_exists(selected_image, 'image'):
+                        image_filename = selected_image
+                        logger.info(f"✅ Existing image selected: {image_filename}")
+            
+            if not video_filename and 'selected_video' in request.form:
+                selected_video = request.form.get('selected_video', '').strip()
+                if selected_video:
+                    from media_file_browser import validate_media_file_exists
+                    if validate_media_file_exists(selected_video, 'video'):
+                        video_filename = selected_video
+                        logger.info(f"✅ Existing video selected: {video_filename}")
+            
+            if not audio_filename and 'selected_audio' in request.form:
+                selected_audio = request.form.get('selected_audio', '').strip()
+                if selected_audio:
+                    from media_file_browser import validate_media_file_exists
+                    if validate_media_file_exists(selected_audio, 'audio'):
+                        audio_filename = selected_audio
+                        logger.info(f"✅ Existing audio selected: {audio_filename}")
+            
+            # Parse form data
+            title = request.form.get('title')
+            content = request.form.get('content')
+            reflection_question = request.form.get('reflection_question')
+            media_type = request.form.get('media_type', 'text')
+            is_active = request.form.get('is_active') == 'true'
+            day_number = request.form.get('dayNumber', type=int)
+            content_type = request.form.get('content_type', 'daily')
+            
+            # Get confirmation button customization fields
+            confirmation_message = request.form.get('confirmation_message', '').strip() or None
+            yes_button_text = request.form.get('yes_button_text', '').strip() or None
+            no_button_text = request.form.get('no_button_text', '').strip() or None
+            
+            # Parse tags from JSON string
+            tags_json = request.form.get('tags', '[]')
+            try:
+                tags = json.loads(tags_json) if tags_json else []
+            except json.JSONDecodeError:
+                tags = []
+            
+            # Create content
+            content_id = db_manager.create_content(
+                day_number=day_number,
+                title=title,
+                content=content,
+                reflection_question=reflection_question,
+                tags=tags,
+                media_type=media_type,
+                image_filename=image_filename,
+                video_filename=video_filename,
+                youtube_url=request.form.get('youtube_url'),
+                audio_filename=audio_filename,
+                is_active=is_active,
+                bot_id=bot_id,
+                content_type=content_type,
+                confirmation_message=confirmation_message,
+                yes_button_text=yes_button_text,
+                no_button_text=no_button_text
+            )
+            
+            if content_id:
+                logger.info(f"Content created successfully: ID {content_id} with media type {media_type}")
+                return jsonify({'success': True, 'id': content_id})
+            else:
+                return jsonify({'success': False, 'error': 'Failed to create content'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error creating CMS content: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    # Traditional form rendering (GET requests or traditional POST)
     form = ContentForm()
     
     if form.validate_on_submit():
