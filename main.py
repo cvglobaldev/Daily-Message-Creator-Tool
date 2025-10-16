@@ -4175,7 +4175,7 @@ Ji dadin raba tunanin ku, yi tambayoyi, ko Æ™ara bincike. Ina nan don taimako! ð
                 bot.completion_message = form.completion_message.data or ""
             
             bot.journey_duration_days = form.journey_duration_days.data or 30
-            bot.delivery_interval_minutes = form.delivery_interval_minutes.data or 1440
+            bot.delivery_interval_minutes = int(form.delivery_interval_minutes.data) if form.delivery_interval_minutes.data else 1440
             
             # Validate timezone and scheduled delivery time consistency
             timezone_data = form.timezone.data if form.timezone.data else None
@@ -4346,7 +4346,7 @@ def edit_bot(bot_id):
         form.telegram_webhook_url.data = bot.telegram_webhook_url
         form.ai_prompt.data = bot.ai_prompt
         form.journey_duration_days.data = bot.journey_duration_days
-        form.delivery_interval_minutes.data = bot.delivery_interval_minutes
+        form.delivery_interval_minutes.data = str(bot.delivery_interval_minutes) if bot.delivery_interval_minutes else '10'
         form.timezone.data = bot.timezone if hasattr(bot, 'timezone') else ''
         form.scheduled_delivery_time.data = bot.scheduled_delivery_time if hasattr(bot, 'scheduled_delivery_time') else ''
         form.language.data = bot.language if hasattr(bot, 'language') else 'English'
@@ -4377,7 +4377,7 @@ def edit_bot(bot_id):
             bot.telegram_bot_token = form.telegram_bot_token.data if 'telegram' in (form.platforms.data or []) else None
             bot.ai_prompt = form.ai_prompt.data
             bot.journey_duration_days = form.journey_duration_days.data
-            bot.delivery_interval_minutes = form.delivery_interval_minutes.data
+            bot.delivery_interval_minutes = int(form.delivery_interval_minutes.data) if form.delivery_interval_minutes.data else 1440
             
             # Validate timezone and scheduled delivery time consistency
             timezone_data = form.timezone.data if form.timezone.data else None
