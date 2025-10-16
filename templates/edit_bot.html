@@ -132,7 +132,7 @@
                             </div>
                             <div class="col-md-6">
                                 {{ form.scheduled_delivery_time.label(class="form-label") }}
-                                {{ form.scheduled_delivery_time(class="form-control" + (" is-invalid" if form.scheduled_delivery_time.errors else ""), placeholder="09:00") }}
+                                {{ form.scheduled_delivery_time(class="form-select" + (" is-invalid" if form.scheduled_delivery_time.errors else "")) }}
                                 {% if form.scheduled_delivery_time.errors %}
                                     <div class="invalid-feedback">
                                         {% for error in form.scheduled_delivery_time.errors %}{{ error }}{% endfor %}
