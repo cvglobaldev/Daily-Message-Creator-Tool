@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Settings - Quiet Hours Configuration</title>
+    
+    <!-- CV Global Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/favicon/favicon-256x256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <meta name="theme-color" content="#00ff88">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- CV Global Theme -->
+    <link rel="stylesheet" href="/static/cvglobal-theme.css">
+    
+    <style>
+        .settings-card {
+            background: var(--cv-gray-800);
+            border: 1px solid var(--cv-gray-700);
+            border-radius: var(--cv-radius-lg);
+            padding: var(--cv-space-6);
+            margin-bottom: var(--cv-space-6);
+        }
+        
+        .settings-header {
+            border-left: 4px solid var(--cv-green);
+            padding-left: var(--cv-space-4);
+            margin-bottom: var(--cv-space-6);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--cv-gray-600);
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: var(--cv-green);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .time-input-wrapper {
+            position: relative;
+        }
+        
+        .time-input-wrapper i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--cv-gray-400);
+        }
+        
+        .time-input-wrapper input {
+            padding-left: 40px;
+        }
+        
+        .user-info-section {
+            background: var(--cv-gray-700);
+            border-radius: var(--cv-radius);
+            padding: var(--cv-space-4);
+            margin-bottom: var(--cv-space-6);
+        }
+        
+        .user-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--cv-space-2) 0;
+            border-bottom: 1px solid var(--cv-gray-600);
+        }
+        
+        .user-info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: var(--cv-gray-300);
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: var(--cv-white);
+            font-weight: 600;
+        }
+        
+        .quiet-hours-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    {% include '_navigation.html' %}
+
+    <div class="container mt-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/chat/{{ user.id }}">User Chat</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Settings</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="settings-header">
+            <h2><i class="fas fa-cog me-3 cv-text-primary"></i>User Settings</h2>
+            <p class="text-muted">Configure quiet hours and user preferences for {{ user.name or user.phone_number }}</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <!-- User Information Card -->
+            <div class="col-lg-4">
+                <div class="settings-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-user me-2 cv-text-primary"></i>User Information
+                    </h5>
+                    <div class="user-info-section">
+                        <div class="user-info-row">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value">{{ user.phone_number }}</span>
+                        </div>
+                        <div class="user-info-row">
+                            <span class="info-label">Name:</span>
+                            <span class="info-value">{{ user.name or 'Not set' }}</span>
+                        </div>
+                        <div class="user-info-row">
+                            <span class="info-label">Timezone:</span>
+                            <span class="info-value">
+                                {% if user.timezone %}
+                                    <i class="fas fa-clock me-1"></i>{{ user.timezone }}
+                                {% else %}
+                                    <span class="text-muted">Not detected</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="user-info-row">
+                            <span class="info-label">Location:</span>
+                            <span class="info-value">
+                                {% if user.city or user.country %}
+                                    {{ user.city or '' }}{% if user.city and user.country %}, {% endif %}{{ user.country or '' }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="user-info-row">
+                            <span class="info-label">Status:</span>
+                            <span class="info-value">
+                                <span class="badge bg-{{ 'success' if user.status == 'active' else 'secondary' }}">
+                                    {{ user.status.capitalize() }}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiet Hours Settings Card -->
+            <div class="col-lg-8">
+                <div class="settings-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-moon me-2 cv-text-primary"></i>Quiet Hours Configuration
+                    </h5>
+
+                    <!-- Info Alert -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How Quiet Hours Work:</strong><br>
+                        Quiet Hours pauses content delivery during your specified time window. The user will still receive messages sent directly to them, but scheduled content will be delayed until quiet hours end. Times are based on the user's timezone{% if user.timezone %} ({{ user.timezone }}){% endif %}.
+                    </div>
+
+                    <form method="POST" id="quietHoursForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <!-- Enable/Disable Toggle -->
+                        <div class="mb-5">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <label class="form-label mb-1">
+                                        <i class="fas fa-power-off me-2"></i>Enable Quiet Hours
+                                    </label>
+                                    <p class="text-muted small mb-0">Turn on to activate quiet hours for this user</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" 
+                                           name="quiet_hours_enabled" 
+                                           id="quietHoursEnabled"
+                                           {% if user.quiet_hours_enabled %}checked{% endif %}
+                                           onchange="toggleQuietHoursInputs()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="quietHoursInputs" class="{{ 'quiet-hours-disabled' if not user.quiet_hours_enabled else '' }}">
+                            <div class="row mb-4">
+                                <!-- Start Time -->
+                                <div class="col-md-6">
+                                    <label for="quiet_hours_start" class="form-label">
+                                        <i class="fas fa-moon me-2"></i>Start Time
+                                    </label>
+                                    <div class="time-input-wrapper">
+                                        <i class="fas fa-clock"></i>
+                                        <input type="time" 
+                                               class="form-control" 
+                                               id="quiet_hours_start" 
+                                               name="quiet_hours_start" 
+                                               value="{{ user.quiet_hours_start or '22:00' }}"
+                                               pattern="[0-2][0-9]:[0-5][0-9]"
+                                               {% if user.quiet_hours_enabled %}required{% endif %}>
+                                    </div>
+                                    <div class="form-text">
+                                        Time when quiet hours begin (24-hour format)
+                                    </div>
+                                </div>
+
+                                <!-- End Time -->
+                                <div class="col-md-6">
+                                    <label for="quiet_hours_end" class="form-label">
+                                        <i class="fas fa-sun me-2"></i>End Time
+                                    </label>
+                                    <div class="time-input-wrapper">
+                                        <i class="fas fa-clock"></i>
+                                        <input type="time" 
+                                               class="form-control" 
+                                               id="quiet_hours_end" 
+                                               name="quiet_hours_end" 
+                                               value="{{ user.quiet_hours_end or '08:00' }}"
+                                               pattern="[0-2][0-9]:[0-5][0-9]"
+                                               {% if user.quiet_hours_enabled %}required{% endif %}>
+                                    </div>
+                                    <div class="form-text">
+                                        Time when quiet hours end (24-hour format)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Example -->
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Example:</strong> Setting start time to <code>22:00</code> and end time to <code>08:00</code> will pause content delivery from 10 PM to 8 AM.
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="/chat/{{ user.id }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Chat
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Current Status Card -->
+                {% if user.quiet_hours_enabled %}
+                <div class="settings-card">
+                    <h5 class="mb-3">
+                        <i class="fas fa-clock me-2 cv-text-primary"></i>Current Status
+                    </h5>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Quiet hours are <strong>enabled</strong> from <strong>{{ user.quiet_hours_start }}</strong> to <strong>{{ user.quiet_hours_end }}</strong>
+                        {% if user.timezone %}in {{ user.timezone }}{% endif %}.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function toggleQuietHoursInputs() {
+            const enabled = document.getElementById('quietHoursEnabled').checked;
+            const inputsContainer = document.getElementById('quietHoursInputs');
+            const startInput = document.getElementById('quiet_hours_start');
+            const endInput = document.getElementById('quiet_hours_end');
+            
+            if (enabled) {
+                inputsContainer.classList.remove('quiet-hours-disabled');
+                startInput.required = true;
+                endInput.required = true;
+            } else {
+                inputsContainer.classList.add('quiet-hours-disabled');
+                startInput.required = false;
+                endInput.required = false;
+            }
+        }
+        
+        document.getElementById('quietHoursForm').addEventListener('submit', function(e) {
+            const enabled = document.getElementById('quietHoursEnabled').checked;
+            
+            if (enabled) {
+                const start = document.getElementById('quiet_hours_start').value;
+                const end = document.getElementById('quiet_hours_end').value;
+                
+                if (!start || !end) {
+                    e.preventDefault();
+                    alert('Please provide both start and end times when quiet hours are enabled.');
+                    return false;
+                }
+                
+                const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+                if (!timePattern.test(start) || !timePattern.test(end)) {
+                    e.preventDefault();
+                    alert('Please use valid HH:MM format (24-hour) for the times.');
+                    return false;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

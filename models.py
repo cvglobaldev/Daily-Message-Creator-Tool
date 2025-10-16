@@ -193,6 +193,11 @@ class User(db.Model):
     completion_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     tags: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=list)
     
+    # Quiet Hours feature
+    quiet_hours_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    quiet_hours_start: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)  # Format: "22:00" in user's timezone
+    quiet_hours_end: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)  # Format: "08:00" in user's timezone
+    
     # Relationships
     bot: Mapped[Optional["Bot"]] = relationship("Bot", back_populates="users")
     messages: Mapped[List["MessageLog"]] = relationship("MessageLog", back_populates="user", cascade="all, delete-orphan")

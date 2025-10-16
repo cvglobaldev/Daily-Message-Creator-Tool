@@ -5730,6 +5730,54 @@ def delete_user(user_id):
     flash(f'User {username} has been deleted successfully!', 'success')
     return redirect(url_for('user_management'))
 
+@app.route('/user/<int:user_id>/settings', methods=['GET', 'POST'])
+@login_required
+def user_settings(user_id):
+    """User quiet hours settings page"""
+    import re
+    
+    user = User.query.get_or_404(user_id)
+    
+    if request.method == 'POST':
+        try:
+            quiet_hours_enabled = request.form.get('quiet_hours_enabled') == 'on'
+            quiet_hours_start = request.form.get('quiet_hours_start', '').strip()
+            quiet_hours_end = request.form.get('quiet_hours_end', '').strip()
+            
+            time_pattern = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
+            
+            if quiet_hours_enabled:
+                if not quiet_hours_start or not quiet_hours_end:
+                    flash('Both start and end times are required when quiet hours are enabled.', 'error')
+                    return redirect(url_for('user_settings', user_id=user_id))
+                
+                if not time_pattern.match(quiet_hours_start):
+                    flash('Invalid start time format. Please use HH:MM format (e.g., 22:00).', 'error')
+                    return redirect(url_for('user_settings', user_id=user_id))
+                
+                if not time_pattern.match(quiet_hours_end):
+                    flash('Invalid end time format. Please use HH:MM format (e.g., 08:00).', 'error')
+                    return redirect(url_for('user_settings', user_id=user_id))
+                
+                user.quiet_hours_enabled = True
+                user.quiet_hours_start = quiet_hours_start
+                user.quiet_hours_end = quiet_hours_end
+            else:
+                user.quiet_hours_enabled = False
+                user.quiet_hours_start = None
+                user.quiet_hours_end = None
+            
+            db.session.commit()
+            flash('Quiet hours settings updated successfully!', 'success')
+            return redirect(url_for('user_settings', user_id=user_id))
+            
+        except Exception as e:
+            logger.error(f"Error updating quiet hours settings: {e}")
+            flash('An error occurred while updating settings. Please try again.', 'error')
+            return redirect(url_for('user_settings', user_id=user_id))
+    
+    return render_template('user_settings.html', user=user)
+
 @app.route('/static/uploads/<subfolder>/<filename>')
 def serve_uploaded_file(subfolder, filename):
     """Serve uploaded media files from subdirectories"""
