@@ -511,7 +511,7 @@ class ContentScheduler:
                 
                 # Send confirmation buttons after content is delivered
                 if content_delivered:
-                    time.sleep(10)  # 10 second pause before asking for confirmation
+                    time.sleep(30)  # 30 second pause before asking for confirmation
                     self._send_content_confirmation_buttons(phone_number, platform, telegram_service, day)
                 
                 return content_delivered
@@ -561,7 +561,7 @@ class ContentScheduler:
                 
                 # Send confirmation buttons after content is delivered
                 if content_delivered:
-                    time.sleep(10)  # 10 second pause before asking for confirmation
+                    time.sleep(30)  # 30 second pause before asking for confirmation
                     self._send_content_confirmation_buttons(phone_number, platform, whatsapp_service, day)
                 
                 return content_delivered
