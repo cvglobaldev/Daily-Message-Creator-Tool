@@ -64,11 +64,16 @@ Your goal is to create respectful, meaningful conversations that invite people t
         validators=[DataRequired(), NumberRange(min=1, max=365)],
         default=30
     )
-    delivery_interval_minutes = IntegerField(
-        'Content Delivery Interval (Minutes)',
-        validators=[DataRequired(), NumberRange(min=1, max=1440)],
-        default=10,
-        description="How often to deliver daily content (1-1440 minutes). Default: 10 minutes for testing, 1440 for daily delivery."
+    delivery_interval_minutes = SelectField(
+        'Content Delivery Interval',
+        choices=[
+            ('10', '10 minutes (for testing)'),
+            ('1440', '1440 minutes (1 day)'),
+            ('2880', '2880 minutes (2 days)')
+        ],
+        validators=[DataRequired()],
+        default='10',
+        description="Select how often to check and deliver daily content to users."
     )
     
     # Timezone-based scheduling
@@ -359,10 +364,15 @@ class EditBotForm(FlaskForm):
         'Journey Duration (Days)',
         validators=[DataRequired(), NumberRange(min=1, max=365)]
     )
-    delivery_interval_minutes = IntegerField(
-        'Content Delivery Interval (Minutes)',
-        validators=[DataRequired(), NumberRange(min=1, max=1440)],
-        description="How often to deliver daily content (1-1440 minutes). Default: 10 minutes for testing, 1440 for daily delivery."
+    delivery_interval_minutes = SelectField(
+        'Content Delivery Interval',
+        choices=[
+            ('10', '10 minutes (for testing)'),
+            ('1440', '1440 minutes (1 day)'),
+            ('2880', '2880 minutes (2 days)')
+        ],
+        validators=[DataRequired()],
+        description="Select how often to check and deliver daily content to users."
     )
     
     # Timezone-based scheduling
