@@ -1357,19 +1357,22 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
                     db_manager.update_user(phone_number, **user_data)
         
         # Handle commands - support both slash commands (Telegram) and keyword commands (WhatsApp)
-        if message_lower in ['start', '/start'] or 'start' in message_lower:
+        # Check FIRST WORD to avoid matching commands within sentences like "Can you help me"
+        first_word = message_lower.split()[0] if message_lower.split() else message_lower
+        
+        if first_word in ['start', '/start']:
             handle_start_command(phone_number, platform, user_data, request_ip, bot_id)
             return
         
-        elif message_lower in ['stop', '/stop'] or 'stop' in message_lower:
+        elif first_word in ['stop', '/stop']:
             handle_stop_command(phone_number, platform, bot_id)
             return
         
-        elif message_lower in ['help', '/help'] or 'help' in message_lower:
+        elif first_word in ['help', '/help']:
             handle_help_command(phone_number, platform, bot_id)
             return
         
-        elif message_lower in ['human', '/human'] or 'human' in message_lower:
+        elif first_word in ['human', '/human']:
             handle_human_command(phone_number, platform, bot_id)
             return
         
