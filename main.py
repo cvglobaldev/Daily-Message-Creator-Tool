@@ -782,9 +782,10 @@ def telegram_webhook(bot_id=1):
                             for msg in reversed(recent_messages):
                                 if msg.direction == 'incoming' and 'human connection' not in msg.raw_text.lower():
                                     original_message = msg.raw_text
-                                    logger.info(f"User chose bot response, providing contextual reply to: {original_message}")
-                                    # Generate contextual response to the original message
-                                    handle_contextual_conversation(phone_number, original_message, "telegram", bot_id)
+                                    was_voice_message = msg.is_voice_message  # Check if original was voice
+                                    logger.info(f"User chose bot response, providing contextual reply to: {original_message} (voice: {was_voice_message})")
+                                    # Generate contextual response to the original message - reply with voice if original was voice
+                                    handle_contextual_conversation(phone_number, original_message, "telegram", bot_id, is_voice_message=was_voice_message)
                                     break
                     
                 elif callback_data.startswith('content_confirm_yes_'):
