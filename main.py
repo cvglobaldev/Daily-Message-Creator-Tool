@@ -2683,6 +2683,20 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
         should_offer_human = _should_offer_human_connection(message_text, analysis)
         
         if should_offer_human:
+            # Log the user's incoming message BEFORE offering human connection
+            # This ensures the voice flag is preserved for callback handling
+            if user:
+                filtered_tags = [tag for tag in analysis['tags'] if tag.lower() != 'human']
+                db_manager.log_message(
+                    user=user,
+                    direction='incoming',
+                    raw_text=message_text,
+                    sentiment=analysis['sentiment'],
+                    tags=filtered_tags,
+                    confidence=analysis.get('confidence'),
+                    is_voice_message=is_voice_message  # Preserve voice flag for callback handler
+                )
+            
             # Offer human connection with interactive buttons
             from models import Bot
             bot = Bot.query.get(bot_id)
