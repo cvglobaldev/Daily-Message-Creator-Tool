@@ -987,6 +987,55 @@ def whatsapp_webhook(bot_id=1):
                                             # Skip normal text processing for voice messages
                                             continue
                                     
+                                    # Handle human connection buttons (WhatsApp)
+                                    if button_id == 'human_yes':
+                                        # User chose to connect with human - add Human tag
+                                        user = db_manager.get_user_by_phone(phone_number)
+                                        if user:
+                                            db_manager.log_message(
+                                                user=user,
+                                                direction='incoming',
+                                                raw_text="User requested human connection via button",
+                                                sentiment='neutral',
+                                                tags=['Human']
+                                            )
+                                        
+                                        # Send confirmation message
+                                        from models import Bot
+                                        bot = Bot.query.get(bot_id)
+                                        
+                                        if bot and bot.name and "indonesia" in bot.name.lower():
+                                            confirmation_msg = "✅ Terima kasih! Tim kami akan segera menghubungi Anda untuk memberikan dukungan personal."
+                                        else:
+                                            confirmation_msg = "✅ Thank you! Our team will connect with you soon for personal support."
+                                        
+                                        bot_whatsapp_service = get_whatsapp_service_for_bot(bot_id)
+                                        bot_whatsapp_service.send_message(phone_number, confirmation_msg)
+                                        logger.info(f"Human connection requested by {phone_number}")
+                                        
+                                        # Skip normal processing
+                                        continue
+                                    
+                                    elif button_id == 'human_no':
+                                        # User chose to continue with bot - provide contextual response with voice if original was voice
+                                        user = db_manager.get_user_by_phone(phone_number)
+                                        if user:
+                                            # Get the original message from recent logs to provide contextual response
+                                            recent_messages = db_manager.get_user_messages(phone_number)[:3]
+                                            if recent_messages and len(recent_messages) > 1:
+                                                # Find the original user message (not the human offer)
+                                                for msg in reversed(recent_messages):
+                                                    if msg.direction == 'incoming' and 'human connection' not in msg.raw_text.lower():
+                                                        original_message = msg.raw_text
+                                                        was_voice_message = msg.is_voice_message  # Check if original was voice
+                                                        logger.info(f"WhatsApp user chose bot response, providing contextual reply to: {original_message} (voice: {was_voice_message})")
+                                                        # Generate contextual response - reply with voice if original was voice
+                                                        handle_contextual_conversation(phone_number, original_message, "whatsapp", bot_id, is_voice_message=was_voice_message)
+                                                        break
+                                        
+                                        # Skip normal processing
+                                        continue
+                                    
                                     # Handle content confirmation buttons (WhatsApp)
                                     if button_id and button_id.startswith('content_confirm_'):
                                         user = db_manager.get_user_by_phone(phone_number)
