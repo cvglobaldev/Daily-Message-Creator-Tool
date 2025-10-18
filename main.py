@@ -784,8 +784,9 @@ def telegram_webhook(bot_id=1):
                                     original_message = msg.raw_text
                                     was_voice_message = msg.is_voice_message  # Check if original was voice
                                     logger.info(f"User chose bot response, providing contextual reply to: {original_message} (voice: {was_voice_message})")
-                                    # Generate contextual response to the original message - reply with voice if original was voice
-                                    handle_contextual_conversation(phone_number, original_message, "telegram", bot_id, is_voice_message=was_voice_message)
+                                    # Generate contextual response - skip human offer since user already declined
+                                    handle_contextual_conversation(phone_number, original_message, "telegram", bot_id, 
+                                                                  is_voice_message=was_voice_message, skip_human_offer=True)
                                     break
                     
                 elif callback_data.startswith('content_confirm_yes_'):
@@ -1029,8 +1030,9 @@ def whatsapp_webhook(bot_id=1):
                                                         original_message = msg.raw_text
                                                         was_voice_message = msg.is_voice_message  # Check if original was voice
                                                         logger.info(f"WhatsApp user chose bot response, providing contextual reply to: {original_message} (voice: {was_voice_message})")
-                                                        # Generate contextual response - reply with voice if original was voice
-                                                        handle_contextual_conversation(phone_number, original_message, "whatsapp", bot_id, is_voice_message=was_voice_message)
+                                                        # Generate contextual response - skip human offer since user already declined
+                                                        handle_contextual_conversation(phone_number, original_message, "whatsapp", bot_id, 
+                                                                                     is_voice_message=was_voice_message, skip_human_offer=True)
                                                         break
                                         
                                         # Skip normal processing
@@ -2665,8 +2667,12 @@ def handle_general_conversation(phone_number: str, message_text: str, platform: 
         fallback_response = "Thank you for your message. How can I help you today?"
         send_message_to_platform(phone_number, platform, fallback_response, bot_id=bot_id, send_as_voice=is_voice_message)
 
-def handle_contextual_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1, is_voice_message: bool = False):
-    """Handle any user message with full context of their current daily content"""
+def handle_contextual_conversation(phone_number: str, message_text: str, platform: str = "whatsapp", bot_id: int = 1, is_voice_message: bool = False, skip_human_offer: bool = False):
+    """Handle any user message with full context of their current daily content
+    
+    Args:
+        skip_human_offer: Set to True when called from callback handler after user declined human connection
+    """
     try:
         # Analyze the response with Gemini
         analysis = gemini_service.analyze_response(message_text)
@@ -2680,7 +2686,8 @@ def handle_contextual_conversation(phone_number: str, message_text: str, platfor
             db_manager.update_user(phone_number, bot_id=bot_id)
         
         # ALWAYS OFFER HUMAN CONNECTION FIRST - Check if user seems to need additional support
-        should_offer_human = _should_offer_human_connection(message_text, analysis)
+        # Skip if this is a callback response where user already declined
+        should_offer_human = _should_offer_human_connection(message_text, analysis) if not skip_human_offer else False
         
         if should_offer_human:
             # Log the user's incoming message BEFORE offering human connection
