@@ -954,14 +954,6 @@ class DatabaseManager:
             logger.error(f"Error getting user by ID {user_id}: {e}")
             return None
     
-    def get_user_messages(self, user_id: int) -> List[MessageLog]:
-        """Get all messages for a specific user"""
-        try:
-            return MessageLog.query.filter_by(user_id=user_id).order_by(MessageLog.timestamp.asc()).all()
-        except SQLAlchemyError as e:
-            logger.error(f"Error getting user messages: {e}")
-            return []
-    
     def get_recent_active_users(self, limit: int = 10, bot_id: int = None) -> List[Dict]:
         """Get recent unique users with their conversation summary (no duplicates)"""
         try:
