@@ -1344,7 +1344,7 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         existing_user = db_manager.get_user_by_phone(phone_number)
         if not existing_user:
             logger.info(f"New {platform} user {phone_number}, triggering welcome flow for first message: '{message_text}'")
-            handle_whatsapp_first_message(phone_number, platform, user_data, request_ip, bot_id)
+            handle_first_message(phone_number, platform, user_data, request_ip, bot_id)
             return
         
         # Update user data if available (WhatsApp-specific metadata)
@@ -2410,8 +2410,8 @@ def handle_human_handoff(phone_number: str, message_text: str, platform: str = "
     except Exception as e:
         logger.error(f"Error handling human handoff for {phone_number}: {e}")
 
-def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
-    """Handle first message from WhatsApp user with welcome flow: greeting → 10 sec delay → Day 1 content"""
+def handle_first_message(phone_number: str, platform: str = "whatsapp", user_data: dict = None, request_ip: str = None, bot_id: int = 1):
+    """Handle first message from new user (WhatsApp or Telegram) with welcome flow: greeting → 10 sec delay → Day 1 content"""
     try:
         from datetime import datetime
         import threading
@@ -2422,7 +2422,7 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
             create_kwargs.update(user_data)
         
         user = db_manager.create_user(phone_number, **create_kwargs)
-        logger.info(f"Created new WhatsApp user {phone_number} for bot {bot_id}")
+        logger.info(f"Created new {platform} user {phone_number} for bot {bot_id}")
         
         # Send welcome message from CMS greeting content
         greeting = db_manager.get_greeting_content(bot_id=bot_id)
@@ -2480,16 +2480,23 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
                                     base_url = f"https://{base_url}"
                                 media_url = f"{base_url}/static/uploads/images/{content.image_filename}"
                                 
-                                logger.info(f"🖼️ Attempting to send Day 1 image: {media_url}")
-                                bot_service = get_whatsapp_service_for_bot(bot_id)
+                                logger.info(f"🖼️ Attempting to send Day 1 image to {platform}: {media_url}")
                                 
                                 try:
                                     # Validate image file exists before attempting to send
                                     import os
                                     relative_path = f"static/uploads/images/{content.image_filename}"
                                     if os.path.exists(relative_path):
-                                        # Send image with retry logic
-                                        image_success = bot_service.send_media_message(phone_number, "image", media_url, caption="")
+                                        # Platform-specific image sending
+                                        if platform == "whatsapp":
+                                            bot_service = get_whatsapp_service_for_bot(bot_id)
+                                            image_success = bot_service.send_media_message(phone_number, "image", media_url, caption="")
+                                        else:  # telegram
+                                            bot_service = get_telegram_service_for_bot(bot_id)
+                                            # Extract chat_id from phone_number (format: tg_123456)
+                                            chat_id = phone_number[3:] if phone_number.startswith("tg_") else phone_number
+                                            image_success = bot_service.send_photo(chat_id, media_url, caption="")
+                                        
                                         if image_success:
                                             logger.info(f"✅ Day 1 image sent successfully to {phone_number}")
                                         else:
@@ -2536,7 +2543,7 @@ def handle_whatsapp_first_message(phone_number: str, platform: str = "whatsapp",
             logger.info(f"Scheduled Day 1 content delivery for {phone_number} in 10 seconds")
         
     except Exception as e:
-        logger.error(f"Error handling WhatsApp first message for {phone_number}: {e}")
+        logger.error(f"Error handling first message for {platform} user {phone_number}: {e}")
 
 def apply_combined_tags(message_log: MessageLog, user: User, bot: Bot) -> None:
     """Apply both AI-powered and rule-based tags to a message"""
