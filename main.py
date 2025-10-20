@@ -1340,10 +1340,14 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         message_lower = message_text.lower().strip()
         
-        # Check if user is new and send welcome message for any first message (applies to both WhatsApp and Telegram)
+        # Check if user is new OR inactive (after history deletion) and send welcome message
+        # This applies to both WhatsApp and Telegram
         existing_user = db_manager.get_user_by_phone(phone_number)
-        if not existing_user:
-            logger.info(f"New {platform} user {phone_number}, triggering welcome flow for first message: '{message_text}'")
+        if not existing_user or (existing_user and existing_user.status == 'inactive'):
+            if existing_user and existing_user.status == 'inactive':
+                logger.info(f"Inactive {platform} user {phone_number} (history deleted), triggering welcome flow for: '{message_text}'")
+            else:
+                logger.info(f"New {platform} user {phone_number}, triggering welcome flow for first message: '{message_text}'")
             handle_first_message(phone_number, platform, user_data, request_ip, bot_id)
             return
         
@@ -2416,13 +2420,34 @@ def handle_first_message(phone_number: str, platform: str = "whatsapp", user_dat
         from datetime import datetime
         import threading
         
-        # Create new user
-        create_kwargs = {'status': 'active', 'current_day': 1, 'tags': [], 'bot_id': bot_id}
-        if user_data:
-            create_kwargs.update(user_data)
+        # Check if user already exists (e.g., inactive user after history deletion)
+        user = db_manager.get_user_by_phone(phone_number)
         
-        user = db_manager.create_user(phone_number, **create_kwargs)
-        logger.info(f"Created new {platform} user {phone_number} for bot {bot_id}")
+        if user:
+            # Existing user (likely inactive after history deletion) - reactivate them
+            # First, clean up any message logs created while inactive
+            from models import MessageLog
+            from app import db
+            deleted_count = MessageLog.query.filter_by(user_id=user.id).delete()
+            db.session.commit()  # Commit the deletion
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} message logs for inactive user {phone_number}")
+            
+            update_kwargs = {'status': 'active', 'current_day': 1, 'tags': []}
+            if user_data:
+                update_kwargs.update(user_data)
+            db_manager.update_user(phone_number, **update_kwargs)
+            logger.info(f"Reactivated existing {platform} user {phone_number} for bot {bot_id}")
+        else:
+            # Create new user
+            create_kwargs = {'status': 'active', 'current_day': 1, 'tags': [], 'bot_id': bot_id}
+            if user_data:
+                create_kwargs.update(user_data)
+            user = db_manager.create_user(phone_number, **create_kwargs)
+            logger.info(f"Created new {platform} user {phone_number} for bot {bot_id}")
+        
+        # Refresh user object to get latest data
+        user = db_manager.get_user_by_phone(phone_number)
         
         # Send welcome message from CMS greeting content
         greeting = db_manager.get_greeting_content(bot_id=bot_id)
