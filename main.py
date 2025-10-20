@@ -1340,23 +1340,17 @@ def process_incoming_message(phone_number: str, message_text: str, platform: str
         
         message_lower = message_text.lower().strip()
         
-        # For WhatsApp: Check if user is new and send welcome message for any first message
-        if platform == "whatsapp":
-            existing_user = db_manager.get_user_by_phone(phone_number)
-            if not existing_user:
-                logger.info(f"New WhatsApp user {phone_number}, triggering welcome flow for first message: '{message_text}'")
-                handle_whatsapp_first_message(phone_number, platform, user_data, request_ip, bot_id)
-                return
-            elif existing_user.current_day == 1 and not any(cmd in message_lower for cmd in ['start', 'stop', 'help', 'human']):
-                # Day 1 users already received content, so they should get contextual responses too
-                logger.info(f"Day 1 user {phone_number} sending message about Day 1 content, using contextual AI response")
-                handle_contextual_conversation(phone_number, message_text, platform, bot_id, is_voice_message)
-                return
-            else:
-                # Update user with any new WhatsApp data if available
-                if user_data and (user_data.get('whatsapp_formatted_name') or user_data.get('whatsapp_contact_name')):
-                    logger.info(f"Updating existing user {phone_number} with new WhatsApp data")
-                    db_manager.update_user(phone_number, **user_data)
+        # Check if user is new and send welcome message for any first message (applies to both WhatsApp and Telegram)
+        existing_user = db_manager.get_user_by_phone(phone_number)
+        if not existing_user:
+            logger.info(f"New {platform} user {phone_number}, triggering welcome flow for first message: '{message_text}'")
+            handle_whatsapp_first_message(phone_number, platform, user_data, request_ip, bot_id)
+            return
+        
+        # Update user data if available (WhatsApp-specific metadata)
+        if platform == "whatsapp" and user_data and (user_data.get('whatsapp_formatted_name') or user_data.get('whatsapp_contact_name')):
+            logger.info(f"Updating existing user {phone_number} with new WhatsApp data")
+            db_manager.update_user(phone_number, **user_data)
         
         # Handle commands - support both slash commands (Telegram) and keyword commands (WhatsApp)
         # Check FIRST WORD to avoid matching commands within sentences like "Can you help me"
