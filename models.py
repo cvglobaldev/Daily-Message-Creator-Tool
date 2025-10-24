@@ -102,10 +102,17 @@ class Bot(db.Model):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default='active')  # active, inactive
     
     # Platform-specific configurations
+    # WhatsApp - Meta Business API configuration
+    whatsapp_connection_type: Mapped[str] = mapped_column(String(20), nullable=False, default='meta')  # 'meta' or 'waha'
     whatsapp_access_token: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     whatsapp_phone_number_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     whatsapp_webhook_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     whatsapp_verify_token: Mapped[str] = mapped_column(String(255), nullable=False, default='CVGlobal_WhatsApp_Verify_2024')
+    
+    # WhatsApp - WAHA (WhatsApp HTTP API) configuration
+    waha_base_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # e.g., http://localhost:3000
+    waha_api_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    waha_session: Mapped[str] = mapped_column(String(100), nullable=False, default='default')  # WAHA session name
     
     telegram_bot_token: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     telegram_webhook_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
@@ -148,9 +155,13 @@ class Bot(db.Model):
             'description': self.description,
             'platforms': self.platforms or [],
             'status': self.status,
+            'whatsapp_connection_type': self.whatsapp_connection_type,
             'whatsapp_access_token': self.whatsapp_access_token,
             'whatsapp_phone_number_id': self.whatsapp_phone_number_id,
             'whatsapp_webhook_url': self.whatsapp_webhook_url,
+            'waha_base_url': self.waha_base_url,
+            'waha_api_key': self.waha_api_key,
+            'waha_session': self.waha_session,
             'telegram_bot_token': self.telegram_bot_token,
             'telegram_webhook_url': self.telegram_webhook_url,
             'ai_prompt': self.ai_prompt,
