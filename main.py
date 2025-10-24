@@ -1139,6 +1139,238 @@ def whatsapp_webhook(bot_id=1):
         logger.error(f"Error processing WhatsApp webhook for bot {bot_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/waha/<int:bot_id>', methods=['POST'])
+@app.route('/waha', methods=['POST'])
+@csrf.exempt
+def waha_webhook(bot_id=1):
+    """Handle WAHA (WhatsApp HTTP API) webhook for incoming messages"""
+    
+    try:
+        data = request.get_json()
+        logger.info(f"📥 Received WAHA webhook for bot {bot_id}: {data}")
+        
+        # WAHA webhook format: { "event": "message", "session": "default", "payload": {...} }
+        event = data.get('event', '')
+        session = data.get('session', 'default')
+        payload = data.get('payload', {})
+        
+        # Only process message events
+        if event not in ['message', 'message.any']:
+            logger.info(f"Ignoring WAHA event: {event}")
+            return jsonify({"status": "ignored", "reason": f"Event {event} not processed"}), 200
+        
+        # Extract message data from WAHA payload
+        # WAHA format: payload = { "from": "6281234567890@c.us", "body": "text", "type": "chat", ... }
+        from_id = payload.get('from', '')  # Format: 6281234567890@c.us
+        message_body = payload.get('body', '').strip()
+        message_type = payload.get('type', 'chat')  # chat, image, video, audio, voice, ptt
+        message_id = payload.get('id', '')
+        
+        logger.info(f"📨 WAHA message: type={message_type}, from={from_id}, id={message_id}")
+        
+        # Check for duplicate webhooks
+        if message_id and _is_duplicate_webhook(message_id):
+            logger.info(f"🚫 Duplicate WAHA webhook ignored: {message_id} from {from_id}")
+            return jsonify({"status": "duplicate"}), 200
+        
+        # Convert WAHA chat ID to phone number format
+        # from_id is like "6281234567890@c.us" -> convert to "+6281234567890"
+        if '@c.us' in from_id:
+            phone_number = '+' + from_id.replace('@c.us', '')
+        else:
+            phone_number = from_id
+        
+        # Get client IP for location data
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if client_ip and ',' in client_ip:
+            client_ip = client_ip.split(',')[0].strip()
+        
+        # Handle different message types
+        if message_type in ['ptt', 'audio', 'voice']:
+            # Handle voice/audio messages
+            logger.info(f"🎤 WAHA voice/audio message from {phone_number}")
+            
+            # Try to get media URL from WAHA payload
+            media_url = payload.get('_data', {}).get('body') or payload.get('mediaUrl', '')
+            
+            if media_url:
+                try:
+                    # Download audio from WAHA media URL
+                    response = requests.get(media_url, timeout=30)
+                    
+                    if response.status_code == 200:
+                        audio_bytes = response.content
+                        logger.info(f"✅ Downloaded WAHA audio file ({len(audio_bytes)} bytes)")
+                        
+                        # Process voice message through existing pipeline
+                        user_data = {'platform': 'waha', 'session': session}
+                        process_voice_message(phone_number, audio_bytes, platform="whatsapp", 
+                                            user_data=user_data, request_ip=client_ip, bot_id=bot_id)
+                    else:
+                        logger.error(f"Failed to download WAHA audio: {response.status_code}")
+                        
+                except Exception as e:
+                    logger.error(f"Error downloading WAHA voice message: {e}")
+                    from services import WAHAService
+                    from models import Bot
+                    bot = Bot.query.get(bot_id)
+                    if bot:
+                        waha_service = WAHAService(
+                            base_url=bot.waha_base_url,
+                            api_key=bot.waha_api_key,
+                            session_name=bot.waha_session
+                        )
+                        waha_service.send_message(phone_number, 
+                            "Sorry, there was an error processing your voice message. Please try again or send a text message.")
+            
+            return jsonify({"status": "processed"}), 200
+        
+        # Handle interactive button responses (WAHA format may vary)
+        button_id = None
+        if 'selectedButtonId' in payload:
+            button_id = payload['selectedButtonId']
+            message_body = payload.get('selectedButtonText', message_body)
+        
+        # Handle human connection buttons
+        if button_id == 'human_yes':
+            user = db_manager.get_user_by_phone(phone_number)
+            if user:
+                db_manager.log_message(
+                    user=user,
+                    direction='incoming',
+                    raw_text="User requested human connection via button",
+                    sentiment='neutral',
+                    tags=['Human']
+                )
+            
+            from models import Bot
+            from services import WAHAService
+            bot = Bot.query.get(bot_id)
+            
+            if bot and bot.name and "indonesia" in bot.name.lower():
+                confirmation_msg = "✅ Terima kasih! Tim kami akan segera menghubungi Anda untuk memberikan dukungan personal."
+            else:
+                confirmation_msg = "✅ Thank you! Our team will connect with you soon for personal support."
+            
+            if bot:
+                waha_service = WAHAService(
+                    base_url=bot.waha_base_url,
+                    api_key=bot.waha_api_key,
+                    session_name=bot.waha_session
+                )
+                waha_service.send_message(phone_number, confirmation_msg)
+            
+            logger.info(f"WAHA: Human connection requested by {phone_number}")
+            return jsonify({"status": "processed"}), 200
+        
+        elif button_id == 'human_no':
+            user = db_manager.get_user_by_phone(phone_number)
+            if user:
+                recent_messages = db_manager.get_user_messages(phone_number)[:3]
+                if recent_messages and len(recent_messages) > 1:
+                    for msg in reversed(recent_messages):
+                        if msg.direction == 'incoming' and 'human connection' not in msg.raw_text.lower():
+                            original_message = msg.raw_text
+                            was_voice_message = msg.is_voice_message
+                            logger.info(f"WAHA: User chose bot response, providing contextual reply (voice: {was_voice_message})")
+                            handle_contextual_conversation(phone_number, original_message, "whatsapp", bot_id, 
+                                                         is_voice_message=was_voice_message, skip_human_offer=True)
+                            break
+            
+            return jsonify({"status": "processed"}), 200
+        
+        # Handle content confirmation buttons
+        if button_id and button_id.startswith('content_confirm_'):
+            user = db_manager.get_user_by_phone(phone_number)
+            from models import Bot
+            from services import WAHAService
+            bot = Bot.query.get(bot_id)
+            
+            waha_service = None
+            if bot:
+                waha_service = WAHAService(
+                    base_url=bot.waha_base_url,
+                    api_key=bot.waha_api_key,
+                    session_name=bot.waha_session
+                )
+            
+            if button_id.startswith('content_confirm_yes_'):
+                day = button_id.replace('content_confirm_yes_', '')
+                logger.info(f"WAHA: User {phone_number} confirmed reading Day {day} content")
+                
+                if user:
+                    db_manager.log_message(
+                        user=user,
+                        direction='incoming',
+                        raw_text=f"User confirmed reading Day {day} content",
+                        sentiment='positive',
+                        tags=['Christian Learning']
+                    )
+                    db_manager.add_user_tag(phone_number, 'Christian Learning')
+                
+                if bot and bot.name and "indonesia" in bot.name.lower():
+                    feedback_msg = "✅ Terima kasih! Semoga pesan hari ini bermanfaat untuk perjalanan spiritualmu. 🙏"
+                else:
+                    feedback_msg = "✅ Thank you! We hope today's message was meaningful for your spiritual journey. 🙏"
+                
+                if waha_service:
+                    waha_service.send_message(phone_number, feedback_msg)
+                    
+            elif button_id.startswith('content_confirm_no_'):
+                day = button_id.replace('content_confirm_no_', '')
+                logger.info(f"WAHA: User {phone_number} hasn't read Day {day} content yet")
+                
+                if bot and bot.name and "indonesia" in bot.name.lower():
+                    reminder_msg = "Tidak apa-apa! Silakan baca kapan pun Anda siap. Kami di sini untuk Anda. 😊"
+                else:
+                    reminder_msg = "That's okay! Read it whenever you're ready. We're here for you. 😊"
+                
+                if waha_service:
+                    waha_service.send_message(phone_number, reminder_msg)
+            
+            return jsonify({"status": "processed"}), 200
+        
+        # Process regular text messages
+        if phone_number and message_body:
+            # Create user data dict
+            user_data = {
+                'platform': 'waha',
+                'session': session,
+                'waha_id': from_id
+            }
+            
+            logger.info(f"🔥 DEBUG: WAHA user data: {user_data}")
+            
+            try:
+                process_incoming_message(phone_number, message_body, platform="whatsapp", 
+                                       user_data=user_data, request_ip=client_ip, bot_id=bot_id)
+                logger.info(f"✅ Successfully processed WAHA message from {phone_number}")
+            except Exception as processing_error:
+                logger.error(f"❌ Error processing WAHA message from {phone_number}: {processing_error}")
+                
+                try:
+                    from models import Bot
+                    from services import WAHAService
+                    bot = Bot.query.get(bot_id)
+                    if bot:
+                        waha_service = WAHAService(
+                            base_url=bot.waha_base_url,
+                            api_key=bot.waha_api_key,
+                            session_name=bot.waha_session
+                        )
+                        waha_service.send_message(
+                            phone_number, 
+                            "Sorry, there was a temporary error. Please try sending your message again."
+                        )
+                except:
+                    logger.error(f"❌ Failed to send error message to {phone_number}")
+        
+        return jsonify({"status": "success"}), 200
+        
+    except Exception as e:
+        logger.error(f"Error processing WAHA webhook for bot {bot_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/send_test_message', methods=['POST'])
 def send_test_message():
     """Send a test WhatsApp message to verify system is working"""
