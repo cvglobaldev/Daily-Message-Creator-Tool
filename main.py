@@ -129,24 +129,42 @@ def get_published_base_url():
     return "https://smart-budget-cvglobaldev.replit.app"
 
 def get_whatsapp_service_for_bot(bot_id):
-    """Get bot-specific WhatsApp service using environment variables"""
+    """Get bot-specific WhatsApp service - intelligently routes to Meta API or WAHA based on bot config"""
     logger.info(f"🔥 DEBUG: Getting WhatsApp service for bot_id {bot_id}")
     try:
         if bot_id not in bot_whatsapp_services:
             with app.app_context():  # Ensure database context
-                # Always use environment variables for WhatsApp credentials
-                access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
-                phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+                from models import Bot
+                from services import WAHAService
                 
-                if access_token and phone_number_id:
-                    bot_whatsapp_services[bot_id] = WhatsAppService(access_token, phone_number_id)
-                    logger.info(f"🔥 DEBUG: Created new WhatsAppService for bot_id {bot_id} with environment credentials")
+                bot = Bot.query.get(bot_id)
+                
+                # Check if bot uses WAHA or Meta Business API
+                if bot and bot.whatsapp_connection_type == 'waha':
+                    # Use WAHA service
+                    logger.info(f"🔥 DEBUG: Bot {bot_id} configured for WAHA")
+                    bot_whatsapp_services[bot_id] = WAHAService(
+                        base_url=bot.waha_base_url,
+                        api_key=bot.waha_api_key,
+                        session_name=bot.waha_session
+                    )
+                    logger.info(f"🔥 DEBUG: Created new WAHAService for bot_id {bot_id}")
                 else:
-                    # Fallback to default service
-                    bot_whatsapp_services[bot_id] = whatsapp_service
-                    logger.info(f"🔥 DEBUG: Using default WhatsAppService for bot_id {bot_id} (missing credentials)")
+                    # Use Meta Business API (default)
+                    logger.info(f"🔥 DEBUG: Bot {bot_id} configured for Meta Business API")
+                    # Always use environment variables for WhatsApp credentials
+                    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+                    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+                    
+                    if access_token and phone_number_id:
+                        bot_whatsapp_services[bot_id] = WhatsAppService(access_token, phone_number_id)
+                        logger.info(f"🔥 DEBUG: Created new WhatsAppService for bot_id {bot_id} with environment credentials")
+                    else:
+                        # Fallback to default service
+                        bot_whatsapp_services[bot_id] = whatsapp_service
+                        logger.info(f"🔥 DEBUG: Using default WhatsAppService for bot_id {bot_id} (missing credentials)")
         else:
-            logger.info(f"🔥 DEBUG: Using cached WhatsAppService for bot_id {bot_id}")
+            logger.info(f"🔥 DEBUG: Using cached service for bot_id {bot_id}")
         return bot_whatsapp_services[bot_id]
     except Exception as e:
         logger.error(f"🔥 ERROR: Failed to get WhatsApp service for bot_id {bot_id}: {e}")

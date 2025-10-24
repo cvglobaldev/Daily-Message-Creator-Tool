@@ -41,6 +41,7 @@ A consistent "CV Global" design theme is applied across all management interface
 - **Voice Message Conversation Flow**: When users send voice messages and click "No, continue with bot" after the human connection offer, the system detects if the original message was voice by checking MessageLog.is_voice_message and replies with voice (Text-to-Speech) instead of text. This applies to both Telegram and WhatsApp platforms, creating natural voice-to-voice conversations. The callback handlers (human_yes/human_no buttons) preserve the voice context through the entire conversation flow.
 - **First-Word Command Detection**: Command detection (START, STOP, HELP, HUMAN) uses first-word matching to avoid false triggers. The system extracts the first word from user messages and checks if it matches command keywords, preventing conversational phrases like "Can you help me" from triggering the HELP command while still supporting all legitimate command formats including slash commands (/help), bare keywords (help), and commands with arguments (help me).
 - **Universal First-Time User Welcome Flow**: Both WhatsApp and Telegram platforms implement identical first-time user onboarding. When ANY new user sends their first message (regardless of platform), they automatically receive: welcome message → 10 second delay → Day 1 content → 30 second delay → confirmation buttons. The system uses the unified `handle_first_message()` function which handles platform-specific media delivery (WhatsApp uses `send_media_message()`, Telegram uses `send_photo()` with chat_id extraction). This ensures consistent user experience across platforms and prevents new users from triggering contextual AI responses before completing onboarding.
+- **WAHA (WhatsApp HTTP API) Integration**: The system supports two WhatsApp connection methods: Meta Business API and WAHA (a self-hosted, simpler alternative). Bots can be configured individually to use either connection type via the admin dashboard. WAHA integration provides: simpler setup (Docker + QR code, no Meta Business Manager), no per-conversation costs, self-hosted infrastructure, and easier development/testing. The system includes WAHAService class (mirroring WhatsAppService), dedicated /waha/<bot_id> webhook endpoint, intelligent message routing based on bot.whatsapp_connection_type, and conditional form validation ensuring WAHA credentials are required when WAHA connection is selected. This dual-mode approach allows gradual migration and flexibility for different deployment scenarios without code changes.
 
 ### System Design Choices
 - **Multi-Bot System**: Enables creation and management of independent bots.
@@ -54,15 +55,19 @@ A consistent "CV Global" design theme is applied across all management interface
 ## External Dependencies
 
 ### APIs
-- WhatsApp Business API
+- WhatsApp Business API (Meta Business API)
+- WAHA (WhatsApp HTTP API) - Self-hosted alternative to Meta Business API
 - Google Gemini API
 - Telegram Bot API
 - Google Cloud Speech-to-Text API
 - Google Cloud Text-to-Speech API
 
 ### Environment Variables
-- `WHATSAPP_ACCESS_TOKEN`
-- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_ACCESS_TOKEN` (Meta Business API)
+- `WHATSAPP_PHONE_NUMBER_ID` (Meta Business API)
+- `WAHA_BASE_URL` (optional, for WAHA integration)
+- `WAHA_API_KEY` (optional, for WAHA integration)
+- `WAHA_SESSION` (optional, default: 'default')
 - `GEMINI_API_KEY`
 - `SESSION_SECRET`
 - `GOOGLE_CLOUD_CREDENTIALS_JSON`

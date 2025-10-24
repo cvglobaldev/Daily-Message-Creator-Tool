@@ -814,6 +814,9 @@ class WAHAService:
             base_url: WAHA server URL (e.g., http://localhost:3000)
             api_key: WAHA API key for authentication
             session_name: WAHA session name (usually 'default' or custom)
+        
+        Raises:
+            ValueError: If required WAHA credentials are missing in production mode
         """
         self.base_url = (base_url or os.environ.get("WAHA_BASE_URL", "")).rstrip('/')
         self.api_key = api_key or os.environ.get("WAHA_API_KEY", "")
@@ -824,6 +827,12 @@ class WAHAService:
         
         if self.simulate_mode:
             logger.warning("WAHA service running in simulation mode (no API credentials)")
+            logger.warning("⚠️ WAHA Configuration Incomplete:")
+            if not self.base_url:
+                logger.warning("  - Missing WAHA_BASE_URL (e.g., http://localhost:3000)")
+            if not self.api_key:
+                logger.warning("  - Missing WAHA_API_KEY")
+            logger.warning("  → Messages will be simulated but not actually sent")
         else:
             logger.info(f"WAHA service initialized: {self.base_url}, session: {self.session_name}")
     

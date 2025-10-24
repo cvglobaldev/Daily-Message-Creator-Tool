@@ -21,10 +21,22 @@ class CreateBotForm(FlaskForm):
     )
     
     # WhatsApp configuration
+    whatsapp_connection_type = SelectField(
+        'WhatsApp Connection Type',
+        choices=[('meta', 'Meta Business API'), ('waha', 'WAHA (WhatsApp HTTP API)')],
+        default='meta',
+        validators=[Optional()],
+        description="Choose how to connect to WhatsApp"
+    )
     whatsapp_access_token = StringField('WhatsApp Access Token', validators=[Optional(), Length(max=500)])
     whatsapp_phone_number_id = StringField('WhatsApp Phone Number ID', validators=[Optional(), Length(max=100)])
     whatsapp_webhook_url = StringField('WhatsApp Webhook URL', validators=[Optional(), Length(max=500)])
     whatsapp_verify_token = StringField('WhatsApp Verify Token', validators=[DataRequired(), Length(min=5, max=255)], default='CVGlobal_WhatsApp_Verify_2024')
+    
+    # WAHA configuration
+    waha_base_url = StringField('WAHA Base URL', validators=[Optional(), Length(max=500)], description="e.g., http://localhost:3000")
+    waha_api_key = StringField('WAHA API Key', validators=[Optional(), Length(max=500)])
+    waha_session = StringField('WAHA Session Name', validators=[Optional(), Length(max=100)], default='default')
     
     # Telegram configuration
     telegram_bot_token = StringField('Telegram Bot Token', validators=[Optional(), Length(max=500)])
@@ -318,6 +330,36 @@ Your goal is to create respectful, meaningful conversations that invite people t
         description="Describe the type of content you want to generate. Be specific about tone, topics, and approach."
     )
     
+    def validate(self, extra_validators=None):
+        """Custom validation for conditional WAHA field requirements"""
+        if not super().validate(extra_validators):
+            return False
+        
+        # If WAHA connection type is selected, ensure WAHA fields are filled
+        if self.whatsapp_connection_type.data == 'waha':
+            has_error = False
+            
+            if not self.waha_base_url.data or not self.waha_base_url.data.strip():
+                self.waha_base_url.errors = list(self.waha_base_url.errors) if self.waha_base_url.errors else []
+                self.waha_base_url.errors.append('WAHA Base URL is required when using WAHA connection type')
+                has_error = True
+                
+            if not self.waha_api_key.data or not self.waha_api_key.data.strip():
+                self.waha_api_key.errors = list(self.waha_api_key.errors) if self.waha_api_key.errors else []
+                self.waha_api_key.errors.append('WAHA API Key is required when using WAHA connection type')
+                has_error = True
+            
+            # waha_session has a default value, but check if it's been cleared
+            if not self.waha_session.data or not self.waha_session.data.strip():
+                self.waha_session.errors = list(self.waha_session.errors) if self.waha_session.errors else []
+                self.waha_session.errors.append('WAHA Session Name is required when using WAHA connection type')
+                has_error = True
+            
+            if has_error:
+                return False
+        
+        return True
+    
     submit = SubmitField('Create Bot')
 
 class EditBotForm(FlaskForm):
@@ -333,10 +375,22 @@ class EditBotForm(FlaskForm):
     )
     
     # WhatsApp configuration
+    whatsapp_connection_type = SelectField(
+        'WhatsApp Connection Type',
+        choices=[('meta', 'Meta Business API'), ('waha', 'WAHA (WhatsApp HTTP API)')],
+        default='meta',
+        validators=[Optional()],
+        description="Choose how to connect to WhatsApp"
+    )
     whatsapp_access_token = StringField('WhatsApp Access Token', validators=[Optional(), Length(max=500)])
     whatsapp_phone_number_id = StringField('WhatsApp Phone Number ID', validators=[Optional(), Length(max=100)])
     whatsapp_webhook_url = StringField('WhatsApp Webhook URL', validators=[Optional(), Length(max=500)])
     whatsapp_verify_token = StringField('WhatsApp Verify Token', validators=[DataRequired(), Length(min=5, max=255)], default='CVGlobal_WhatsApp_Verify_2024')
+    
+    # WAHA configuration
+    waha_base_url = StringField('WAHA Base URL', validators=[Optional(), Length(max=500)], description="e.g., http://localhost:3000")
+    waha_api_key = StringField('WAHA API Key', validators=[Optional(), Length(max=500)])
+    waha_session = StringField('WAHA Session Name', validators=[Optional(), Length(max=100)], default='default')
     
     # Telegram configuration
     telegram_bot_token = StringField('Telegram Bot Token', validators=[Optional(), Length(max=500)])
@@ -525,6 +579,36 @@ class EditBotForm(FlaskForm):
     
     # Status
     status = BooleanField('Active')
+    
+    def validate(self, extra_validators=None):
+        """Custom validation for conditional WAHA field requirements"""
+        if not super().validate(extra_validators):
+            return False
+        
+        # If WAHA connection type is selected, ensure WAHA fields are filled
+        if self.whatsapp_connection_type.data == 'waha':
+            has_error = False
+            
+            if not self.waha_base_url.data or not self.waha_base_url.data.strip():
+                self.waha_base_url.errors = list(self.waha_base_url.errors) if self.waha_base_url.errors else []
+                self.waha_base_url.errors.append('WAHA Base URL is required when using WAHA connection type')
+                has_error = True
+                
+            if not self.waha_api_key.data or not self.waha_api_key.data.strip():
+                self.waha_api_key.errors = list(self.waha_api_key.errors) if self.waha_api_key.errors else []
+                self.waha_api_key.errors.append('WAHA API Key is required when using WAHA connection type')
+                has_error = True
+            
+            # waha_session has a default value, but check if it's been cleared
+            if not self.waha_session.data or not self.waha_session.data.strip():
+                self.waha_session.errors = list(self.waha_session.errors) if self.waha_session.errors else []
+                self.waha_session.errors.append('WAHA Session Name is required when using WAHA connection type')
+                has_error = True
+            
+            if has_error:
+                return False
+        
+        return True
     
     submit = SubmitField('Update Bot')
 
