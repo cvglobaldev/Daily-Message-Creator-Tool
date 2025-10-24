@@ -803,6 +803,220 @@ class WhatsAppService:
             return False
 
 
+class WAHAService:
+    """Service for WAHA (WhatsApp HTTP API) integration - simpler alternative to Meta Business API"""
+    
+    def __init__(self, base_url=None, api_key=None, session_name=None):
+        """
+        Initialize WAHA service
+        
+        Args:
+            base_url: WAHA server URL (e.g., http://localhost:3000)
+            api_key: WAHA API key for authentication
+            session_name: WAHA session name (usually 'default' or custom)
+        """
+        self.base_url = (base_url or os.environ.get("WAHA_BASE_URL", "")).rstrip('/')
+        self.api_key = api_key or os.environ.get("WAHA_API_KEY", "")
+        self.session_name = session_name or os.environ.get("WAHA_SESSION", "default")
+        
+        # Simulation mode if credentials not configured
+        self.simulate_mode = not (self.base_url and self.api_key)
+        
+        if self.simulate_mode:
+            logger.warning("WAHA service running in simulation mode (no API credentials)")
+        else:
+            logger.info(f"WAHA service initialized: {self.base_url}, session: {self.session_name}")
+    
+    def _format_chat_id(self, phone_number: str) -> str:
+        """
+        Convert phone number to WAHA chatId format
+        
+        WAHA format: <phone-without-plus>@c.us
+        Example: +6281234567890 -> 6281234567890@c.us
+        """
+        # Remove + and any formatting
+        clean_number = phone_number.replace('+', '').replace('-', '').replace(' ', '')
+        return f"{clean_number}@c.us"
+    
+    def _get_headers(self) -> dict:
+        """Get HTTP headers for WAHA API requests"""
+        return {
+            "Content-Type": "application/json",
+            "X-Api-Key": self.api_key
+        }
+    
+    def send_message(self, to: str, message: str) -> bool:
+        """Send a text message via WAHA"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 WAHA MESSAGE TO {to}:")
+                print(f"   {message}")
+                print("   ✅ Message simulated (development mode)")
+                return True
+            
+            url = f"{self.base_url}/api/sendText"
+            chat_id = self._format_chat_id(to)
+            
+            payload = {
+                "session": self.session_name,
+                "chatId": chat_id,
+                "text": message
+            }
+            
+            response = requests.post(url, json=payload, headers=self._get_headers(), timeout=30)
+            
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"WAHA message sent successfully to {to}")
+                return True
+            else:
+                logger.error(f"Failed to send WAHA message to {to}: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending WAHA message to {to}: {e}")
+            return False
+    
+    def send_media_message(self, to: str, media_type: str, media_url: str, caption: str = "") -> bool:
+        """Send a media message (image, video, audio) via WAHA"""
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 WAHA MEDIA MESSAGE TO {to}:")
+                print(f"   Type: {media_type}")
+                print(f"   URL: {media_url}")
+                if caption:
+                    print(f"   Caption: {caption}")
+                print("   ✅ Media message simulated (development mode)")
+                return True
+            
+            chat_id = self._format_chat_id(to)
+            
+            # Map media types to WAHA endpoints
+            if media_type == "image":
+                url = f"{self.base_url}/api/sendImage"
+                payload = {
+                    "session": self.session_name,
+                    "chatId": chat_id,
+                    "url": media_url,
+                    "caption": caption
+                }
+            elif media_type == "video":
+                url = f"{self.base_url}/api/sendVideo"
+                payload = {
+                    "session": self.session_name,
+                    "chatId": chat_id,
+                    "url": media_url,
+                    "caption": caption
+                }
+            elif media_type == "audio":
+                url = f"{self.base_url}/api/sendVoice"
+                payload = {
+                    "session": self.session_name,
+                    "chatId": chat_id,
+                    "url": media_url
+                }
+            else:
+                # Generic file for unknown types
+                url = f"{self.base_url}/api/sendFile"
+                payload = {
+                    "session": self.session_name,
+                    "chatId": chat_id,
+                    "url": media_url,
+                    "caption": caption
+                }
+            
+            response = requests.post(url, json=payload, headers=self._get_headers(), timeout=60)
+            
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"WAHA media message sent successfully to {to}")
+                return True
+            else:
+                logger.error(f"Failed to send WAHA media to {to}: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending WAHA media to {to}: {e}")
+            return False
+    
+    def send_video(self, to: str, video_url: str, caption: str = "") -> bool:
+        """Send video message via WAHA"""
+        return self.send_media_message(to, "video", video_url, caption)
+    
+    def send_audio(self, to: str, audio_url: str, caption: str = None) -> bool:
+        """Send audio/voice message via WAHA"""
+        return self.send_media_message(to, "audio", audio_url, caption or "")
+    
+    def send_interactive_buttons(self, to: str, message: str, buttons: list) -> bool:
+        """
+        Send an interactive message with buttons via WAHA
+        
+        Note: WAHA supports buttons, but the format is different from Meta API.
+        This implementation sends regular text with numbered options as a fallback.
+        For full button support, use WAHA's sendButtons endpoint (WAHA Plus feature).
+        """
+        try:
+            if self.simulate_mode:
+                print(f"\n📱 WAHA INTERACTIVE MESSAGE TO {to}:")
+                print(f"   {message}")
+                print(f"   🔘 Buttons: {[btn['title'] for btn in buttons]}")
+                print("   ✅ Interactive message simulated (development mode)")
+                return True
+            
+            chat_id = self._format_chat_id(to)
+            
+            # Format message with numbered button options
+            button_text = "\n\n" + "\n".join([f"{i+1}. {btn['title']}" for i, btn in enumerate(buttons)])
+            full_message = message + button_text
+            
+            # Try to use WAHA's buttons API if available (WAHA Plus)
+            try:
+                url = f"{self.base_url}/api/sendButtons"
+                payload = {
+                    "session": self.session_name,
+                    "chatId": chat_id,
+                    "text": message,
+                    "buttons": [{"id": btn["id"], "text": btn["title"]} for btn in buttons]
+                }
+                
+                response = requests.post(url, json=payload, headers=self._get_headers(), timeout=30)
+                
+                if response.status_code == 200 or response.status_code == 201:
+                    logger.info(f"WAHA buttons sent successfully to {to}")
+                    return True
+                else:
+                    # Fallback to text with numbered options
+                    logger.warning(f"WAHA buttons not supported, falling back to numbered text")
+                    return self.send_message(to, full_message)
+                    
+            except Exception as btn_error:
+                logger.warning(f"WAHA buttons API error: {btn_error}, using numbered text fallback")
+                return self.send_message(to, full_message)
+                
+        except Exception as e:
+            logger.error(f"Error sending WAHA interactive message to {to}: {e}")
+            return False
+    
+    def get_session_status(self) -> dict:
+        """Check WAHA session status"""
+        try:
+            if self.simulate_mode:
+                return {"status": "simulated", "message": "Running in simulation mode"}
+            
+            url = f"{self.base_url}/api/sessions/{self.session_name}"
+            response = requests.get(url, headers=self._get_headers(), timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logger.info(f"WAHA session status: {data}")
+                return data
+            else:
+                logger.error(f"Failed to get WAHA session status: {response.status_code} - {response.text}")
+                return {"status": "error", "message": response.text}
+                
+        except Exception as e:
+            logger.error(f"Error checking WAHA session status: {e}")
+            return {"status": "error", "message": str(e)}
+
+
 class ResponseAnalysis(BaseModel):
     sentiment: str
     tags: List[str]
