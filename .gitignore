@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask
+instance/
+.webassets-cache
+.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+secrets.toml
+
+# Replit specific
+.replit
+.upm
+.config/
+.cache/
+.pythonlibs/
+.breakpoints
+replit.nix
+poetry.lock
+uv.lock
+
+# Media files (if large/temporary)
+# Uncomment if you don't want to backup media files
+# attached_assets/
+# static/uploads/
+
+# Sensitive files
+cookies.txt
+*.pem
+*.key
+*.cert
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
