@@ -6,6 +6,10 @@ from datetime import datetime, timedelta
 from typing import Dict
 from functools import lru_cache
 from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session, flash, send_from_directory
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 from models import db, User, Content, MessageLog, AdminUser, Bot
 from db_manager import DatabaseManager
 from services import WhatsAppService, TelegramService, GeminiService, SpeechToTextService, TextToSpeechService
