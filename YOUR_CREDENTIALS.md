@@ -57,7 +57,7 @@ DATABASE_URL=postgresql://postgres.vvrmvukgtafnymjbhcho@aws-0-us-west-1.pooler.s
 
 ### ✅ Google Gemini AI (ACTIVE)
 ```
-GEMINI_API_KEY=AIzaSyBhEOrnxltM9y-l5ZEFjgMh9mZU7Lwa_Ws
+GEMINI_API_KEY=
 ```
 **Status:** Configured and ready to use
 **Used for:**
@@ -88,7 +88,7 @@ TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 
 ### Flask Session Secret
 ```
-SESSION_SECRET=sk_prod_8f7e6d5c4b3a2918e7d6c5b4a3928176e5d4c3b2a1908f7e
+SESSION_SECRET=
 ```
 **Note:** This is a development key. Consider changing it for production.
 
